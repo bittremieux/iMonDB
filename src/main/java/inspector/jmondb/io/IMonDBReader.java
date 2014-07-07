@@ -1,6 +1,7 @@
 package inspector.jmondb.io;
 
 import inspector.jmondb.model.Project;
+import inspector.jmondb.model.Run;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -9,6 +10,9 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.TypedQuery;
 
+/**
+ * An iMonDB input reader to read from an RDBMS.
+ */
 public class IMonDBReader {
 
 	private static final Logger logger = LogManager.getLogger(IMonDBReader.class);
@@ -44,7 +48,7 @@ public class IMonDBReader {
 	 * Returns the {@link Project} specified by the given label.
 	 *
 	 * @param label  The label of the project
-	 * @return  The project specified by the given label if found, else {@code null}
+	 * @return The project specified by the given label if found, else {@code null}
 	 */
 	public Project getProject(String label) {
 		logger.info("Retrieve project <{}>", label);
@@ -54,6 +58,33 @@ public class IMonDBReader {
 		try {
 			TypedQuery<Project> query = entityManager.createQuery("SELECT project FROM Project project WHERE project.label = :label", Project.class);
 			query.setParameter("label", label);
+
+			return query.getSingleResult();
+		}
+		catch(NoResultException e) {
+			return null;
+		}
+		finally {
+			entityManager.close();
+		}
+	}
+
+	/**
+	 * Returns the {@link Run} specified by the given name.
+	 *
+	 * @param name  The name of the run
+	 * @return The run specified by the given name if found, else {@code null}
+	 */
+	public Run getRun(String name) {
+		logger.info("Retrieve run <{}>", name);
+
+		EntityManager entityManager = createEntityManager();
+
+		try {
+			//TODO: make sure that run names are unique, otherwise this will fail
+			//TODO: discuss this with Hanny
+			TypedQuery<Run> query = entityManager.createQuery("SELECT run FROM Run run WHERE run.name = :name", Run.class);
+			query.setParameter("name", name);
 
 			return query.getSingleResult();
 		}

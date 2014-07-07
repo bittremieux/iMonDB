@@ -203,4 +203,9 @@ public class Run {
 		result = 31 * result + (sampleDate != null ? sampleDate.hashCode() : 0);
 		return result;
 	}
+
+	@Override
+	public String toString() {
+		return "Run {id=" + id + ", name=" + name + ", #values=" + getNumberOfValues() + "}";
+	}
 }

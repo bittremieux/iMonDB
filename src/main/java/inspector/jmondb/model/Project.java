@@ -205,4 +205,16 @@ public class Project {
 		result = 31 * result + (title != null ? title.hashCode() : 0);
 		return result;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Project {id=").append(id).append(", label=").append(label).append("\n");
+		Iterator<Run> it = getRunIterator();
+		while(it.hasNext())
+			sb.append("\t").append(it.next()).append("\n");
+		sb.append("}");
+
+		return sb.toString();
+	}
 }
