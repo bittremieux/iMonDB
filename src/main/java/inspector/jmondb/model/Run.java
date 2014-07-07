@@ -42,6 +42,14 @@ public class Run {
 	private Map<Long, Value> hasValues;
 
 	/**
+	 * Default constructor required by JPA.
+	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
+	 */
+	protected Run() {
+		hasValues = new HashMap<>();
+	}
+
+	/**
 	 * Creates a Run with the specified name, storage name and sample date.
 	 *
 	 * The id is automatically determined by the database as primary key.
@@ -51,11 +59,11 @@ public class Run {
 	 * @param sampleDate  The date on which the run was performed
 	 */
 	public Run(String name, String storageName, Timestamp sampleDate) {
+		this();
+
 		this.name = name;
 		this.storageName = storageName;
 		this.sampleDate = sampleDate;
-
-		hasValues = new HashMap<>();
 	}
 
 	public long getId() {

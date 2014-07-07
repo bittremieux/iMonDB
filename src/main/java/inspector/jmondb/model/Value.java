@@ -65,6 +65,14 @@ public class Value {
 	private Property hasProperty;
 
 	/**
+	 * Default constructor required by JPA.
+	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
+	 */
+	protected Value() {
+
+	}
+
+	/**
 	 * Creates a Value. Use the {@link ValueBuilder} to easily create a Value with a specific set of member variables.
 	 *
 	 * This Value signifies a summary value calculated out of a range of different observations.
@@ -85,6 +93,8 @@ public class Value {
 	 * @param q3  The third quartile
 	 */
 	public Value(Boolean isNumeric, String firstValue, Integer n, Integer nDiffValues, Integer nNotMissingValues, Float min, Float max, Float mean, Float median, Float sd, Float q1, Float q3) {
+		this();
+
 		this.isNumeric = isNumeric;
 		this.firstValue = firstValue;
 		this.n = n;

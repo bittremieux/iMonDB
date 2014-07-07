@@ -42,6 +42,14 @@ public class CvTerm {
 	private Map<Long, Property> definesProperties;
 
 	/**
+	 * Default constructor required by JPA.
+	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
+	 */
+	protected CvTerm() {
+		definesProperties = new HashMap<>();
+	}
+
+	/**
 	 * Creates a CvTerm with the specified accession number, cvProperty, label, name and ontology reference.
 	 *
 	 * The id is automatically determined by the database as primary key.
@@ -53,13 +61,13 @@ public class CvTerm {
 	 * @param ontology  The reference to the ontology or controlled vocabulary in which the term is defined
 	 */
 	public CvTerm(String accession, String cvProperty, String label, String name, String ontology) {
+		this();
+
 		this.accession = accession;
 		this.cvProperty = cvProperty;
 		this.label = label;
 		this.name = name;
 		this.ontology = ontology;
-
-		definesProperties = new HashMap<>();
 	}
 
 	public long getId() {

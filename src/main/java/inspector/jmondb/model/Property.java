@@ -38,6 +38,14 @@ public class Property {
 	private CvTerm hasCvTerm;
 
 	/**
+	 * Default constructor required by JPA.
+	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
+	 */
+	protected Property() {
+		definesValues = new HashMap<>();
+	}
+
+	/**
 	 * Creates a Property with the specified name and type.
 	 *
 	 * The id is automatically determined by the database as primary key.
@@ -46,10 +54,10 @@ public class Property {
 	 * @param type  The type of property
 	 */
 	public Property(String name, String type) {
+		this();
+
 		this.name = name;
 		this.type = type;
-
-		definesValues = new HashMap<>();
 	}
 
 	public long getId() {

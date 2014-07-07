@@ -36,6 +36,14 @@ public class Project {
 	private Map<Long, Run> hasRuns;
 
 	/**
+	 * Default constructor required by JPA.
+	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
+	 */
+	protected Project() {
+		hasRuns = new HashMap<>();
+	}
+
+	/**
 	 * Creates a Project with the specified label and title.
 	 *
 	 * The id is automatically determined by the database as primary key.
@@ -44,10 +52,10 @@ public class Project {
 	 * @param title  The project title
 	 */
 	public Project(String label, String title) {
+		this();
+
 		this.label = label;
 		this.title = title;
-
-		hasRuns = new HashMap<>();
 	}
 
 	/**
