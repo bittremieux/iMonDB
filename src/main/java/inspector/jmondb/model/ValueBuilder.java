@@ -1,5 +1,8 @@
 package inspector.jmondb.model;
 
+/**
+ * Builder pattern to facilitate creating a {@link Value} with a specific set of member variables.
+ */
 public class ValueBuilder {
 
 	private Boolean isNumeric;
