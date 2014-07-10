@@ -9,6 +9,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.TypedQuery;
+import java.util.List;
 
 /**
  * An iMonDB input reader to read from an RDBMS.
@@ -93,6 +94,33 @@ public class IMonDBReader {
 		}
 		finally {
 			entityManager.close();
+		}
+	}
+
+	/**
+	 * Returns arbitrary data retrieved by a custom JPQL query.
+	 *
+	 * @param query  The query used to retrieve the data
+	 * @param clss  The class type of the object returned by the query
+	 * @param <T>  The type of the requested data
+	 * @return A List containing all objects of the given type returned by the given query
+	 */
+	public <T> List<T> getFromCustomQuery(String query, Class<T> clss) {
+		if(query != null && clss != null) {
+			logger.info("Execute custom query: {}", query);
+
+			EntityManager entityManager = createEntityManager();
+
+			try {
+				return entityManager.createQuery(query, clss).getResultList();
+			}
+			finally {
+				entityManager.close();
+			}
+		}
+		else {
+			logger.error("Unable to execute <null> query");
+			throw new NullPointerException("Unable to execute <null> query");
 		}
 	}
 }
