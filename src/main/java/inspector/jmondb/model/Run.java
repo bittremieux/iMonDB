@@ -37,7 +37,7 @@ public class Run {
 	private Project fromProject;
 
 	/** list of {@link Value}s for the run */
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="fromRun")
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy="fromRun")
 	@MapKey(name="id")
 	private Map<Long, Value> hasValues;
 
@@ -64,6 +64,18 @@ public class Run {
 		this.name = name;
 		this.storageName = storageName;
 		this.sampleDate = sampleDate;
+	}
+
+	//TODO: temporary copy constructor
+	public Run(Run other) {
+		this();
+
+		setName(other.getName());
+		setStorageName(other.getStorageName());
+		setSampleDate(other.getSampleDate());
+
+		for(Iterator<Value> it = other.getValueIterator(); it.hasNext(); )
+			addValue(new Value(it.next()));
 	}
 
 	public long getId() {

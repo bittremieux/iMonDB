@@ -31,9 +31,9 @@ public class Project {
 	private String title;
 
 	/** list of {@link Run}s belonging to the project */
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="fromProject")
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy="fromProject")
 	@MapKey(name="id")
-	private Map<Long, Run> hasRuns;
+	private Map<String, Run> hasRuns;
 
 	/**
 	 * Default constructor required by JPA.
@@ -70,6 +70,18 @@ public class Project {
 	public Project(String label, String title, String description) {
 		this(label, title);
 		this.description = description;
+	}
+
+	//TODO: temporary copy constructor
+	public Project(Project other) {
+		this();
+
+		setDescription(other.getDescription());
+		setLabel(other.getLabel());
+		setTitle(other.getTitle());
+
+		for(Iterator<Run> it = other.getRunIterator(); it.hasNext(); )
+			addRun(new Run(it.next()));
 	}
 
 	public long getId() {
@@ -115,14 +127,14 @@ public class Project {
 	}
 
 	/**
-	 * Returns the {@link Run} with the specified id belonging to the project.
+	 * Returns the {@link Run} with the specified name belonging to the project.
 	 *
-	 * @param id  The id of the requested Run
-	 * @return The Run with the specified id belonging to the project
+	 * @param name  The name of the requested Run
+	 * @return The Run with the specified name belonging to the project
 	 */
-	public Run getRun(Long id) {
-		if(id != null)
-			return hasRuns.get(id);
+	public Run getRun(String name) {
+		if(name != null)
+			return hasRuns.get(name);
 		else
 			return null;
 	}
@@ -139,14 +151,14 @@ public class Project {
 	/**
 	 * Adds the given {@link Run} to the project.
 	 *
-	 * If a Run with the same id was already present, the previous Run is replaced by the given Run.
+	 * If a Run with the same name was already present, the previous Run is replaced by the given Run.
 	 *
 	 * @param run  The Run that will be added to the project
 	 */
 	public void addRun(Run run) {
 		if(run != null) {
 			run.setFromProject(this);	// add the bi-directional relationship
-			hasRuns.put(run.getId(), run);
+			hasRuns.put(run.getName(), run);
 		}
 		else {
 			logger.error("Can't add <null> Run to a Project");
@@ -155,16 +167,16 @@ public class Project {
 	}
 
 	/**
-	 * Removes the {@link Run} specified by the given id from the project.
+	 * Removes the {@link Run} specified by the given name from the project.
 	 *
-	 * @param id  The id of the Run that will be removed
+	 * @param name  The name of the Run that will be removed
 	 */
-	public void removeRun(Long id) {
-		if(id != null) {
-			Run run = hasRuns.get(id);
+	public void removeRun(String name) {
+		if(name != null) {
+			Run run = hasRuns.get(name);
 			if(run != null)	// remove the bi-directional relationship
 				run.setFromProject(null);
-			hasRuns.remove(id);
+			hasRuns.remove(name);
 		}
 	}
 

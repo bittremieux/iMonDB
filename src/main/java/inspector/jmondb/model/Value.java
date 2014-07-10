@@ -60,7 +60,7 @@ public class Value {
 	private Run fromRun;
 
 	/** inverse part of the bi-directional relationship with {@link Property} */
-	@ManyToOne(fetch=FetchType.EAGER)
+	@ManyToOne(cascade=CascadeType.PERSIST, fetch=FetchType.EAGER)
 	@JoinColumn(name="l_imon_property_id", referencedColumnName="id")
 	private Property hasProperty;
 
@@ -107,6 +107,26 @@ public class Value {
 		this.sd = sd;
 		this.q1 = q1;
 		this.q3 = q3;
+	}
+
+	//TODO: temporary copy constructor
+	public Value(Value other) {
+		this();
+
+		setNumeric(other.getNumeric());
+		setFirstValue(other.getFirstValue());
+		setN(other.getN());
+		setNDiffValues(other.getNDiffValues());
+		setNNotMissingValues(other.getNNotMissingValues());
+		setMin(other.getMin());
+		setMax(other.getMax());
+		setMean(other.getMean());
+		setMedian(other.getMedian());
+		setSd(other.getSd());
+		setQ1(other.getQ1());
+		setQ3(other.getQ3());
+
+		setProperty(other.getProperty());
 	}
 
 	public long getId() {
@@ -216,6 +236,10 @@ public class Value {
 
 	public void setFromRun(Run run) {
 		this.fromRun = run;
+	}
+
+	public Property getProperty() {
+		return hasProperty;
 	}
 
 	public void setProperty(Property property) {
