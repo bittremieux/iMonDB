@@ -64,11 +64,11 @@ public class IMonDBWriter {
 			try {
 				// check if the project is already in the database and if so, delete the old information
 				// (the delete will cascade to the child Runs and Values)
-				TypedQuery<Integer> projectQuery = entityManager.createQuery("SELECT project.id FROM Project project WHERE project.label = :label", Integer.class);
+				TypedQuery<Long> projectQuery = entityManager.createQuery("SELECT project.id FROM Project project WHERE project.label = :label", Long.class);
 				projectQuery.setParameter("label", project.getLabel());
 				projectQuery.setMaxResults(1);	// restrict to a single result (label is unique anyway)
 
-				List<Integer> result = projectQuery.getResultList();
+				List<Long> result = projectQuery.getResultList();
 				if(result.size() > 0) {
 					// delete the old project
 					logger.info("Duplicate project <label={}>: delete old project <id={}>", project.getLabel(), result.get(0));
@@ -125,11 +125,11 @@ public class IMonDBWriter {
 			try {
 				// check if the run is already in the database and if so, delete the old information
 				// (the delete will cascade to the child Values)
-				TypedQuery<Integer> runQuery = entityManager.createQuery("SELECT run.id FROM Run run WHERE run.name = :name", Integer.class);
+				TypedQuery<Long> runQuery = entityManager.createQuery("SELECT run.id FROM Run run WHERE run.name = :name", Long.class);
 				runQuery.setParameter("name", run.getName());
 				runQuery.setMaxResults(1);	// restrict to a single result
 
-				List<Integer> result = runQuery.getResultList();
+				List<Long> result = runQuery.getResultList();
 				if(result.size() > 0) {
 					// delete the old run
 					logger.info("Duplicate run <name={}>: delete old run <id={}>", run.getName(), result.get(0));
@@ -170,11 +170,55 @@ public class IMonDBWriter {
 	}
 
 	public void writeProperty(Property property) {
-		//TODO
+		if(property != null) {
+			logger.info("Store property <{}>", property.getName());
+
+			EntityManager entityManager = createEntityManager();
+
+			// persist the Property in a transaction
+			try {
+				// check if the Property is already in the database and retrieve its primary key
+				TypedQuery<Long> query = entityManager.createQuery("SELECT property.id FROM Property property WHERE property.name = :name", Long.class);
+				query.setParameter("name", property.getName()).setMaxResults(1);
+				List<Long> result = query.getResultList();
+				if(result.size() > 0) {
+					logger.info("Duplicate property <name={}>: assign id <{}>", property.getName(), result.get(0));
+					property.setId(result.get(0));
+				}
+
+				// store this Property
+				entityManager.getTransaction().begin();
+				entityManager.merge(property);
+				entityManager.getTransaction().commit();
+			}
+			catch(EntityExistsException e) {
+				try {
+					entityManager.getTransaction().rollback();
+				}
+				catch(PersistenceException p) {
+					logger.error("Unable to rollback the transaction for property <{}> to the database: {}", property.getName(), p);
+				}
+
+				logger.error("Unable to persist property <{}> to the database: {}", property.getName(), e);
+				throw new IllegalArgumentException("Unable to persist property <" + property.getName() + "> to the database");
+			}
+			catch(RollbackException e) {
+				logger.error("Unable to commit the transaction for property <{}> to the database: {}", property.getName(), e);
+				throw new IllegalArgumentException("Unable to commit the transaction for property <" + property.getName() + "> to the database");
+			}
+			finally {
+				entityManager.close();
+			}
+		}
+
+		else {
+			logger.error("Unable to write <null> property to the database");
+			throw new NullPointerException("Unable to write <null> property to the database");
+		}
 	}
 
 	public void writeCvTerm(CvTerm cvTerm) {
-		//TODO
+		throw new UnsupportedOperationException("Not implemented yet");
 	}
 
 }
