@@ -20,6 +20,8 @@ public class StatusLogWriter {
 
 	private static final Logger logger = LogManager.getLogger(StatusLogWriter.class);
 
+	private enum InstrumentModel { ORBITRAP_VELOS, ORBITRAP_XL, Q_EXACTIVE, TSQ_VANTAGE, UNKNOWN_MODEL };
+
 	/**
 	 * Writes the status log information for the given Thermo raw file to the given IMonDB.
 	 *
@@ -54,7 +56,7 @@ public class StatusLogWriter {
 			throw new NullPointerException("Invalid file name");
 		}
 		// check whether the file has the correct *.raw extension
-		else if(!FilenameUtils.getExtension(fileName).equals("raw")) {
+		else if(!FilenameUtils.getExtension(fileName).equalsIgnoreCase("raw")) {
 			logger.error("Invalid file name <{}>: Not a *.raw file", fileName);
 			throw new NullPointerException("Not a *.raw file");
 		}
@@ -88,25 +90,41 @@ public class StatusLogWriter {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 			// read each item on a new line
 			// the first line contains information about the instrument model
-			String model = reader.readLine();
-			if(model != null) {
-				String modelCv = model.split("\t")[1];
+			String modelLine = reader.readLine();
+			if(modelLine != null) {
+				String modelCv = modelLine.split("\t")[1];
 				// read the status log data depending on the type of instrument model
-				//TODO: interpret the OBO file
-				if(modelCv.equals("MS:1001742")) {	// LTQ Orbitrap Velos
-					data = readOrbitrapVelos(reader);
+				//TODO: interpret the PSI-MS OBO file
+				InstrumentModel model;
+				switch(modelCv) {
+					case "MS:1001742":
+						model = InstrumentModel.ORBITRAP_VELOS;
+						break;
+					case "MS:1000556":
+						model = InstrumentModel.ORBITRAP_XL;
+						break;
+					case "MS:1001911":
+						model = InstrumentModel.Q_EXACTIVE;
+						break;
+					case "MS:1001510":
+						model = InstrumentModel.TSQ_VANTAGE;
+						break;
+					default:
+						model = InstrumentModel.UNKNOWN_MODEL;
+						logger.info("Unknown instrument model <{}>", modelCv);
+						break;
 				}
-				//TODO: else -> other models
+				data = readData(reader, model);
 			}
 
 			// make sure the process has finished
 			process.waitFor();
 
 		} catch(IOException e) {
-			logger.info("Could not execute the status log extractor: {}", e);
+			logger.error("Could not execute the status log extractor: {}", e);
 			throw new IllegalStateException("Could not execute the status log extractor: " + e);
 		} catch(InterruptedException e) {
-			logger.info("Error while extracting the status log: {}", e);
+			logger.error("Error while extracting the status log: {}", e);
 			throw new IllegalStateException("Error while extracting the status log: " + e);
 		}
 
@@ -114,12 +132,12 @@ public class StatusLogWriter {
 	}
 
 	/**
-	 * Reads the status log data formatted in the LTQ Ortbitrap Velos format.
+	 * Reads the status log data.
 	 *
 	 * @param reader  BufferedReader to read the status log data
 	 * @return A HashMap consisting of the status log labels as keys and a list of values for each key
 	 */
-	private HashMap<String, ArrayList<String>> readOrbitrapVelos(BufferedReader reader) {
+	private HashMap<String, ArrayList<String>> readData(BufferedReader reader, InstrumentModel model) {
 		HashMap<String, ArrayList<String>> data = new HashMap<>();
 		try {
 			// read all the individual status log values
@@ -127,27 +145,85 @@ public class StatusLogWriter {
 			String subTitle = "";
 			while((line = reader.readLine()) != null) {
 				String[] values = line.split("\t");
-				// subtitle
-				if(values.length == 1) {
-					subTitle = values[0].trim() + " - ";
+				// sub title
+				if(values.length == 1 && values[0].length() > 0) {
+					switch(model) {
+						case ORBITRAP_VELOS:
+						case ORBITRAP_XL:
+							subTitle = subTitleOrbitrap(values[0]);
+							break;
+						case Q_EXACTIVE:
+							subTitle = subTitleQExactive(values[0]);
+							break;
+						case TSQ_VANTAGE:
+							subTitle = "";	// shouldn't come here
+							break;
+						default:
+							subTitle = values[0];
+							break;
+					}
 				}
 				// value
 				else if(values.length == 2) {
-					String name = values[0].trim();
-					name = name.substring(0, name.lastIndexOf(':'));
-					String value = values[1].trim();
+					String[] nameValue;
+					switch(model) {
+						case ORBITRAP_VELOS:
+						case ORBITRAP_XL:
+							nameValue = valueOrbitrap(values);
+							break;
+						case Q_EXACTIVE:
+							nameValue = valueQExactive(values);
+							break;
+						case TSQ_VANTAGE:
+							nameValue = valueTsqVantage(values);
+							break;
+						default:
+							nameValue = values;
+							break;
+					}
+
 					// save value
-					String key = subTitle + name;
+					String key = subTitle + nameValue[0];
 					if(!data.containsKey(key))
 						data.put(key, new ArrayList<>());
-					data.get(key).add(value);
+					data.get(key).add(nameValue[1]);
 				}
 			}
 		} catch(IOException e) {
-			e.printStackTrace();
+			logger.error("Error while reading the status log data: {}", e);
+			throw new IllegalStateException("Error while reading the status log data: " + e);
 		}
 
 		return data;
+	}
+
+	private String subTitleOrbitrap(String subTitle) {
+		return subTitle.trim() + " - ";
+	}
+
+	private String subTitleQExactive(String subTitle) {
+		return subTitle.substring(subTitle.indexOf(' '), subTitle.indexOf(':')).trim() + " - ";
+	}
+
+	private String[] valueOrbitrap(String[] line) {
+		String name = line[0].trim();
+		name = name.substring(0, name.lastIndexOf(':'));
+		String value = line[1].trim();
+
+		return new String[] { name, value };
+	}
+
+	private String[] valueQExactive(String[] line) {
+		String name = line[0].trim();
+		if(name.contains(":"))
+			name = name.substring(0, name.lastIndexOf(':'));
+		String value = line[1].trim();
+
+		return new String[] { name, value };
+	}
+
+	private String[] valueTsqVantage(String[] line) {
+		return line;
 	}
 
 	/**
