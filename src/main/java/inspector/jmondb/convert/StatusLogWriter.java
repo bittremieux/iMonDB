@@ -1,6 +1,5 @@
 package inspector.jmondb.convert;
 
-import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
 import inspector.jmondb.model.Property;
 import inspector.jmondb.model.Value;
@@ -28,43 +27,17 @@ public class StatusLogWriter {
 	 * @param emf  The EntityManagerFactory representing the IMonDB connection
 	 */
 	public void write(String fileName, EntityManagerFactory emf) {
-		try {
-			// test if the file name is valid
-			File file = getFile(fileName);
+		// test if the file name is valid
+		File file = getFile(fileName);
 
-			// execute the command-line application to extract the status log
-			BufferedReader reader = getStatusLogReader(file);
-
-			// read the status log
-			HashMap<String, ArrayList<String>> data = null;
-			// read each item on a new line
-			// the first line contains information about the instrument model
-			String model = reader.readLine();
-			if(model != null) {
-				String modelCv = model.split("\t")[1];
-				// read the status log data depending on the type of instrument model
-				//TODO: interpret the OBO file
-				if(modelCv.equals("MS:1001742")) {	// LTQ Orbitrap Velos
-					data = readOrbitrapVelos(reader);
-				}
-				//TODO: else -> other models
-			}
-
-			ArrayList<Property> properties = null;
-			if(data != null) {
-				// compute the summary statistics
-				properties = computeStatistics(data);
-				// store the data in the database
-				IMonDBWriter writer = new IMonDBWriter(emf);
-				properties.forEach(writer::writeProperty);
-			}
-
-		} catch(IOException e) {
-			logger.info("Could not execute the status log extractor: {}", e);
-			throw new IllegalStateException("Could not execute the status log extractor: " + e);
-		} catch(InterruptedException e) {
-			logger.info("Error while extracting the status log: {}", e);
-			throw new IllegalStateException("Error while extracting the status log: " + e);
+		// execute the command-line application to extract the status log
+		HashMap<String, ArrayList<String>> data = readStatusLog(file);
+		if(data != null) {
+			// compute the summary statistics
+			ArrayList<Property> properties = computeStatistics(data);
+			// store the data in the database
+			IMonDBWriter writer = new IMonDBWriter(emf);
+			properties.forEach(writer::writeProperty);
 		}
 	}
 
@@ -101,15 +74,43 @@ public class StatusLogWriter {
 	 * raw file and returns a {@link BufferedReader} to read this information.
 	 *
 	 * @param file  A reference to the Thermo raw file for which the status log information will be read
-	 * @return A BufferedReader reading the status log information
-	 * @throws IOException
-	 * @throws InterruptedException
+	 * @return A HashMap consisting of the status log labels as keys and a list of values for each key
 	 */
-	private BufferedReader getStatusLogReader(File file) throws IOException, InterruptedException {
-		URL statusLogExe = StatusLogWriter.class.getResource("/ThermoStatusLog/ThermoStatusLog.exe");
-		Process process = Runtime.getRuntime().exec(statusLogExe.getFile() + " " + file.getAbsoluteFile());
-		process.waitFor();
-		return new BufferedReader(new InputStreamReader(process.getInputStream()));
+	private HashMap<String, ArrayList<String>> readStatusLog(File file) {
+		HashMap<String, ArrayList<String>> data = null;
+
+		try {
+			// execute the CLI process
+			URL statusLogExe = StatusLogWriter.class.getResource("/ThermoStatusLog/ThermoStatusLog.exe");
+			Process process = Runtime.getRuntime().exec(statusLogExe.getFile() + " " + file.getAbsoluteFile());
+
+			// read the status log data
+			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+			// read each item on a new line
+			// the first line contains information about the instrument model
+			String model = reader.readLine();
+			if(model != null) {
+				String modelCv = model.split("\t")[1];
+				// read the status log data depending on the type of instrument model
+				//TODO: interpret the OBO file
+				if(modelCv.equals("MS:1001742")) {	// LTQ Orbitrap Velos
+					data = readOrbitrapVelos(reader);
+				}
+				//TODO: else -> other models
+			}
+
+			// make sure the process has finished
+			process.waitFor();
+
+		} catch(IOException e) {
+			logger.info("Could not execute the status log extractor: {}", e);
+			throw new IllegalStateException("Could not execute the status log extractor: " + e);
+		} catch(InterruptedException e) {
+			logger.info("Error while extracting the status log: {}", e);
+			throw new IllegalStateException("Error while extracting the status log: " + e);
+		}
+
+		return data;
 	}
 
 	/**
