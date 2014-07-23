@@ -125,13 +125,17 @@ public class Property {
 	public void addValue(Value value) {
 		if(value != null) {
 			value.setProperty(this);	// add the bi-directional relationship
-			definesValues.put(value.getId(), value);
+			//TODO: definesValues.put(value.getId(), value);
+			definesValues.put(elemCounter++, value);
 		}
 		else {
 			logger.error("Can't add <null> Value to a Property");
 			throw new NullPointerException("Can't add <null> Value");
 		}
 	}
+
+	//TODO: remove
+	static long elemCounter = 0;
 
 	/**
 	 * Disconnects the {@link Value} specified by the given id from the property.

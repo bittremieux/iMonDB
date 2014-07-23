@@ -246,6 +246,12 @@ public class Value {
 		this.hasProperty = property;
 	}
 
+	public String toString() {
+		return "Value \t" + getNumeric() + "\t" + getFirstValue() + "\t" + getN() + "\t" + getNDiffValues()
+				+ "\t" + getNNotMissingValues() + "\t" + getMin() + "\t" + getMax() + "\t" + getMean()
+				+ "\t" + getMedian() + "\t" + getSd() + "\t" + getQ1() + "\t" + getQ3();
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if(this == o) return true;
