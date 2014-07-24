@@ -28,7 +28,7 @@ public class Value {
 	@Column(name="accession", nullable=false, length=255)
 	private String accession;
 	/** the controlled vocabulary that defines the value */
-	@ManyToOne(cascade=CascadeType.PERSIST, fetch=FetchType.EAGER)
+	@ManyToOne(cascade=CascadeType.MERGE, fetch=FetchType.EAGER)
 	@JoinColumn(name="l_imon_cv_id", referencedColumnName="id")
 	private CV cv;
 
