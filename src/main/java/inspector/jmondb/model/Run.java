@@ -20,7 +20,8 @@ public class Run {
 	@Id
 	@Column(name="id", nullable=false)
 	@GeneratedValue(strategy=GenerationType.IDENTITY)
-	private long id;
+	private Long id;
+
 	/** the name identifying the run */
 	@Column(name="name", nullable=false, length=100)
 	private String name;
@@ -38,8 +39,8 @@ public class Run {
 
 	/** list of {@link Value}s for the run */
 	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy="fromRun")
-	@MapKey(name="id")
-	private Map<Long, Value> hasValues;
+	@MapKey(name="accession")
+	private Map<String, Value> hasValues;
 
 	/**
 	 * Default constructor required by JPA.
@@ -78,12 +79,12 @@ public class Run {
 			addValue(new Value(it.next()));
 	}
 
-	public long getId() {
+	public Long getId() {
 		return id;
 	}
 
 	/* package private: read-only key to be set by the JPA implementation */
-	void setId(long id) {
+	void setId(Long id) {
 		this.id = id;
 	}
 
@@ -125,14 +126,14 @@ public class Run {
 	}
 
 	/**
-	 * Returns the {@link Value} with the specified id for the run.
+	 * Returns the {@link Value} with the specified accession for the run.
 	 *
-	 * @param id  The id of the requested Value
-	 * @return The Value with the specified id for the run
+	 * @param accession  The accession of the requested Value
+	 * @return The Value with the specified accession for the run
 	 */
-	public Value getValue(Long id) {
+	public Value getValue(String accession) {
 		if(id != null)
-			return hasValues.get(id);
+			return hasValues.get(accession);
 		else
 			return null;
 	}
@@ -149,14 +150,14 @@ public class Run {
 	/**
 	 * Adds the given {@link Value} to the run.
 	 *
-	 * If a Value with the same id was already present, the previous Value is replaced by the given Value.
+	 * If a Value with the same accession was already present, the previous Value is replaced by the given Value.
 	 *
 	 * @param value  The Value that will be added to the run
 	 */
 	public void addValue(Value value) {
 		if(value != null) {
 			value.setFromRun(this);	// add the bi-directional relationship
-			hasValues.put(value.getId(), value);
+			hasValues.put(value.getAccession(), value);
 		}
 		else {
 			logger.error("Can't add <null> Value to a Run");
@@ -165,16 +166,16 @@ public class Run {
 	}
 
 	/**
-	 * Removes the {@link Value} specified by the given id from the run.
+	 * Removes the {@link Value} specified by the given accession from the run.
 	 *
-	 * @param id  The id of the Value that will be removed
+	 * @param accession  The accession of the Value that will be removed
 	 */
-	public void removeValue(Long id) {
-		if(id != null) {
-			Value value = hasValues.get(id);
+	public void removeValue(String accession) {
+		if(accession != null) {
+			Value value = hasValues.get(accession);
 			if(value != null)	// remove the bi-directional relationship
 				value.setFromRun(null);
-			hasValues.remove(id);
+			hasValues.remove(accession);
 		}
 	}
 
@@ -199,21 +200,12 @@ public class Run {
 
 		Run that = (Run) o;
 
-		if(id != that.id) return false;
+		if(id != null ? !id.equals(that.id) : that.id != null) return false;
 		if(name != null ? !name.equals(that.name) : that.name != null) return false;
 		if(sampleDate != null ? !sampleDate.equals(that.sampleDate) : that.sampleDate != null) return false;
 		if(storageName != null ? !storageName.equals(that.storageName) : that.storageName != null) return false;
 
 		return true;
-	}
-
-	@Override
-	public int hashCode() {
-		int result = (int) (id ^ (id >>> 32));
-		result = 31 * result + (name != null ? name.hashCode() : 0);
-		result = 31 * result + (storageName != null ? storageName.hashCode() : 0);
-		result = 31 * result + (sampleDate != null ? sampleDate.hashCode() : 0);
-		return result;
 	}
 
 	@Override

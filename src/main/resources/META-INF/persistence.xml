@@ -7,8 +7,7 @@
         <class>inspector.jmondb.model.Project</class>
         <class>inspector.jmondb.model.Run</class>
         <class>inspector.jmondb.model.Value</class>
-        <class>inspector.jmondb.model.Property</class>
-        <class>inspector.jmondb.model.CvTerm</class>
+        <class>inspector.jmondb.model.CV</class>
         
     </persistence-unit>
 </persistence> 

@@ -19,7 +19,8 @@ public class Project {
 	@Id
 	@Column(name="id", nullable=false)
 	@GeneratedValue(strategy=GenerationType.IDENTITY)
-	private long id;
+	private Long id;
+
 	/** the project description */
 	@Column(name="description", length=255)
 	private String description;
@@ -32,7 +33,7 @@ public class Project {
 
 	/** list of {@link Run}s belonging to the project */
 	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy="fromProject")
-	@MapKey(name="id")
+	@MapKey(name="name")
 	private Map<String, Run> hasRuns;
 
 	/**
@@ -84,12 +85,12 @@ public class Project {
 			addRun(new Run(it.next()));
 	}
 
-	public long getId() {
+	public Long getId() {
 		return id;
 	}
 
 	/* package private: read-only key to be set by the JPA implementation */
-	void setId(long id) {
+	void setId(Long id) {
 		this.id = id;
 	}
 
@@ -201,21 +202,12 @@ public class Project {
 
 		Project that = (Project) o;
 
-		if(id != that.id) return false;
+		if(id != null ? !id.equals(that.id) : that.id != null) return false;
 		if(description != null ? !description.equals(that.description) : that.description != null) return false;
 		if(label != null ? !label.equals(that.label) : that.label != null) return false;
 		if(title != null ? !title.equals(that.title) : that.title != null) return false;
 
 		return true;
-	}
-
-	@Override
-	public int hashCode() {
-		int result = (int) (id ^ (id >>> 32));
-		result = 31 * result + (description != null ? description.hashCode() : 0);
-		result = 31 * result + (label != null ? label.hashCode() : 0);
-		result = 31 * result + (title != null ? title.hashCode() : 0);
-		return result;
 	}
 
 	@Override

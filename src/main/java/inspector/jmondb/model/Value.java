@@ -16,7 +16,22 @@ public class Value {
 	@Id
 	@Column(name="id", nullable=false)
 	@GeneratedValue(strategy=GenerationType.IDENTITY)
-	private long id;
+	private Long id;
+
+	/** the name of the value */
+	@Column(name="name", nullable=false, length=200)
+	private String name;
+	/** the type of the value */
+	@Column(name="type", nullable=false, length=20)
+	private String type;
+	/** the accession number that identifies the value in the controlled vocabulary */
+	@Column(name="accession", nullable=false, length=255)
+	private String accession;
+	/** the controlled vocabulary that defines the value */
+	@ManyToOne(cascade=CascadeType.PERSIST, fetch=FetchType.EAGER)
+	@JoinColumn(name="l_imon_cv_id", referencedColumnName="id")
+	private CV cv;
+
 	/** indicates whether the Value signifies numerical data */
 	@Column(name="isnumeric", nullable=false)
 	private Boolean isNumeric;
@@ -59,11 +74,6 @@ public class Value {
 	@JoinColumn(name="l_imon_run_id", referencedColumnName="id")
 	private Run fromRun;
 
-	/** inverse part of the bi-directional relationship with {@link Property} */
-	@ManyToOne(cascade=CascadeType.PERSIST, fetch=FetchType.EAGER)
-	@JoinColumn(name="l_imon_property_id", referencedColumnName="id")
-	private Property hasProperty;
-
 	/**
 	 * Default constructor required by JPA.
 	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
@@ -79,6 +89,10 @@ public class Value {
 	 *
 	 * The id is automatically determined by the database as primary key.
 	 *
+	 * @param name  The name of the value
+	 * @param type  The type of the value
+	 * @param accession  The accession number that identifies the value in the controlled vocabulary
+	 * @param cv  The controlled vocabulary that defines the value
 	 * @param isNumeric  Indicates whether the Value signifies numerical data
 	 * @param firstValue  The first observation
 	 * @param n  The number of observations used to calculate the summary value
@@ -92,9 +106,13 @@ public class Value {
 	 * @param q1  The first quartile
 	 * @param q3  The third quartile
 	 */
-	public Value(Boolean isNumeric, String firstValue, Integer n, Integer nDiffValues, Integer nNotMissingValues, Float min, Float max, Float mean, Float median, Float sd, Float q1, Float q3) {
+	public Value(String name, String type, String accession, CV cv, Boolean isNumeric, String firstValue, Integer n, Integer nDiffValues, Integer nNotMissingValues, Float min, Float max, Float mean, Float median, Float sd, Float q1, Float q3) {
 		this();
 
+		this.name = name;
+		this.type = type;
+		this.accession = accession;
+		this.cv = cv;
 		this.isNumeric = isNumeric;
 		this.firstValue = firstValue;
 		this.n = n;
@@ -113,6 +131,10 @@ public class Value {
 	public Value(Value other) {
 		this();
 
+		setName(other.getName());
+		setType(other.getType());
+		setAccession(other.getAccession());
+		setCv(other.getCv());
 		setNumeric(other.getNumeric());
 		setFirstValue(other.getFirstValue());
 		setN(other.getN());
@@ -125,17 +147,47 @@ public class Value {
 		setSd(other.getSd());
 		setQ1(other.getQ1());
 		setQ3(other.getQ3());
-
-		setProperty(other.getProperty());
 	}
 
-	public long getId() {
+	public Long getId() {
 		return id;
 	}
 
 	/* package private: read-only key to be set by the JPA implementation */
-	void setId(long id) {
+	void setId(Long id) {
 		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public String getAccession() {
+		return accession;
+	}
+
+	public void setAccession(String accession) {
+		this.accession = accession;
+	}
+
+	public CV getCv() {
+		return cv;
+	}
+
+	public void setCv(CV cv) {
+		this.cv = cv;
 	}
 
 	public Boolean getNumeric() {
@@ -238,14 +290,6 @@ public class Value {
 		this.fromRun = run;
 	}
 
-	public Property getProperty() {
-		return hasProperty;
-	}
-
-	public void setProperty(Property property) {
-		this.hasProperty = property;
-	}
-
 	public String toString() {
 		return "Value \t" + getNumeric() + "\t" + getFirstValue() + "\t" + getN() + "\t" + getNDiffValues()
 				+ "\t" + getNNotMissingValues() + "\t" + getMin() + "\t" + getMax() + "\t" + getMean()
@@ -259,7 +303,11 @@ public class Value {
 
 		Value that = (Value) o;
 
-		if(id != that.id) return false;
+		if(id != null ? !id.equals(that.id) : that.id != null) return false;
+		if(name != null ? !name.equals(that.name) : that.name != null) return false;
+		if(type != null ? !type.equals(that.type) : that.type != null) return false;
+		if(accession != null ? !accession.equals(that.accession) : that.accession != null) return false;
+		if(cv != null ? !cv.equals(that.cv) : that.cv != null) return false;
 		if(firstValue != null ? !firstValue.equals(that.firstValue) : that.firstValue != null) return false;
 		if(isNumeric != null ? !isNumeric.equals(that.isNumeric) : that.isNumeric != null) return false;
 		if(max != null ? !max.equals(that.max) : that.max != null) return false;
@@ -275,23 +323,5 @@ public class Value {
 		if(sd != null ? !sd.equals(that.sd) : that.sd != null) return false;
 
 		return true;
-	}
-
-	@Override
-	public int hashCode() {
-		int result = (int) (id ^ (id >>> 32));
-		result = 31 * result + (isNumeric != null ? isNumeric.hashCode() : 0);
-		result = 31 * result + (firstValue != null ? firstValue.hashCode() : 0);
-		result = 31 * result + (n != null ? n.hashCode() : 0);
-		result = 31 * result + (nDiffValues != null ? nDiffValues.hashCode() : 0);
-		result = 31 * result + (nNotMissingValues != null ? nNotMissingValues.hashCode() : 0);
-		result = 31 * result + (min != null ? min.hashCode() : 0);
-		result = 31 * result + (max != null ? max.hashCode() : 0);
-		result = 31 * result + (mean != null ? mean.hashCode() : 0);
-		result = 31 * result + (median != null ? median.hashCode() : 0);
-		result = 31 * result + (sd != null ? sd.hashCode() : 0);
-		result = 31 * result + (q1 != null ? q1.hashCode() : 0);
-		result = 31 * result + (q3 != null ? q3.hashCode() : 0);
-		return result;
 	}
 }
