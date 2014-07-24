@@ -36,7 +36,7 @@ public class Value {
 	@Column(name="isnumeric", nullable=false)
 	private Boolean isNumeric;
 	/** the first observation */
-	@Column(name="firstvalue", length=50)
+	@Column(name="firstvalue", length=200)
 	private String firstValue;
 	/** the number of observations used to calculate the summary value */
 	@Column(name="n")

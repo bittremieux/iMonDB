@@ -45,7 +45,13 @@ public class StatusLogWriter {
 
 			// create a run containing all the values
 			String runName = FilenameUtils.getBaseName(file.getName());
-			Run run = new Run(runName, file.getAbsolutePath(), date);
+			Run run = null;
+			try {
+				run = new Run(runName, file.getCanonicalPath(), date);
+			} catch(IOException e) {
+				logger.error("Error while resolving the canonical path for file <{}>", file.getPath());
+				throw new IllegalStateException("Error while resolving the canonical path for file <" + file.getPath() + ">");
+			}
 			values.forEach(run::addValue);
 
 			// store the run in the database
