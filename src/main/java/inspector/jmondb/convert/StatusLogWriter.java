@@ -1,7 +1,8 @@
 package inspector.jmondb.convert;
 
 import inspector.jmondb.io.IMonDBWriter;
-import inspector.jmondb.model.Property;
+import inspector.jmondb.model.CV;
+import inspector.jmondb.model.Run;
 import inspector.jmondb.model.Value;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.math3.stat.Frequency;
@@ -12,23 +13,27 @@ import org.apache.logging.log4j.Logger;
 import javax.persistence.EntityManagerFactory;
 import java.io.*;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class StatusLogWriter {
 
 	private static final Logger logger = LogManager.getLogger(StatusLogWriter.class);
 
-	private enum InstrumentModel { ORBITRAP_VELOS, ORBITRAP_XL, Q_EXACTIVE, TSQ_VANTAGE, UNKNOWN_MODEL };
+	private Timestamp date;
+
+	private enum InstrumentModel { ORBITRAP_VELOS, ORBITRAP_XL, Q_EXACTIVE, TSQ_VANTAGE, UNKNOWN_MODEL }
 
 	/**
-	 * Writes the status log information for the given Thermo raw file to the given IMonDB.
+	 * Writes the status log information for the given Thermo raw file to the given project in an iMonDB.
 	 *
 	 * @param fileName  The file name of the Thermo raw file
-	 * @param emf  The EntityManagerFactory representing the IMonDB connection
+	 * @param emf  The EntityManagerFactory representing the iMonDB connection
+	 * @param projectLabel  The label of the project to which the run represented by the given raw file belongs
 	 */
-	public void write(String fileName, EntityManagerFactory emf) {
+	public void write(String fileName, EntityManagerFactory emf, String projectLabel) {
 		// test if the file name is valid
 		File file = getFile(fileName);
 
@@ -36,10 +41,15 @@ public class StatusLogWriter {
 		HashMap<String, ArrayList<String>> data = readStatusLog(file);
 		if(data != null) {
 			// compute the summary statistics
-			ArrayList<Property> properties = computeStatistics(data);
-			// store the data in the database
-			IMonDBWriter writer = new IMonDBWriter(emf);
-			properties.forEach(writer::writeProperty);
+			ArrayList<Value> values = computeStatistics(data);
+
+			// create a run containing all the values
+			String runName = FilenameUtils.getBaseName(file.getName());
+			Run run = new Run(runName, file.getAbsolutePath(), date);
+			values.forEach(run::addValue);
+
+			// store the run in the database
+			persist(emf, projectLabel, run);
 		}
 	}
 
@@ -79,7 +89,7 @@ public class StatusLogWriter {
 	 * @return A HashMap consisting of the status log labels as keys and a list of values for each key
 	 */
 	private HashMap<String, ArrayList<String>> readStatusLog(File file) {
-		HashMap<String, ArrayList<String>> data = null;
+		HashMap<String, ArrayList<String>> data;
 
 		try {
 			// execute the CLI process
@@ -91,11 +101,11 @@ public class StatusLogWriter {
 			// read each item on a new line
 			// the first line contains information about the instrument model
 			String modelLine = reader.readLine();
+			InstrumentModel model = null;
 			if(modelLine != null) {
 				String modelCv = modelLine.split("\t")[1];
 				// read the status log data depending on the type of instrument model
 				//TODO: interpret the PSI-MS OBO file
-				InstrumentModel model;
 				switch(modelCv) {
 					case "MS:1001742":
 						model = InstrumentModel.ORBITRAP_VELOS;
@@ -114,8 +124,17 @@ public class StatusLogWriter {
 						logger.info("Unknown instrument model <{}>", modelCv);
 						break;
 				}
-				data = readData(reader, model);
 			}
+
+			// the second line contains the date
+			String dateLine = reader.readLine();
+			if(dateLine != null) {
+				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MMM-dd hh:mm:ss zzz");
+				date = new Timestamp(dateFormat.parse(dateLine.split("\t")[1]).getTime());
+			}
+
+			// read the remainder of the data
+			data = readData(reader, model);
 
 			// make sure the process has finished
 			process.waitFor();
@@ -126,6 +145,9 @@ public class StatusLogWriter {
 		} catch(InterruptedException e) {
 			logger.error("Error while extracting the status log: {}", e);
 			throw new IllegalStateException("Error while extracting the status log: " + e);
+		} catch(ParseException e) {
+			logger.error("Error while parsing the date: {}", e);
+			throw new IllegalStateException("Error while parsing the date: " + e);
 		}
 
 		return data;
@@ -135,6 +157,7 @@ public class StatusLogWriter {
 	 * Reads the status log data.
 	 *
 	 * @param reader  BufferedReader to read the status log data
+	 * @param model  The instrument model from which the status log was generated
 	 * @return A HashMap consisting of the status log labels as keys and a list of values for each key
 	 */
 	private HashMap<String, ArrayList<String>> readData(BufferedReader reader, InstrumentModel model) {
@@ -230,15 +253,17 @@ public class StatusLogWriter {
 	 * Computes summary statistics for each status log value.
 	 *
 	 * @param data  A HashMap consisting of the status log labels as keys and a list of values for each key
-	 * @return A list of {@link Property}s with their corresponding {@link Value}s
+	 * @return A list of {@link Value}s
 	 */
-	private ArrayList<Property> computeStatistics(HashMap<String, ArrayList<String>> data) {
-		ArrayList<Property> properties = new ArrayList<>(data.size());
+	private ArrayList<Value> computeStatistics(HashMap<String, ArrayList<String>> data) {
+		ArrayList<Value> values = new ArrayList<>(data.size());
+
+		//TODO: correctly specify the used cv
+		//TODO: maybe we can even re-use some terms from the PSI-MS cv?
+		CV cv = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
 
 		for(Map.Entry<String, ArrayList<String>> entry : data.entrySet()) {
-			// create a Property
-			Property property = new Property(entry.getKey(), "statuslog");
-			// add the Value for the property
+			// calculate the summary value
 			Boolean isNumeric = true;
 			String firstValue = entry.getValue().get(0);
 			Integer n = null;
@@ -278,15 +303,24 @@ public class StatusLogWriter {
 				q3 = (float) stats.getPercentile(75);
 			}
 
-			Value value = new Value(isNumeric, firstValue, n, nDiff, nNotMissing, min, max, mean, median, sd, q1, q3);
-			property.addValue(value);
+			//TODO: correctly set the accession number once we have a valid cv
+			Value value = new Value(entry.getKey(), "statuslog", entry.getKey(), cv, isNumeric, firstValue, n, nDiff, nNotMissing, min, max, mean, median, sd, q1, q3);
 
-			properties.add(property);
-
-			//TODO: DEBUG
-			System.out.println(property.getName() + "\t" + value);
+			values.add(value);
 		}
 
-		return properties;
+		return values;
+	}
+
+	/**
+	 * Save the given run to its project in the iMonDB.
+	 *
+	 * @param emf  The connection to the iMonDB
+	 * @param projectLabel  The label of the project to which the given run belongs
+	 * @param run  The run with the computed status log values to be persisted in the database
+	 */
+	private void persist(EntityManagerFactory emf, String projectLabel, Run run) {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeRun(run, projectLabel);
 	}
 }
