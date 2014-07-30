@@ -247,44 +247,47 @@ public class ThermoRawFileExtractor {
 		}
 	}
 
-	private String headerOrbitrap(String header) {
-		return header.trim();
+	private String headerOrbitrap(String header) throws UnsupportedEncodingException {
+		return new String(header.trim().getBytes("ascii"));
 	}
 
-	private String headerQExactive(String header) {
-		return header.substring(header.indexOf(' '), header.indexOf(':')).trim();
+	private String headerQExactive(String header) throws UnsupportedEncodingException {
+		String result = header.substring(header.indexOf(' '), header.indexOf(':')).trim();
+		return new String(result.getBytes("ascii"));
 	}
 
-	private String headerTsqVantage(String newHeader, String oldHeader) {
+	private String headerTsqVantage(String newHeader, String oldHeader) throws UnsupportedEncodingException {
 		newHeader = newHeader.trim();
 		if(oldHeader.contains("-"))
 			oldHeader = oldHeader.substring(0, oldHeader.indexOf('-')).trim();
 
-		if(newHeader.substring(0, 1).equals("\"") && oldHeader.length() > 0)
-			return oldHeader + " - " + newHeader;
+		if(newHeader.substring(0, 1).equals("\"") && oldHeader.length() > 0) {
+			String result = oldHeader + " - " + newHeader;
+			return new String(result.getBytes("ascii"));
+		}
 		else
-			return newHeader;
+			return new String(newHeader.getBytes("ascii"));
 	}
 
-	private String[] valueOrbitrap(String[] line) {
+	private String[] valueOrbitrap(String[] line) throws UnsupportedEncodingException {
 		String name = line[0].trim();
 		name = name.substring(0, name.lastIndexOf(':'));
 		String value = line[1].trim();
 
-		return new String[] { name, value };
+		return new String[] { new String(name.getBytes("ascii")), value };
 	}
 
-	private String[] valueQExactive(String[] line) {
+	private String[] valueQExactive(String[] line) throws UnsupportedEncodingException {
 		String name = line[0].trim();
 		if(name.contains(":"))
 			name = name.substring(0, name.lastIndexOf(':'));
 		String value = line[1].trim();
 
-		return new String[] { name, value };
+		return new String[] { new String(name.getBytes("ascii")), value };
 	}
 
-	private String[] valueTsqVantage(String[] line) {
-		return line;
+	private String[] valueTsqVantage(String[] line) throws UnsupportedEncodingException {
+		return new String[] { new String(line[0].getBytes("ascii")), line[1] };
 	}
 
 	/**
