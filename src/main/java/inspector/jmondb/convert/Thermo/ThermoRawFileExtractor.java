@@ -30,7 +30,7 @@ public class ThermoRawFileExtractor {
 	private InstrumentModel model;
 	private Timestamp date;
 
-	private static PropertiesConfiguration exclusionProperties;
+	private static PropertiesConfiguration exclusionProperties = initializeExclusionProperties();
 
 	//TODO 1: correctly specify the used cv
 	//TODO 1: maybe we can even re-use some terms from the PSI-MS cv?
@@ -38,9 +38,22 @@ public class ThermoRawFileExtractor {
 	//TODO 2: fix this by having a global CV list or something
 	private CV cv = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
 
-	static {
+	private static PropertiesConfiguration initializeExclusionProperties() {
 		try {
-			exclusionProperties = new PropertiesConfiguration(ThermoRawFileExtractor.class.getResource("/exclusion.properties"));
+			// check whether the exclusion properties were specified as argument
+			String systemProperties = System.getProperty("exclusion.properties");
+			if(systemProperties != null) {
+				if(!new File(systemProperties).exists()) {
+					logger.error("The exclusion properties file <{}> does not exist", systemProperties);
+					throw new IllegalArgumentException("The exclusion properties file to read does not exist: " + systemProperties);
+				}
+				else
+					return new PropertiesConfiguration(systemProperties);
+			}
+
+			// else load the standard exclusion properties
+			return new PropertiesConfiguration(ThermoRawFileExtractor.class.getResource("/exclusion.properties"));
+
 		} catch(ConfigurationException e) {
 			logger.error("Error while reading the exclusion properties: {}", e);
 			throw new IllegalStateException("Error while reading the exclusion properties: " + e);
