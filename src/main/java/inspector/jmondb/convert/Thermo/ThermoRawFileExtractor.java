@@ -1,27 +1,25 @@
 package inspector.jmondb.convert.Thermo;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import inspector.jmondb.convert.InstrumentModel;
 import inspector.jmondb.model.CV;
 import inspector.jmondb.model.Run;
 import inspector.jmondb.model.Value;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.math3.stat.Frequency;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public class ThermoRawFileExtractor {
 
@@ -30,8 +28,24 @@ public class ThermoRawFileExtractor {
 	private File rawFile;
 
 	private InstrumentModel model;
-
 	private Timestamp date;
+
+	private static PropertiesConfiguration exclusionProperties;
+
+	//TODO 1: correctly specify the used cv
+	//TODO 1: maybe we can even re-use some terms from the PSI-MS cv?
+	//TODO 2: this is a global variable to fix a duplicate key error when inserting multiple CV objects with the same label that didn't exist in the database before
+	//TODO 2: fix this by having a global CV list or something
+	private CV cv = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
+
+	static {
+		try {
+			exclusionProperties = new PropertiesConfiguration(ThermoRawFileExtractor.class.getResource("/exclusion.properties"));
+		} catch(ConfigurationException e) {
+			logger.error("Error while reading the exclusion properties: {}", e);
+			throw new IllegalStateException("Error while reading the exclusion properties: " + e);
+		}
+	}
 
 	public ThermoRawFileExtractor(String fileName) {
 		// test if the file name is valid
@@ -107,7 +121,10 @@ public class ThermoRawFileExtractor {
 		}
 
 		// execute the command-line application to extract the status log
-		HashMap<String, ArrayList<String>> data = readRawFile(cliPath);
+		Table<String, String, ArrayList<String>> data = readRawFile(cliPath);
+
+		// filter out unwanted values
+		filter(data, valueType);
 
 		// compute the (summary) statistics
 		return computeStatistics(data, valueType);
@@ -117,9 +134,9 @@ public class ThermoRawFileExtractor {
 	 * Extracts data from the raw file by executing a command-line application and interpreting this output.
 	 *
 	 * @param cliPath  The path to the specific CLI application used to extract data from the raw file
-	 * @return A HashMap with the value name as key and a list of values for each key
+	 * @return A Table with as key a possible header and the property name, and a list of values for each property
 	 */
-	private HashMap<String, ArrayList<String>> readRawFile(String cliPath) {
+	private Table<String, String, ArrayList<String>> readRawFile(String cliPath) {
 		try {
 			// execute the CLI process
 			URL cliExe = ThermoRawFileExtractor.class.getResource(cliPath);
@@ -160,7 +177,7 @@ public class ThermoRawFileExtractor {
 			}
 
 			// read the remainder of the data containing the values
-			HashMap<String, ArrayList<String>> data = readData(reader);
+			Table<String, String, ArrayList<String>> data = readData(reader);
 
 			// make sure the process has finished
 			process.waitFor();
@@ -183,11 +200,11 @@ public class ThermoRawFileExtractor {
 	 * Reads the instrument data from the given reader.
 	 *
 	 * @param reader  BufferedReader to read the instrument data
-	 * @return A HashMap with the value name as key and a list of values for each key
+	 * @return A Table with as key a possible header and the property name, and a list of values for each property
 	 */
-	private HashMap<String, ArrayList<String>> readData(BufferedReader reader) {
+	private Table<String, String, ArrayList<String>> readData(BufferedReader reader) {
 		try {
-			HashMap<String, ArrayList<String>> data = new HashMap<>();
+			Table<String, String, ArrayList<String>> data = HashBasedTable.create();
 
 			// read all the individual values
 			String line;
@@ -232,10 +249,9 @@ public class ThermoRawFileExtractor {
 					}
 
 					// save value
-					String key = header + " - " + nameValue[0];
-					if(!data.containsKey(key))
-						data.put(key, new ArrayList<>());
-					data.get(key).add(nameValue[1]);
+					if(!data.contains(header, nameValue[0]))
+						data.put(header, nameValue[0], new ArrayList<>());
+					data.get(header, nameValue[0]).add(nameValue[1]);
 				}
 			}
 
@@ -290,23 +306,41 @@ public class ThermoRawFileExtractor {
 		return new String[] { new String(line[0].getBytes("ascii")), line[1] };
 	}
 
+	private void filter(Table<String, String, ArrayList<String>> data, String valueType) {
+		String[] filterLong = exclusionProperties.getStringArray(valueType + "-long");
+		String[] filterShort = exclusionProperties.getStringArray(valueType + "-short");
+
+		// filter out all the entries that have the (exact!) matching long name
+		for(String filter : filterLong) {
+			String[] filters = filter.split(" - ");
+			data.row(filters[0]).remove(filters[1]);
+		}
+		// filter out all the entries that have a (partially!) matching short name
+		//TODO: this is hardly very efficient, can we come up with something better?
+		for(Iterator<Table.Cell<String, String, ArrayList<String>>> it = data.cellSet().iterator(); it.hasNext(); ) {
+			Table.Cell<String, String, ArrayList<String>> cell = it.next();
+			boolean toRemove = false;
+			for(int i = 0; i < filterShort.length && !toRemove; i++) {
+				toRemove = cell.getColumnKey().contains(filterShort[i]);
+			if(toRemove)
+				it.remove();
+			}
+		}
+	}
+
 	/**
 	 * Calculates properties for each instrument value, including summary statistics if multiple values for the same parameter are present.
 	 *
-	 * @param data  A HashMap with the value name as key and a list of values for each key
+	 * @param data  A Table with as key a possible header and the property name, and a list of values for each property
 	 * @return A list of {@link Value}s
 	 */
-	private ArrayList<Value> computeStatistics(HashMap<String, ArrayList<String>> data, String valueType) {
+	private ArrayList<Value> computeStatistics(Table<String, String, ArrayList<String>> data, String valueType) {
 		ArrayList<Value> values = new ArrayList<>(data.size());
 
-		//TODO: correctly specify the used cv
-		//TODO: maybe we can even re-use some terms from the PSI-MS cv?
-		CV cv = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
-
-		for(Map.Entry<String, ArrayList<String>> entry : data.entrySet()) {
+		for(Table.Cell<String, String, ArrayList<String>> cell : data.cellSet()) {
 			// calculate the summary value
 			Boolean isNumeric = true;
-			String firstValue = entry.getValue().get(0);
+			String firstValue = cell.getValue().get(0);
 			Integer n;
 			Integer nDiff;
 			Integer nNotMissing = 0;
@@ -318,10 +352,10 @@ public class ThermoRawFileExtractor {
 			Float q1 = null;
 			Float q3 = null;
 
-			DescriptiveStatistics stats = new DescriptiveStatistics(entry.getValue().size());
+			DescriptiveStatistics stats = new DescriptiveStatistics(cell.getValue().size());
 			Frequency freq = new Frequency();
-			for(int i = 0; i < entry.getValue().size(); i++) {
-				String s = entry.getValue().get(i);
+			for(int i = 0; i < cell.getValue().size(); i++) {
+				String s = cell.getValue().get(i);
 				if(s != null && !s.equals("")) {
 					nNotMissing++;
 					freq.addValue(s);
@@ -345,7 +379,9 @@ public class ThermoRawFileExtractor {
 			}
 
 			//TODO: correctly set the accession number once we have a valid cv
-			Value value = new Value(entry.getKey(), valueType, entry.getKey(), cv, isNumeric, firstValue, n, nDiff, nNotMissing, min, max, mean, median, sd, q1, q3);
+			String name = cell.getRowKey() + " - " + cell.getColumnKey();
+			String accession = name;
+			Value value = new Value(name, valueType, accession, cv, isNumeric, firstValue, n, nDiff, nNotMissing, min, max, mean, median, sd, q1, q3);
 
 			values.add(value);
 		}
