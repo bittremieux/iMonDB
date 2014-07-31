@@ -121,6 +121,12 @@ public class ThermoRawFileExtractor {
 		}
 	}
 
+	/**
+	 * Extracts data from the raw file and computes (summary) statistics for the desired values.
+	 *
+	 * @param isStatusLog  True if the status log values have to be generated, false if the tune method values have to be generated
+	 * @return An ArrayList containing the various Values
+	 */
 	private ArrayList<Value> getValues(boolean isStatusLog) {
 		String cliPath;
 		String valueType;
@@ -319,6 +325,12 @@ public class ThermoRawFileExtractor {
 		return new String[] { new String(line[0].getBytes("ascii")), line[1] };
 	}
 
+	/**
+	 * Filters values that are set in the exclusion properties.
+	 *
+	 * @param data  The data from which values will be removed
+	 * @param valueType  The type of values for which the exclusion properties has to be filtered
+	 */
 	private void filter(Table<String, String, ArrayList<String>> data, String valueType) {
 		String[] filterLong = exclusionProperties.getStringArray(valueType + "-long");
 		String[] filterShort = exclusionProperties.getStringArray(valueType + "-short");
