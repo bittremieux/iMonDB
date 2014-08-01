@@ -105,7 +105,6 @@ public class CV {
 
 		CV that = (CV) o;
 
-		if(id != null ? !id.equals(that.id) : that.id != null) return false;
 		if(label != null ? !label.equals(that.label) : that.label != null) return false;
 		if(name != null ? !name.equals(that.name) : that.name != null) return false;
 		if(uri != null ? !uri.equals(that.uri) : that.uri != null) return false;
