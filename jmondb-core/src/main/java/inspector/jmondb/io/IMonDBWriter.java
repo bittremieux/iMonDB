@@ -124,11 +124,7 @@ public class IMonDBWriter {
 	private void replaceDuplicateCV(Run run, EntityManager entityManager) {
 		// get all cv's existing in the database
 		TypedQuery<CV> cvQuery = entityManager.createQuery("SELECT cv FROM CV cv", CV.class);
-		Map<String, CV> cvLabelMap = Maps.uniqueIndex(cvQuery.getResultList(), new Function<CV, String>() {
-			public String apply(CV from) {
-				return from.getLabel();
-			}
-		});
+		Map<String, CV> cvLabelMap = Maps.uniqueIndex(cvQuery.getResultList(), CV::getLabel);
 		// check which cv's are duplicate
 		for(Iterator<Value> valIt = run.getValueIterator(); valIt.hasNext(); ) {
 			CV cv = valIt.next().getCv();
@@ -149,7 +145,7 @@ public class IMonDBWriter {
 	 *                      If this project is not present in the database yet, a minimal project will be created using the given information.
 	 */
 	public void writeRun(Run run, String projectLabel) {
-		if(run != null) {
+		if(run != null && projectLabel != null) {
 			logger.info("Store run <{}> for project <{}>", run.getName(), projectLabel);
 
 			EntityManager entityManager = createEntityManager();
@@ -213,8 +209,14 @@ public class IMonDBWriter {
 			}
 		}
 		else {
-			logger.error("Unable to write <null> run element to the database");
-			throw new NullPointerException("Unable to write <null> run element to the database");
+			if(run == null) {
+				logger.error("Unable to write <null> run element to the database");
+				throw new NullPointerException("Unable to write <null> run element to the database");
+			}
+			else {
+				logger.error("Unable to write the run to a <null> project");
+				throw new NullPointerException("Unable to write the run to a <null> project");
+			}
 		}
 	}
 

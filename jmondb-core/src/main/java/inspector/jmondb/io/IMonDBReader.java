@@ -74,18 +74,18 @@ public class IMonDBReader {
 	 * Returns the {@link Run} specified by the given name.
 	 *
 	 * @param name  The name of the run
+	 * @param projectLabel  The label identifying the Project to which the Run belongs
 	 * @return The run specified by the given name if found, else {@code null}
 	 */
-	public Run getRun(String name) {
-		logger.info("Retrieve run <{}>", name);
+	public Run getRun(String name, String projectLabel) {
+		logger.info("Retrieve run <{}> from project <{}>", name, projectLabel);
 
 		EntityManager entityManager = createEntityManager();
 
 		try {
-			//TODO: make sure that run names are unique, otherwise this will fail
-			//TODO: discuss this with Hanny
-			TypedQuery<Run> query = entityManager.createQuery("SELECT run FROM Run run WHERE run.name = :name", Run.class);
+			TypedQuery<Run> query = entityManager.createQuery("SELECT run FROM Run run WHERE run.name = :name AND run.fromProject.label = :label", Run.class);
 			query.setParameter("name", name);
+			query.setParameter("label", projectLabel);
 
 			return query.getSingleResult();
 		}
@@ -119,8 +119,8 @@ public class IMonDBReader {
 			}
 		}
 		else {
-			logger.error("Unable to execute <null> query");
-			throw new NullPointerException("Unable to execute <null> query");
+			logger.info("Unable to execute <null> query");
+			return null;
 		}
 	}
 }

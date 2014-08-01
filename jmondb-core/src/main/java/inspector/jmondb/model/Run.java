@@ -132,7 +132,7 @@ public class Run {
 	 * @return The Value with the specified accession for the run
 	 */
 	public Value getValue(String accession) {
-		if(id != null)
+		if(accession != null)
 			return hasValues.get(accession);
 		else
 			return null;
