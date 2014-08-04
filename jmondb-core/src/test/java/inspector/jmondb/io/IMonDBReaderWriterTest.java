@@ -4,7 +4,6 @@ import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.model.CV;
 import inspector.jmondb.model.Project;
 import inspector.jmondb.model.Run;
-import inspector.jmondb.model.Value;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,7 +14,6 @@ import javax.persistence.EntityManagerFactory;
 import java.io.*;
 import java.sql.Timestamp;
 import java.util.Calendar;
-import java.util.Iterator;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
@@ -239,20 +237,7 @@ public class IMonDBReaderWriterTest {
 		Run runDb = reader.getRun("OrbitrapVelos", "Wout");
 
 		// compare all elements
-		equalRuns(run, runDb);
-	}
-
-	private void equalRuns(Run first, Run second) {
-		assertEquals(first, second);
-		assertEquals(first.getNumberOfValues(), second.getNumberOfValues());
-
-		for(Iterator<Value> valIt = first.getValueIterator(); valIt.hasNext(); ) {
-			Value valFirst = valIt.next();
-			Value valSecond = second.getValue(valFirst.getAccession());
-			assertNotNull(valSecond);
-
-			assertEquals(valFirst, valSecond);
-		}
+		assertEquals(run, runDb);
 	}
 
 	@Test
@@ -264,7 +249,7 @@ public class IMonDBReaderWriterTest {
 		Run runDb = reader.getRun("OrbitrapXL", "Wout");
 
 		// compare all elements
-		equalRuns(run, runDb);
+		assertEquals(run, runDb);
 	}
 
 	@Test
@@ -276,7 +261,7 @@ public class IMonDBReaderWriterTest {
 		Run runDb = reader.getRun("QExactive", "Wout");
 
 		// compare all elements
-		equalRuns(run, runDb);
+		assertEquals(run, runDb);
 	}
 
 	@Test
@@ -288,6 +273,6 @@ public class IMonDBReaderWriterTest {
 		Run runDb = reader.getRun("QQQ", "Wout");
 
 		// compare all elements
-		equalRuns(run, runDb);
+		assertEquals(run, runDb);
 	}
 }

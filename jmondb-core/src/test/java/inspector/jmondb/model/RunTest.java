@@ -13,12 +13,14 @@ public class RunTest {
 
 	private Run run;
 
+	private CV cv = new CV("testCv", "Dummy CV to run the unit tests", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
+
 	@Before
 	public void setUp() {
 		run = new Run("run", "path/to/run/", new Timestamp(Calendar.getInstance().getTime().getTime()));
 
 		for(int i = 0; i < 12; i++) {
-			run.addValue(new ValueBuilder().setName("value_" + i).setAccession("value_" + i).setType("test").isNumeric(true).setFirstValue(Double.toString(Math.random() * 100)).createValue());
+			run.addValue(new ValueBuilder().setName("value_" + i).setCv(cv).setAccession("value_" + i).setType("test").isNumeric(true).setFirstValue(Double.toString(Math.random() * 100)).createValue());
 		}
 	}
 
@@ -45,7 +47,7 @@ public class RunTest {
 	@Test
 	public void addValue_duplicate() {
 		int nrOfValues = run.getNumberOfValues();
-		run.addValue(new ValueBuilder().setName("value_7").setAccession("value_7").setType("test").isNumeric(true).setFirstValue("new value").createValue());
+		run.addValue(new ValueBuilder().setName("value_7").setCv(cv).setAccession("value_7").setType("test").isNumeric(true).setFirstValue("new value").createValue());
 		assertEquals(nrOfValues, run.getNumberOfValues());
 		Value v = run.getValue("value_7");
 		assertEquals("new value", run.getValue("value_7").getFirstValue());
@@ -54,7 +56,7 @@ public class RunTest {
 	@Test
 	public void addValue_new() {
 		int nrOfValues = run.getNumberOfValues();
-		run.addValue(new ValueBuilder().setName("new value").setAccession("new value").setType("test").isNumeric(true).setFirstValue(Double.toString(Math.random() * 100)).createValue());
+		run.addValue(new ValueBuilder().setName("new value").setCv(cv).setAccession("new value").setType("test").isNumeric(true).setFirstValue(Double.toString(Math.random() * 100)).createValue());
 		assertEquals(nrOfValues + 1, run.getNumberOfValues());
 	}
 

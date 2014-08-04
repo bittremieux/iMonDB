@@ -100,18 +100,17 @@ public class ThermoRawFileExtractor {
 	 */
 	public Run extractInstrumentData() {
 		try {
+			// extract the data from the row file
+			ArrayList<Value> statusLogValues = getValues(true);
+			ArrayList<Value> tuneMethodValues = getValues(false);
+
 			// create a run containing all the instrument data values
 			String runName = FilenameUtils.getBaseName(rawFile.getName());
-			Run run = new Run(runName, rawFile.getCanonicalPath(), null);	// the date is only set when reading the values
+			Run run = new Run(runName, rawFile.getCanonicalPath(), date);
 
-			// add the status log data
-			getValues(true).forEach(run::addValue);
-
-			// add the tune method data
-			getValues(false).forEach(run::addValue);
-
-			// set the date correctly
-			run.setSampleDate(date);
+			// add the values to the run
+			statusLogValues.forEach(run::addValue);
+			tuneMethodValues.forEach(run::addValue);
 
 			return run;
 

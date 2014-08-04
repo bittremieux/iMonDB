@@ -109,44 +109,22 @@ public class Value {
 	public Value(String name, String type, String accession, CV cv, Boolean isNumeric, String firstValue, Integer n, Integer nDiffValues, Integer nNotMissingValues, Float min, Float max, Float mean, Float median, Float sd, Float q1, Float q3) {
 		this();
 
-		this.name = name;
-		this.type = type;
-		this.accession = accession;
-		this.cv = cv;
-		this.isNumeric = isNumeric;
-		this.firstValue = firstValue;
-		this.n = n;
-		this.nDiffValues = nDiffValues;
-		this.nNotMissingValues = nNotMissingValues;
-		this.min = min;
-		this.max = max;
-		this.mean = mean;
-		this.median = median;
-		this.sd = sd;
-		this.q1 = q1;
-		this.q3 = q3;
-	}
-
-	//TODO: temporary copy constructor
-	public Value(Value other) {
-		this();
-
-		setName(other.getName());
-		setType(other.getType());
-		setAccession(other.getAccession());
-		setCv(other.getCv());
-		setNumeric(other.getNumeric());
-		setFirstValue(other.getFirstValue());
-		setN(other.getN());
-		setNDiffValues(other.getNDiffValues());
-		setNNotMissingValues(other.getNNotMissingValues());
-		setMin(other.getMin());
-		setMax(other.getMax());
-		setMean(other.getMean());
-		setMedian(other.getMedian());
-		setSd(other.getSd());
-		setQ1(other.getQ1());
-		setQ3(other.getQ3());
+		setName(name);
+		setType(type);
+		setAccession(accession);
+		setCv(cv);
+		setNumeric(isNumeric);
+		setFirstValue(firstValue);
+		setN(n);
+		setNDiffValues(nDiffValues);
+		setNNotMissingValues(nNotMissingValues);
+		setMin(min);
+		setMax(max);
+		setMean(mean);
+		setMedian(median);
+		setSd(sd);
+		setQ1(q1);
+		setQ3(q3);
 	}
 
 	public Long getId() {
@@ -163,7 +141,12 @@ public class Value {
 	}
 
 	public void setName(String name) {
-		this.name = name;
+		if(name != null)
+			this.name = name;
+		else {
+			logger.error("The value's name is not allowed to be <null>");
+			throw new NullPointerException("The value's name is not allowed to be <null>");
+		}
 	}
 
 	public String getType() {
@@ -171,7 +154,12 @@ public class Value {
 	}
 
 	public void setType(String type) {
-		this.type = type;
+		if(type != null)
+			this.type = type;
+		else {
+			logger.error("The value's type is not allowed to be <null>");
+			throw new NullPointerException("The value's type is not allowed to be <null>");
+		}
 	}
 
 	public String getAccession() {
@@ -179,7 +167,12 @@ public class Value {
 	}
 
 	public void setAccession(String accession) {
-		this.accession = accession;
+		if(accession != null)
+			this.accession = accession;
+		else {
+			logger.error("The value's accession is not allowed to be <null>");
+			throw new NullPointerException("The value's accession is not allowed to be <null>");
+		}
 	}
 
 	public CV getCv() {
@@ -187,7 +180,12 @@ public class Value {
 	}
 
 	public void setCv(CV cv) {
-		this.cv = cv;
+		if(cv != null)
+			this.cv = cv;
+		else {
+			logger.error("The value's CV is not allowed to be <null>");
+			throw new NullPointerException("The value's CV is not allowed to be <null>");
+		}
 	}
 
 	public Boolean getNumeric() {
@@ -195,7 +193,12 @@ public class Value {
 	}
 
 	public void setNumeric(Boolean numeric) {
-		this.isNumeric = numeric;
+		if(numeric != null)
+			this.isNumeric = numeric;
+		else {
+			logger.error("It is mandatory to specify whether the value is numeric");
+			throw new NullPointerException("It is mandatory to specify whether the value is numeric");
+		}
 	}
 
 	public String getFirstValue() {
@@ -290,12 +293,6 @@ public class Value {
 		this.fromRun = run;
 	}
 
-	public String toString() {
-		return "Value \t" + getNumeric() + "\t" + getFirstValue() + "\t" + getN() + "\t" + getNDiffValues()
-				+ "\t" + getNNotMissingValues() + "\t" + getMin() + "\t" + getMax() + "\t" + getMean()
-				+ "\t" + getMedian() + "\t" + getSd() + "\t" + getQ1() + "\t" + getQ3();
-	}
-
 	@Override
 	public boolean equals(Object o) {
 		if(this == o) return true;
@@ -322,5 +319,10 @@ public class Value {
 		if(sd != null ? !sd.equals(that.sd) : that.sd != null) return false;
 
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "Value {id=" + id + ", name=" + name + ", type=" + type + "CV=" + cv.getLabel()+ "#" + accession + "firstValue=" + firstValue + "}";
 	}
 }

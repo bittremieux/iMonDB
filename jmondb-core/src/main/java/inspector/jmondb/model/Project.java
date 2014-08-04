@@ -55,8 +55,8 @@ public class Project {
 	public Project(String label, String title) {
 		this();
 
-		this.label = label;
-		this.title = title;
+		setLabel(label);
+		setTitle(title);
 	}
 
 	/**
@@ -70,19 +70,7 @@ public class Project {
 	 */
 	public Project(String label, String title, String description) {
 		this(label, title);
-		this.description = description;
-	}
-
-	//TODO: temporary copy constructor
-	public Project(Project other) {
-		this();
-
-		setDescription(other.getDescription());
-		setLabel(other.getLabel());
-		setTitle(other.getTitle());
-
-		for(Iterator<Run> it = other.getRunIterator(); it.hasNext(); )
-			addRun(new Run(it.next()));
+		setDescription(description);
 	}
 
 	public Long getId() {
@@ -107,7 +95,12 @@ public class Project {
 	}
 
 	public void setLabel(String label) {
-		this.label = label;
+		if(label != null)
+			this.label = label;
+		else {
+			logger.error("The project's label is not allowed to be <null>");
+			throw new NullPointerException("The project's label is not allowed to be <null>");
+		}
 	}
 
 	public String getTitle() {
@@ -115,7 +108,12 @@ public class Project {
 	}
 
 	public void setTitle(String title) {
-		this.title = title;
+		if(title != null)
+			this.title = title;
+		else {
+			logger.error("The project's title is not allowed to be <null>");
+			throw new NullPointerException("The project's title is not allowed to be <null>");
+		}
 	}
 
 	/**
@@ -195,6 +193,14 @@ public class Project {
 		}
 	}
 
+	/**
+	 * Indicates whether some other object is "equal to" this one.
+	 *
+	 * Two Projects are considered equal if their direct metadata is equal. Possible {@link Run}s in one or both of the Projects are not considered.
+	 *
+	 * @param o  The reference object with which to compare
+	 * @return <code>true</code> if this object is the same as the o argument; <code>false</code> otherwise
+	 */
 	@Override
 	public boolean equals(Object o) {
 		if(this == o) return true;

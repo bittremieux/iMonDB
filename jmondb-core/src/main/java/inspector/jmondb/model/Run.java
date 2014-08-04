@@ -62,21 +62,9 @@ public class Run {
 	public Run(String name, String storageName, Timestamp sampleDate) {
 		this();
 
-		this.name = name;
-		this.storageName = storageName;
-		this.sampleDate = sampleDate;
-	}
-
-	//TODO: temporary copy constructor
-	public Run(Run other) {
-		this();
-
-		setName(other.getName());
-		setStorageName(other.getStorageName());
-		setSampleDate(other.getSampleDate());
-
-		for(Iterator<Value> it = other.getValueIterator(); it.hasNext(); )
-			addValue(new Value(it.next()));
+		setName(name);
+		setStorageName(storageName);
+		setSampleDate(sampleDate);
 	}
 
 	public Long getId() {
@@ -93,7 +81,12 @@ public class Run {
 	}
 
 	public void setName(String name) {
-		this.name = name;
+		if(name != null)
+			this.name = name;
+		else {
+			logger.error("The run's name is not allowed to be <null>");
+			throw new NullPointerException("The run's name is not allowed to be <null>");
+		}
 	}
 
 	public String getStorageName() {
@@ -101,7 +94,12 @@ public class Run {
 	}
 
 	public void setStorageName(String storageName) {
-		this.storageName = storageName;
+		if(storageName != null)
+			this.storageName = storageName;
+		else {
+			logger.error("The run's storage name is not allowed to be <null>");
+			throw new NullPointerException("The run's storage name is not allowed to be <null>");
+		}
 	}
 
 	public Timestamp getSampleDate() {
@@ -109,7 +107,12 @@ public class Run {
 	}
 
 	public void setSampleDate(Timestamp sampleDate) {
-		this.sampleDate = sampleDate;
+		if(sampleDate != null)
+			this.sampleDate = sampleDate;
+		else {
+			logger.error("The run's sample date is not allowed to be <null>");
+			throw new NullPointerException("The run's sample date is not allowed to be <null>");
+		}
 	}
 
 	public void setFromProject(Project project) {
@@ -193,6 +196,14 @@ public class Run {
 		}
 	}
 
+	/**
+	 * Indicates whether some other object is "equal to" this one.
+	 *
+	 * Two Runs are considered equal if their direct metadata is equal <em>and</em> all their underlying {@link Value}s are equal.
+	 *
+	 * @param o  The reference object with which to compare
+	 * @return <code>true</code> if this object is the same as the o argument; <code>false</code> otherwise
+	 */
 	@Override
 	public boolean equals(Object o) {
 		if(this == o) return true;
@@ -203,6 +214,14 @@ public class Run {
 		if(name != null ? !name.equals(that.name) : that.name != null) return false;
 		if(sampleDate != null ? !sampleDate.equals(that.sampleDate) : that.sampleDate != null) return false;
 		if(storageName != null ? !storageName.equals(that.storageName) : that.storageName != null) return false;
+		if(getNumberOfValues() != that.getNumberOfValues()) return false;
+
+		for(Iterator<Value> valIt = getValueIterator(); valIt.hasNext(); ) {
+			Value valThis = valIt.next();
+			Value valThat = that.getValue(valThis.getAccession());
+
+			if(valThat != null && !valThis.equals(valThat)) return false;
+		}
 
 		return true;
 	}

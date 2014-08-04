@@ -52,10 +52,10 @@ public class CV {
 	public CV(String label, String name, String uri, String version) {
 		this();
 
-		this.label = label;
-		this.name = name;
-		this.uri = uri;
-		this.version = version;
+		setLabel(label);
+		setName(name);
+		setUri(uri);
+		setVersion(version);
 	}
 
 	public Long getId() {
@@ -71,7 +71,12 @@ public class CV {
 	}
 
 	public void setLabel(String label) {
-		this.label = label;
+		if(label != null)
+			this.label = label;
+		else {
+			logger.error("The CV's label is not allowed to be <null>");
+			throw new NullPointerException("The CV's label is not allowed to be <null>");
+		}
 	}
 
 	public String getName() {
@@ -79,15 +84,25 @@ public class CV {
 	}
 
 	public void setName(String name) {
-		this.name = name;
+		if(name != null)
+			this.name = name;
+		else {
+			logger.error("The CV's name is not allowed to be <null>");
+			throw new NullPointerException("The CV's name is not allowed to be <null>");
+		}
 	}
 
 	public String getUri() {
 		return uri;
 	}
 
-	public void setUri(String ontology) {
-		this.uri = ontology;
+	public void setUri(String uri) {
+		if(uri != null)
+			this.uri = uri;
+		else {
+			logger.error("The CV's URI is not allowed to be <null>");
+			throw new NullPointerException("The CV's URI is not allowed to be <null>");
+		}
 	}
 
 	public String getVersion() {
@@ -111,5 +126,10 @@ public class CV {
 		if(version != null ? !version.equals(that.version) : that.version != null) return false;
 
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "CV {id=" + id + ", label=" + label + "}";
 	}
 }
