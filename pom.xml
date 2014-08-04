@@ -35,5 +35,6 @@
     <!-- Multi module project -->
     <modules>
         <module>jmondb-core</module>
+        <module>jmondb-collector</module>
     </modules>
 </project>
