@@ -158,7 +158,7 @@ public class ThermoRawFileExtractor {
 		try {
 			// execute the CLI process
 			URL cliExe = ThermoRawFileExtractor.class.getResource(cliPath);
-			Process process = Runtime.getRuntime().exec(cliExe.getFile() + " " + rawFile.getAbsoluteFile());
+			Process process = Runtime.getRuntime().exec(cliExe.getFile() + " \"" + rawFile.getAbsoluteFile() + "\"");
 
 			// read the CLI output data
 			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
