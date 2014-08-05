@@ -2,6 +2,7 @@ package inspector.jmondb.collect;
 
 import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBManagerFactory;
+import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
 import inspector.jmondb.model.Run;
 import org.apache.commons.io.FileUtils;
@@ -16,7 +17,6 @@ import javax.persistence.EntityManagerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
@@ -37,6 +37,7 @@ public class Collector {
 				config.get("sql", "user"), config.get("sql", "password"));
 
 		try {
+			IMonDBReader dbReader = new IMonDBReader(emf);
 			IMonDBWriter dbWriter = new IMonDBWriter(emf);
 
 			// read project folders
@@ -46,7 +47,7 @@ public class Collector {
 			String lastDate = config.get("general", "last_date");
 			Date date;
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-			if(lastDate == null) {
+			if(lastDate == null || lastDate.equals("")) {
 				logger.info("No cut-off date specified, retrieving all eligible files");
 				date = new Date(0);
 			}
@@ -54,7 +55,12 @@ public class Collector {
 				date = sdf.parse(lastDate);
 			}
 			Timestamp newestTimeStamp = new Timestamp(date.getTime());
+
 			String match_file = config.get("general", "match_file");
+
+			String nameMask = config.get("general", "rename_run");
+			if(nameMask == null)
+				nameMask = "%p_%dn_%fn";
 
 			// browse all folders and find new raw files
 			for(Map.Entry<String, String> entry : projects.entrySet()) {
@@ -68,24 +74,32 @@ public class Collector {
 
 					// process all found files
 					for(File file : files) {
-						ThermoRawFileExtractor extractor = new ThermoRawFileExtractor(file.getAbsolutePath());
-						Run run = extractor.extractInstrumentData();
+						logger.info("Process file <{}>", file.getAbsolutePath());
 
-						// rename run based on the mask
-						String nameMask = config.get("general", "rename_run");
-						if(nameMask == null)
-							nameMask = "%p_%dn_%fn";
 						String runName = nameMask.replace("%p", entry.getKey()).
 								replace("%dn", FilenameUtils.getBaseName(file.getParent())).
 								replace("%fn", FilenameUtils.getBaseName(file.getName()));
-						run.setName(runName);
 
-						// write the run to the database
-						// TODO: verify if the run was already in the database?
-						dbWriter.writeRun(run, entry.getKey());
+						// check if this run already exists in the database for the given project
+						String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = \"" + runName + "\" AND run.fromProject.label = \"" + entry.getKey() + "\"";
+						boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class).get(0).equals(1L);
 
-						// save the date of the newest file
-						newestTimeStamp = newestTimeStamp.before(run.getSampleDate()) ? run.getSampleDate() : newestTimeStamp;
+						if(!exists) {
+							ThermoRawFileExtractor extractor = new ThermoRawFileExtractor(file.getAbsolutePath());
+							Run run = extractor.extractInstrumentData();
+
+							// rename run based on the mask
+							run.setName(runName);
+
+							// write the run to the database
+							dbWriter.writeRun(run, entry.getKey());
+
+							// save the date of the newest file
+							newestTimeStamp = newestTimeStamp.before(run.getSampleDate()) ? run.getSampleDate() : newestTimeStamp;
+						}
+						else {
+							logger.info("Run <{}> already found in the database; skipping...", runName);
+						}
 					}
 				} else {
 					logger.error("Path <{}> is not a valid directory for project <{}>", entry.getValue(), entry.getKey());
