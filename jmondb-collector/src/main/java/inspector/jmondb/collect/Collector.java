@@ -7,10 +7,7 @@ import inspector.jmondb.model.Run;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOCase;
-import org.apache.commons.io.filefilter.AgeFileFilter;
-import org.apache.commons.io.filefilter.AndFileFilter;
-import org.apache.commons.io.filefilter.DirectoryFileFilter;
-import org.apache.commons.io.filefilter.SuffixFileFilter;
+import org.apache.commons.io.filefilter.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
@@ -18,6 +15,9 @@ import org.ini4j.Ini;
 import javax.persistence.EntityManagerFactory;
 import java.io.File;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
@@ -41,17 +41,27 @@ public class Collector {
 			// read project folders
 			Map<String, String> projects = config.get("projects");
 
+			// read the cut-off date and regex used to match files
+			String lastDate = config.get("general", "last_date");
+			Date date;
+			if(lastDate == null) {
+				logger.info("No cut-off date specified, retrieving all eligible files");
+				date = new Date(0);
+			}
+			else {
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+				date = sdf.parse(lastDate);
+			}
+			String match_file = config.get("general", "match_file");
+
 			// browse all folders and find new raw files
 			for(Map.Entry<String, String> entry : projects.entrySet()) {
 				File baseDir = new File(entry.getValue());
 				if(baseDir.isDirectory()) {
-					// retrieve all files that were created after the specified date, and with file extension *.raw
-					//TODO: fix AgeFileFilter
-					//TODO: file mask to differentiate between BSA samples and experiment samples
-					// create a custom filter that has to be overloaded?
+					// retrieve all files that were created after the specified date, and matching the specified regex
 					Collection<File> files = FileUtils.listFiles(baseDir,
-							new AndFileFilter(new AgeFileFilter(new Date(2014, 1, 1)),
-									new SuffixFileFilter(".raw", IOCase.INSENSITIVE)),
+							new AndFileFilter(new AgeFileFilter(date, false),
+									new RegexFileFilter(match_file, IOCase.INSENSITIVE)),
 							DirectoryFileFilter.DIRECTORY);
 
 					// process all found files
@@ -73,9 +83,11 @@ public class Collector {
 				}
 			}
 
-			//TODO: write date to config file
-		}
-		finally {
+			//TODO: write last date to config file
+		} catch(ParseException e) {
+			logger.error("Invalid cut-off date <{}> specified: ", config.get("general", "last_date"), e);
+			throw new IllegalStateException("Invalid cut-off date specified: " + e);
+		} finally {
 			emf.close();
 		}
 	}
