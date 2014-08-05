@@ -15,6 +15,7 @@ import org.ini4j.Ini;
 import javax.persistence.EntityManagerFactory;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -44,14 +45,15 @@ public class Collector {
 			// read the cut-off date and regex used to match files
 			String lastDate = config.get("general", "last_date");
 			Date date;
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 			if(lastDate == null) {
 				logger.info("No cut-off date specified, retrieving all eligible files");
 				date = new Date(0);
 			}
 			else {
-				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 				date = sdf.parse(lastDate);
 			}
+			Timestamp newestTimeStamp = new Timestamp(date.getTime());
 			String match_file = config.get("general", "match_file");
 
 			// browse all folders and find new raw files
@@ -76,6 +78,9 @@ public class Collector {
 						// write the run to the database
 						// TODO: verify if the run was already in the database?
 						dbWriter.writeRun(run, entry.getKey());
+
+						// save the date of the newest file
+						newestTimeStamp = newestTimeStamp.before(run.getSampleDate()) ? run.getSampleDate() : newestTimeStamp;
 					}
 				} else {
 					logger.error("Path <{}> is not a valid directory for project <{}>", entry.getValue(), entry.getKey());
@@ -83,10 +88,16 @@ public class Collector {
 				}
 			}
 
-			//TODO: write last date to config file
+			// save the date of the newest processed file to the config file
+			config.put("general", "last_date", sdf.format(newestTimeStamp));
+			config.store();
+
 		} catch(ParseException e) {
 			logger.error("Invalid cut-off date <{}> specified: ", config.get("general", "last_date"), e);
 			throw new IllegalStateException("Invalid cut-off date specified: " + e);
+		} catch(IOException e) {
+			logger.error("Error while writing the updated config file: {}", e);
+			throw new IllegalStateException("Error while writing the updated config file: " + e);
 		} finally {
 			emf.close();
 		}
@@ -111,7 +122,7 @@ public class Collector {
 
 		} catch(IOException e) {
 			logger.error("Error while reading the config file: {}", e);
-			throw new IllegalStateException("Error while reading the exclusion properties: " + e);
+			throw new IllegalStateException("Error while reading the config file: " + e);
 		}
 	}
 }
