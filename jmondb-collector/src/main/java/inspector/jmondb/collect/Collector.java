@@ -124,20 +124,18 @@ public class Collector {
 
 	private Ini initializeConfig() {
 		try {
-			// check whether the config file was specified as argument
-			String systemConfig = System.getProperty("config.ini");
-			if(systemConfig != null) {
-				File configFile = new File(systemConfig);
-				if(!configFile.exists()) {
-					logger.error("The config file <{}> does not exist", systemConfig);
-					throw new IllegalArgumentException("The config file to read does not exist: " + systemConfig);
-				}
-				else
-					return new Ini(configFile);
-			}
+			// check whether an explicit config file exists in the current directory
+			File config = new File("config.ini");
+			if(config.exists())
+				return new Ini(config);
+			else {
+				// else load the standard config file
+				logger.info("No user-specific config file found, loading the standard config file");
 
-			// else load the config file
-			return new Ini(Collector.class.getResourceAsStream("/config.ini"));
+				Ini configStd = new Ini(Collector.class.getResourceAsStream("/config.ini"));
+				configStd.setFile(new File("config.ini"));	// set the file to be able to store changes later on
+				return configStd;
+			}
 
 		} catch(IOException e) {
 			logger.error("Error while reading the config file: {}", e);
