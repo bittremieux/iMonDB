@@ -72,8 +72,13 @@ public class Collector {
 						Run run = extractor.extractInstrumentData();
 
 						// rename run based on the mask
-						//TODO
-						run.setName(entry.getKey() + "_" + FilenameUtils.getBaseName(file.getName()));
+						String nameMask = config.get("general", "rename_run");
+						if(nameMask == null)
+							nameMask = "%p_%dn_%fn";
+						String runName = nameMask.replace("%p", entry.getKey()).
+								replace("%dn", FilenameUtils.getBaseName(file.getParent())).
+								replace("%fn", FilenameUtils.getBaseName(file.getName()));
+						run.setName(runName);
 
 						// write the run to the database
 						// TODO: verify if the run was already in the database?
