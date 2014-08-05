@@ -17,12 +17,19 @@
 
 	<!-- Dependencies -->
 	<dependencies>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.11</version>
-			<scope>test</scope>
-		</dependency>
+        <dependency>
+            <groupId>inspector.jmondb.jmondb-core</groupId>
+            <artifactId>jmondb-core</artifactId>
+            <version>0.1</version>
+            <classifier>sources</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
