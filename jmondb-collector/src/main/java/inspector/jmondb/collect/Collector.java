@@ -1,12 +1,9 @@
 package inspector.jmondb.collect;
 
-import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
-import inspector.jmondb.model.Run;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.filefilter.*;
 import org.apache.logging.log4j.LogManager;
@@ -22,6 +19,7 @@ import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.*;
 
 public class Collector {
 
@@ -29,9 +27,6 @@ public class Collector {
 
 	/** Date formatter to convert to and from date strings */
 	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-
-	/** The {@link Timestamp} of the most recent processed raw file */
-	private Timestamp newestTimeStamp;
 
 	public Collector() {
 
@@ -50,10 +45,16 @@ public class Collector {
 
 			// read the cut-off date and regex used to match files
 			Date newestDate = getLastDate(config);
-			newestTimeStamp = new Timestamp(newestDate.getTime());
+			Timestamp newestTimestamp = new Timestamp(newestDate.getTime());
 
 			String matchFile = getMatchFile(config);
 			String renameMask = getRenameMask(config);
+
+			// thread pool
+			int nrOfThreads = getNumberOfThreads(config);
+			ExecutorService threadPool = Executors.newFixedThreadPool(nrOfThreads);
+			CompletionService<Timestamp> pool = new ExecutorCompletionService<>(threadPool);
+			int threadsSubmitted = 0;
 
 			// browse all folders and find new raw files
 			for(Map.Entry<String, String> entry : projects.entrySet()) {
@@ -71,8 +72,10 @@ public class Collector {
 							DirectoryFileFilter.DIRECTORY);
 
 					// process all found files
-					for(File file : files)
-						processFile(dbReader, dbWriter, renameMask, projectLabel, file);
+					for(File file : files) {
+						pool.submit(new FileProcessor(dbReader, dbWriter, renameMask, projectLabel, file));
+						threadsSubmitted++;
+					}
 
 				} else if(!projectLabel.equals("dummy")) {
 					logger.error("Path <{}> is not a valid directory for project <{}>", projectDir, projectLabel);
@@ -80,9 +83,21 @@ public class Collector {
 				}
 			}
 
-			// save the date of the newest processed file to the config file
-			config.put("general", "last_date", DATE_FORMAT.format(newestTimeStamp));
+			// retrieve the sample dates from all the submitted threads
+			for(int i = 0; i < threadsSubmitted; i++) {
+				Timestamp runTimestamp = pool.take().get();
+				newestTimestamp = newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
+			}
 
+			// shut down threads
+			threadPool.shutdown();
+
+			// save the date of the newest processed file to the config file
+			config.put("general", "last_date", DATE_FORMAT.format(newestTimestamp));
+
+		} catch(InterruptedException | ExecutionException e) {
+			logger.error("Error while executing a thread: {}", e);
+			throw new IllegalStateException("Error while executing a thread: " + e);
 		} finally {
 			// close the database connection
 			if(emf != null)
@@ -194,6 +209,13 @@ public class Collector {
 		return renameMask;
 	}
 
+	private int getNumberOfThreads(Ini config) {
+		String nrStr = config.get("general", "num_threads");
+		if(nrStr == null || nrStr.equals(""))
+			return 1;
+		else return Integer.parseInt(nrStr);
+	}
+
 	/**
 	 * Retrieves the regex used to match the raw files from the given config file.
 	 *
@@ -207,43 +229,5 @@ public class Collector {
 			throw new IllegalStateException("The 'match_file' regex must be specified in the config file");
 		}
 		return matchFile;
-	}
-
-	/**
-	 * Processes a file by extracting the instrument data from it and storing the resulting run in the database.
-	 *
-	 * @param dbReader  The {@link IMonDBReader} used to verify the current file isn't present in the database yet
-	 * @param dbWriter  The {@link IMonDBWriter} used to write the new {@link Run} to the database
-	 * @param renameMask  The mask used to rename the run's name
-	 * @param projectLabel  The label of the project to which the run belongs
-	 * @param file  The raw file that will be processed
-	 */
-	private void processFile(IMonDBReader dbReader, IMonDBWriter dbWriter, String renameMask, String projectLabel, File file) {
-		logger.info("Process file <{}>", file.getAbsolutePath());
-
-		String runName = renameMask.replace("%p", projectLabel).
-				replace("%dn", FilenameUtils.getBaseName(file.getParent())).
-				replace("%fn", FilenameUtils.getBaseName(file.getName()));
-
-		// check if this run already exists in the database for the given project
-		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = \"" + runName + "\" AND run.fromProject.label = \"" + projectLabel + "\"";
-		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class).get(0).equals(1L);
-
-		if(!exists) {
-			ThermoRawFileExtractor extractor = new ThermoRawFileExtractor(file.getAbsolutePath());
-			Run run = extractor.extractInstrumentData();
-
-			// rename run based on the mask
-			run.setName(runName);
-
-			// write the run to the database
-			dbWriter.writeRun(run, projectLabel);
-
-			// save the date of the newest file
-			newestTimeStamp = newestTimeStamp.before(run.getSampleDate()) ? run.getSampleDate() : newestTimeStamp;
-		}
-		else {
-			logger.info("Run <{}> already found in the database; skipping...", runName);
-		}
 	}
 }
