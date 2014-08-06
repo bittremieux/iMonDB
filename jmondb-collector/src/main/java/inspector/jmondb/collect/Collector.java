@@ -27,6 +27,12 @@ public class Collector {
 
 	protected static final Logger logger = LogManager.getLogger(Collector.class);
 
+	/** Date formatter to convert to and from date strings */
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+
+	/** The {@link Timestamp} of the most recent processed raw file */
+	private Timestamp newestTimeStamp;
+
 	public Collector() {
 
 		EntityManagerFactory emf = null;
@@ -35,24 +41,7 @@ public class Collector {
 
 		try {
 			// create database connection
-			String host = config.get("sql", "host");
-			host = host == null || host.equals("") ? null : host;
-			String port = config.get("sql", "port");
-			port = port == null || port.equals("") ? null : port;
-			String database = config.get("sql", "database");
-			if(database == null || database.equals("")) {
-				logger.error("The MySQL database must be specified in the config file");
-				throw new IllegalStateException("The MySQL database must be specified in the config file");
-			}
-			String user = config.get("sql", "user");
-			if(user == null || user.equals("")) {
-				logger.error("The MySQL user name must be specified in the config file");
-				throw new IllegalStateException("The MySQL user name must be specified in the config file");
-			}
-			String password = config.get("sql", "password");
-			password = password == null || password.equals("") ? null : password;
-			emf = IMonDBManagerFactory.createMySQLFactory(host, port, database, user, password);
-
+			emf = getEntityManagerFactory(config);
 			IMonDBReader dbReader = new IMonDBReader(emf);
 			IMonDBWriter dbWriter = new IMonDBWriter(emf);
 
@@ -60,96 +49,61 @@ public class Collector {
 			Map<String, String> projects = config.get("projects");
 
 			// read the cut-off date and regex used to match files
-			String lastDate = config.get("general", "last_date");
-			Date date;
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-			if(lastDate == null || lastDate.equals("")) {
-				logger.info("No cut-off date specified, retrieving all eligible files");
-				date = new Date(0);
-			}
-			else {
-				date = sdf.parse(lastDate);
-			}
-			Timestamp newestTimeStamp = new Timestamp(date.getTime());
+			Date newestDate = getLastDate(config);
+			newestTimeStamp = new Timestamp(newestDate.getTime());
 
-			String matchFile = config.get("general", "match_file");
-			if(matchFile == null || matchFile.equals("")) {
-				logger.error("The 'match_file' regex must be specified in the config file");
-				throw new IllegalStateException("The 'match_file' regex must be specified in the config file");
-			}
-
-			String nameMask = config.get("general", "rename_run");
-			if(nameMask == null || nameMask.equals("")) {
-				nameMask = "%p_%dn_%fn";
-				logger.info("No run rename mask specified, using default '{}'", nameMask);
-			}
+			String matchFile = getMatchFile(config);
+			String renameMask = getRenameMask(config);
 
 			// browse all folders and find new raw files
 			for(Map.Entry<String, String> entry : projects.entrySet()) {
-				File baseDir = new File(entry.getValue());
-				if(!entry.getKey().equals("dummy") && baseDir.isDirectory()) {
-					logger.info("Process project <{}>", entry.getKey());
+				String projectLabel = entry.getKey();
+				String projectDir = entry.getValue();
+
+				File baseDir = new File(projectDir);
+				if(!projectLabel.equals("dummy") && baseDir.isDirectory()) {
+					logger.info("Process project <{}>", projectLabel);
 
 					// retrieve all files that were created after the specified date, and matching the specified regex
 					Collection<File> files = FileUtils.listFiles(baseDir,
-							new AndFileFilter(new AgeFileFilter(date, false),
+							new AndFileFilter(new AgeFileFilter(newestDate, false),
 									new RegexFileFilter(matchFile, IOCase.INSENSITIVE)),
 							DirectoryFileFilter.DIRECTORY);
 
 					// process all found files
-					for(File file : files) {
-						logger.info("Process file <{}>", file.getAbsolutePath());
+					for(File file : files)
+						processFile(dbReader, dbWriter, renameMask, projectLabel, file);
 
-						String runName = nameMask.replace("%p", entry.getKey()).
-								replace("%dn", FilenameUtils.getBaseName(file.getParent())).
-								replace("%fn", FilenameUtils.getBaseName(file.getName()));
-
-						// check if this run already exists in the database for the given project
-						String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = \"" + runName + "\" AND run.fromProject.label = \"" + entry.getKey() + "\"";
-						boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class).get(0).equals(1L);
-
-						if(!exists) {
-							ThermoRawFileExtractor extractor = new ThermoRawFileExtractor(file.getAbsolutePath());
-							Run run = extractor.extractInstrumentData();
-
-							// rename run based on the mask
-							run.setName(runName);
-
-							// write the run to the database
-							dbWriter.writeRun(run, entry.getKey());
-
-							// save the date of the newest file
-							newestTimeStamp = newestTimeStamp.before(run.getSampleDate()) ? run.getSampleDate() : newestTimeStamp;
-						}
-						else {
-							logger.info("Run <{}> already found in the database; skipping...", runName);
-						}
-					}
-				} else {
-					logger.error("Path <{}> is not a valid directory for project <{}>", entry.getValue(), entry.getKey());
-					throw new IllegalArgumentException("Path <" + entry.getValue() + "> is not a valid directory");
+				} else if(!projectLabel.equals("dummy")) {
+					logger.error("Path <{}> is not a valid directory for project <{}>", projectDir, projectLabel);
+					throw new IllegalArgumentException("Path <" + projectDir + "> is not a valid directory");
 				}
 			}
 
 			// save the date of the newest processed file to the config file
-			config.put("general", "last_date", sdf.format(newestTimeStamp));
+			config.put("general", "last_date", DATE_FORMAT.format(newestTimeStamp));
 
-		} catch(ParseException e) {
-			logger.error("Invalid cut-off date <{}> specified: ", config.get("general", "last_date"), e);
-			throw new IllegalStateException("Invalid cut-off date specified: " + e);
 		} finally {
+			// close the database connection
 			if(emf != null)
 				emf.close();
+			// make sure the config file is copied to the user directory
 			if(config != null)
 				try {
 					config.store();
 				} catch(IOException e) {
 					logger.error("Error while writing the updated config file: {}", e);
-					throw new IllegalStateException("Error while writing the updated config file: " + e);
 				}
 		}
 	}
 
+	/**
+	 * Loads the config file.
+	 *
+	 * If a user-specific config file exists, this one is used. Otherwise the (incomplete) standard config file is used.
+	 *
+	 * @return An {@link Ini} config file
+	 */
 	private Ini initializeConfig() {
 		try {
 			// check whether an explicit config file exists in the current directory
@@ -168,6 +122,128 @@ public class Collector {
 		} catch(IOException e) {
 			logger.error("Error while reading the config file: {}", e);
 			throw new IllegalStateException("Error while reading the config file: " + e);
+		}
+	}
+
+	/**
+	 * Creates an {@link EntityManagerFactory} using the connection settings in the specified config file.
+	 *
+	 * @param config  An {@link Ini} config file containing the database connection settings
+	 * @return An EntityManagerFactory used to connect to the iMonDB
+	 */
+	private EntityManagerFactory getEntityManagerFactory(Ini config) {
+		String host = config.get("sql", "host");
+		host = host == null || host.equals("") ? null : host;
+
+		String port = config.get("sql", "port");
+		port = port == null || port.equals("") ? null : port;
+
+		String database = config.get("sql", "database");
+		if(database == null || database.equals("")) {
+			logger.error("The MySQL database must be specified in the config file");
+			throw new IllegalStateException("The MySQL database must be specified in the config file");
+		}
+
+		String user = config.get("sql", "user");
+		if(user == null || user.equals("")) {
+			logger.error("The MySQL user name must be specified in the config file");
+			throw new IllegalStateException("The MySQL user name must be specified in the config file");
+		}
+
+		String password = config.get("sql", "password");
+		password = password == null || password.equals("") ? null : password;
+
+		return IMonDBManagerFactory.createMySQLFactory(host, port, database, user, password);
+	}
+
+	/**
+	 * Retrieves the last date from the given config file.
+	 *
+	 * @param config  An {@link Ini} config file
+	 * @return The last date specified in the config file, or 1970-01-01 if not available
+	 */
+	private Date getLastDate(Ini config) {
+		String lastDate = config.get("general", "last_date");
+
+		if(lastDate == null || lastDate.equals("")) {
+			logger.info("No cut-off date specified, retrieving all eligible files");
+			return new Date(0);
+		}
+		else {
+			try {
+				return DATE_FORMAT.parse(lastDate);
+			} catch(ParseException e) {
+				logger.error("Invalid cut-off date <{}> specified: ", lastDate, e);
+				throw new IllegalStateException("Invalid cut-off date specified: " + e);
+			}
+		}
+	}
+
+	/**
+	 * Retrieves the run rename mask from the given config file.
+	 *
+	 * @param config  An {@link Ini} config file
+	 * @return The run rename mask specified in the config file, or %p_%dn_%fn if not available
+	 */
+	private String getRenameMask(Ini config) {
+		String renameMask = config.get("general", "rename_run");
+		if(renameMask == null || renameMask.equals("")) {
+			renameMask = "%p_%dn_%fn";
+			logger.info("No run rename mask specified, using default '{}'", renameMask);
+		}
+		return renameMask;
+	}
+
+	/**
+	 * Retrieves the regex used to match the raw files from the given config file.
+	 *
+	 * @param config  An {@link Ini} config file
+	 * @return The regex used to match the raw files specified in the config file
+	 */
+	private String getMatchFile(Ini config) {
+		String matchFile = config.get("general", "match_file");
+		if(matchFile == null || matchFile.equals("")) {
+			logger.error("The 'match_file' regex must be specified in the config file");
+			throw new IllegalStateException("The 'match_file' regex must be specified in the config file");
+		}
+		return matchFile;
+	}
+
+	/**
+	 * Processes a file by extracting the instrument data from it and storing the resulting run in the database.
+	 *
+	 * @param dbReader  The {@link IMonDBReader} used to verify the current file isn't present in the database yet
+	 * @param dbWriter  The {@link IMonDBWriter} used to write the new {@link Run} to the database
+	 * @param renameMask  The mask used to rename the run's name
+	 * @param projectLabel  The label of the project to which the run belongs
+	 * @param file  The raw file that will be processed
+	 */
+	private void processFile(IMonDBReader dbReader, IMonDBWriter dbWriter, String renameMask, String projectLabel, File file) {
+		logger.info("Process file <{}>", file.getAbsolutePath());
+
+		String runName = renameMask.replace("%p", projectLabel).
+				replace("%dn", FilenameUtils.getBaseName(file.getParent())).
+				replace("%fn", FilenameUtils.getBaseName(file.getName()));
+
+		// check if this run already exists in the database for the given project
+		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = \"" + runName + "\" AND run.fromProject.label = \"" + projectLabel + "\"";
+		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class).get(0).equals(1L);
+
+		if(!exists) {
+			ThermoRawFileExtractor extractor = new ThermoRawFileExtractor(file.getAbsolutePath());
+			Run run = extractor.extractInstrumentData();
+
+			// rename run based on the mask
+			run.setName(runName);
+
+			// write the run to the database
+			dbWriter.writeRun(run, projectLabel);
+
+			// save the date of the newest file
+			newestTimeStamp = newestTimeStamp.before(run.getSampleDate()) ? run.getSampleDate() : newestTimeStamp;
+		}
+		else {
+			logger.info("Run <{}> already found in the database; skipping...", runName);
 		}
 	}
 }
