@@ -66,6 +66,8 @@ public class Collector {
 			for(Map.Entry<String, String> entry : projects.entrySet()) {
 				File baseDir = new File(entry.getValue());
 				if(baseDir.isDirectory()) {
+					logger.info("Process project <{}>", entry.getKey());
+
 					// retrieve all files that were created after the specified date, and matching the specified regex
 					Collection<File> files = FileUtils.listFiles(baseDir,
 							new AndFileFilter(new AgeFileFilter(date, false),
