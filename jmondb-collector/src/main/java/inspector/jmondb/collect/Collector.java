@@ -29,14 +29,30 @@ public class Collector {
 
 	public Collector() {
 
+		EntityManagerFactory emf = null;
+
 		Ini config = initializeConfig();
 
-		// create database connection
-		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory(config.get("sql", "host"),
-				config.get("sql", "port"), config.get("sql", "database"),
-				config.get("sql", "user"), config.get("sql", "password"));
-
 		try {
+			// create database connection
+			String host = config.get("sql", "host");
+			host = host == null || host.equals("") ? null : host;
+			String port = config.get("sql", "port");
+			port = port == null || port.equals("") ? null : port;
+			String database = config.get("sql", "database");
+			if(database == null || database.equals("")) {
+				logger.error("The MySQL database must be specified in the config file");
+				throw new IllegalStateException("The MySQL database must be specified in the config file");
+			}
+			String user = config.get("sql", "user");
+			if(user == null || user.equals("")) {
+				logger.error("The MySQL user name must be specified in the config file");
+				throw new IllegalStateException("The MySQL user name must be specified in the config file");
+			}
+			String password = config.get("sql", "password");
+			password = password == null || password.equals("") ? null : password;
+			emf = IMonDBManagerFactory.createMySQLFactory(host, port, database, user, password);
+
 			IMonDBReader dbReader = new IMonDBReader(emf);
 			IMonDBWriter dbWriter = new IMonDBWriter(emf);
 
@@ -56,22 +72,28 @@ public class Collector {
 			}
 			Timestamp newestTimeStamp = new Timestamp(date.getTime());
 
-			String match_file = config.get("general", "match_file");
+			String matchFile = config.get("general", "match_file");
+			if(matchFile == null || matchFile.equals("")) {
+				logger.error("The 'match_file' regex must be specified in the config file");
+				throw new IllegalStateException("The 'match_file' regex must be specified in the config file");
+			}
 
 			String nameMask = config.get("general", "rename_run");
-			if(nameMask == null)
+			if(nameMask == null || nameMask.equals("")) {
 				nameMask = "%p_%dn_%fn";
+				logger.info("No run rename mask specified, using default '{}'", nameMask);
+			}
 
 			// browse all folders and find new raw files
 			for(Map.Entry<String, String> entry : projects.entrySet()) {
 				File baseDir = new File(entry.getValue());
-				if(baseDir.isDirectory()) {
+				if(!entry.getKey().equals("dummy") && baseDir.isDirectory()) {
 					logger.info("Process project <{}>", entry.getKey());
 
 					// retrieve all files that were created after the specified date, and matching the specified regex
 					Collection<File> files = FileUtils.listFiles(baseDir,
 							new AndFileFilter(new AgeFileFilter(date, false),
-									new RegexFileFilter(match_file, IOCase.INSENSITIVE)),
+									new RegexFileFilter(matchFile, IOCase.INSENSITIVE)),
 							DirectoryFileFilter.DIRECTORY);
 
 					// process all found files
@@ -111,16 +133,20 @@ public class Collector {
 
 			// save the date of the newest processed file to the config file
 			config.put("general", "last_date", sdf.format(newestTimeStamp));
-			config.store();
 
 		} catch(ParseException e) {
 			logger.error("Invalid cut-off date <{}> specified: ", config.get("general", "last_date"), e);
 			throw new IllegalStateException("Invalid cut-off date specified: " + e);
-		} catch(IOException e) {
-			logger.error("Error while writing the updated config file: {}", e);
-			throw new IllegalStateException("Error while writing the updated config file: " + e);
 		} finally {
-			emf.close();
+			if(emf != null)
+				emf.close();
+			if(config != null)
+				try {
+					config.store();
+				} catch(IOException e) {
+					logger.error("Error while writing the updated config file: {}", e);
+					throw new IllegalStateException("Error while writing the updated config file: " + e);
+				}
 		}
 	}
 
