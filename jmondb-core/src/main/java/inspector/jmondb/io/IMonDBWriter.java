@@ -55,7 +55,7 @@ public class IMonDBWriter {
 	 *
 	 * @param project  The Project that will be persisted to the database
 	 */
-	public void writeProject(Project project) {
+	public synchronized void writeProject(Project project) {
 		if(project != null) {
 			logger.info("Store project <{}>", project.getLabel());
 
@@ -144,7 +144,7 @@ public class IMonDBWriter {
 	 * @param projectLabel  The label identifying the Project to which this Run will be added.
 	 *                      If this project is not present in the database yet, a minimal project will be created using the given information.
 	 */
-	public void writeRun(Run run, String projectLabel) {
+	public synchronized void writeRun(Run run, String projectLabel) {
 		if(run != null && projectLabel != null) {
 			logger.info("Store run <{}> for project <{}>", run.getName(), projectLabel);
 
@@ -227,7 +227,7 @@ public class IMonDBWriter {
 	 *
 	 * @param cv  The cv that will be persisted to the database
 	 */
-	public void writeCv(CV cv) {
+	public synchronized void writeCv(CV cv) {
 		if(cv != null) {
 			logger.info("Store cv <{}>", cv.getLabel());
 
