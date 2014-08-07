@@ -14,7 +14,7 @@ public class CollectorJob implements Job {
 	@Override
 	public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
 		try {
-			logger.info("Executing the Collector job");
+			logger.info("Executing the scheduled Collector job");
 			Collector collector = new Collector();
 		} catch(Exception e) {
 			// catch all exceptions that might be thrown and rethrow it as a JobExecutionException

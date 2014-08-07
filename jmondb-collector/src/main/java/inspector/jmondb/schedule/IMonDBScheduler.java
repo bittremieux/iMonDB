@@ -80,4 +80,13 @@ public class IMonDBScheduler {
 
 		scheduler.scheduleJob(job, trigger);
 	}
+
+	/**
+	 * Shuts down the scheduler after all running jobs have completed
+	 *
+	 * @throws SchedulerException
+	 */
+	public void shutdown() throws SchedulerException {
+		scheduler.shutdown(true);
+	}
 }

@@ -30,6 +30,8 @@ public class Collector {
 
 	public Collector() {
 
+		logger.info("Executing the Collector");
+
 		EntityManagerFactory emf = null;
 
 		Ini config = initializeConfig();
