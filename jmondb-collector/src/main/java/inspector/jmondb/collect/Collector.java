@@ -85,21 +85,26 @@ public class Collector {
 				}
 			}
 
-			// retrieve the sample dates from all the submitted threads
+			// process all the submitted threads and retrieve the sample dates
 			for(int i = 0; i < threadsSubmitted; i++) {
-				Timestamp runTimestamp = pool.take().get();
-				newestTimestamp = newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
+				try {
+					Timestamp runTimestamp = pool.take().get();
+					newestTimestamp = newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
+				} catch(Exception e) {	// catch all possible exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
+					logger.error("Error while executing a thread: {}", e.getMessage());
+				}
 			}
 
-			// shut down threads
+			// shut down child threads
 			threadPool.shutdown();
+			// wait until all child threads have finished
+			threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 
 			// save the date of the newest processed file to the config file
 			config.put("general", "last_date", DATE_FORMAT.format(newestTimestamp));
 
-		} catch(InterruptedException | ExecutionException e) {
-			logger.error("Error while executing a thread: {}", e);
-			throw new IllegalStateException("Error while executing a thread: " + e);
+		} catch(InterruptedException e) {
+			logger.error("Thread execution was interrupted: {}", e.getMessage());
 		} finally {
 			// close the database connection
 			if(emf != null)
@@ -109,7 +114,7 @@ public class Collector {
 				try {
 					config.store();
 				} catch(IOException e) {
-					logger.error("Error while writing the updated config file: {}", e);
+					logger.error("Error while writing the updated config file: {}", e.getMessage());
 				}
 		}
 	}
@@ -137,8 +142,8 @@ public class Collector {
 			}
 
 		} catch(IOException e) {
-			logger.error("Error while reading the config file: {}", e);
-			throw new IllegalStateException("Error while reading the config file: " + e);
+			logger.error("Error while reading the config file: {}", e.getMessage());
+			throw new IllegalStateException("Error while reading the config file: " + e.getMessage());
 		}
 	}
 
@@ -190,8 +195,8 @@ public class Collector {
 			try {
 				return DATE_FORMAT.parse(lastDate);
 			} catch(ParseException e) {
-				logger.error("Invalid cut-off date <{}> specified: ", lastDate, e);
-				throw new IllegalStateException("Invalid cut-off date specified: " + e);
+				logger.error("Invalid cut-off date <{}> specified: ", lastDate, e.getMessage());
+				throw new IllegalStateException("Invalid cut-off date specified: " + e.getMessage());
 			}
 		}
 	}
