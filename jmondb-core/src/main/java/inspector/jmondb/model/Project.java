@@ -9,7 +9,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 @Entity
-@Table(name="project")
+@Table(name="imon_project")
 public class Project {
 
 	@Transient
