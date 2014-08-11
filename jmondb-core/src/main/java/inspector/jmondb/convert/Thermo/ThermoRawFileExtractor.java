@@ -130,11 +130,11 @@ public class ThermoRawFileExtractor {
 		String cliPath;
 		String valueType;
 		if(isStatusLog) {
-			cliPath = "/Thermo/ThermoStatusLog.exe";
+			cliPath = "./Thermo/ThermoStatusLog.exe";
 			valueType = "statuslog";
 		}
 		else {
-			cliPath = "/Thermo/ThermoTuneMethod.exe";
+			cliPath = "./Thermo/ThermoTuneMethod.exe";
 			valueType = "tunemethod";
 		}
 
@@ -157,8 +157,7 @@ public class ThermoRawFileExtractor {
 	private Table<String, String, ArrayList<String>> readRawFile(String cliPath) {
 		try {
 			// execute the CLI process
-			URL cliExe = ThermoRawFileExtractor.class.getResource(cliPath);
-			Process process = Runtime.getRuntime().exec(cliExe.getFile() + " \"" + rawFile.getAbsoluteFile() + "\"");
+			Process process = Runtime.getRuntime().exec(new File(cliPath).getAbsolutePath() + " \"" + rawFile.getAbsoluteFile() + "\"");
 
 			// read the CLI output data
 			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
