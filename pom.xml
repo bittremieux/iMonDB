@@ -6,11 +6,11 @@
 	<groupId>inspector.jmondb</groupId>
 	<artifactId>jmondb</artifactId>
 	<packaging>pom</packaging>
-	<version>0.1</version>
+	<version>1.0.0</version>
 
 	<name>jMonDB</name>
 	<url>https://bitbucket.org/proteinspector/jmondb</url>
-	<description>TODO</description>
+	<description>jMonDB is a Java API and a collection of helper tools to work with an iMonDB.</description>
 
 	<!-- License -->
 	<licenses>
