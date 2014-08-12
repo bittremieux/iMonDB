@@ -8,18 +8,23 @@ import inspector.jmondb.model.Run;
 import inspector.jmondb.model.Value;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.stat.Frequency;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import sun.net.www.protocol.file.FileURLConnection;
 
 import java.io.*;
-import java.net.URL;
+import java.net.*;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 public class ThermoRawFileExtractor {
 
@@ -63,6 +68,13 @@ public class ThermoRawFileExtractor {
 	public ThermoRawFileExtractor(String fileName) {
 		// test if the file name is valid
 		rawFile = getFile(fileName);
+
+		// make sure the extractor exe's are available outside the jar
+		if(!new File("./Thermo/ThermoStatusLog.exe").exists() || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
+			// copy the resources outside the jar
+			logger.info("Copying the Thermo extractor CLI's to a new folder in the base directory");
+			copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
+		}
 	}
 
 	/**
@@ -91,6 +103,72 @@ public class ThermoRawFileExtractor {
 		}
 
 		return file;
+	}
+
+	/**
+	 * Copies resources to a new destination.
+	 *
+	 * @param originUrl  The URL where the resources originate
+	 * @param destinationDir  The destinationDir directory to which the resources are copied
+	 */
+	private void copyResources(URL originUrl, File destinationDir) {
+		try {
+			URLConnection urlConnection = originUrl.openConnection();
+			if(urlConnection instanceof JarURLConnection) {	// resources inside a jar file
+				copyJarResources((JarURLConnection) urlConnection, destinationDir);
+			} else if(urlConnection instanceof FileURLConnection) {	// resources in a folder
+				FileUtils.copyDirectory(new File(originUrl.getFile()), destinationDir);
+			} else {
+				logger.error("Could not copy resources, unknown URLConnection: {}", urlConnection.getClass().getSimpleName());
+				throw new IllegalStateException("Unknown URLConnection: " + urlConnection.getClass().getSimpleName());
+			}
+		} catch(IOException e) {
+			logger.error("Could not copy resources: {}", e.getMessage());
+			throw new IllegalStateException("Could not copy resources: " + e.getMessage());
+		}
+
+	}
+
+	/**
+	 * Copies resources from inside a jar file to a new destination.
+	 *
+	 * This is necessary because the CLI exe's can't be run from inside a packaged jar.
+	 *
+	 * @param jarConnection  The connection to the resources in the jar file
+	 * @param destinationDir  The destinationDir directory to which the resources are copied
+	 */
+	private void copyJarResources(JarURLConnection jarConnection, File destinationDir) {
+		try {
+			JarFile jarFile = jarConnection.getJarFile();
+			for(Enumeration<JarEntry> entries = jarFile.entries(); entries.hasMoreElements(); ) {
+				JarEntry entry = entries.nextElement();
+
+				// find all items in the jar that need to be copied
+				if(entry.getName().startsWith(jarConnection.getEntryName())) {
+					String fileName = StringUtils.removeStart(entry.getName(), jarConnection.getEntryName());
+
+					if(!entry.isDirectory()) {
+						// copy each individual file
+						InputStream entryInputStream = null;
+						try {
+							entryInputStream = jarFile.getInputStream(entry);
+							FileUtils.copyInputStreamToFile(entryInputStream, new File(destinationDir, fileName));
+						} finally {
+							if(entryInputStream != null)
+								entryInputStream.close();
+						}
+					} else {
+						// create the required directories
+						File newDir = new File(destinationDir, fileName);
+						if(!newDir.exists())
+							newDir.mkdir();
+					}
+				}
+			}
+		} catch(IOException e) {
+			logger.error("Could not copy jar resources: {}", e.getMessage());
+			throw new IllegalStateException("Could not copy jar resources: " + e.getMessage());
+		}
 	}
 
 	/**
