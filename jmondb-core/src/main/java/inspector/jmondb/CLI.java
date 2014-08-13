@@ -44,16 +44,18 @@ public class CLI {
 					database = cmd.getOptionValue("db");
 				else {
 					logger.error("No database provided");
-					throw new IllegalArgumentException("No database provided");
+					System.err.println("No database provided");
+					new HelpFormatter().printHelp("jMonDB-core", options);
 				}
 				if(cmd.hasOption("u"))
 					user = cmd.getOptionValue("u");
 				else {
 					logger.error("No user name provided");
-					throw new IllegalArgumentException("No user name provided");
+					System.err.println("No user name provided");
+					new HelpFormatter().printHelp("jMonDB-core", options);
 				}
-				if(cmd.hasOption("p"))
-					pass = cmd.getOptionValue("p");
+				if(cmd.hasOption("pw"))
+					pass = cmd.getOptionValue("pw");
 
 				// create database connection
 				emf = IMonDBManagerFactory.createMySQLFactory(host, port, database, user, pass);
@@ -66,13 +68,15 @@ public class CLI {
 					rawFile = cmd.getOptionValue("f");
 				else {
 					logger.error("No raw file provided");
-					throw new IllegalArgumentException("No raw file provided");
+					System.err.println("No raw file provided");
+					new HelpFormatter().printHelp("jMonDB-core", options);
 				}
 				if(cmd.hasOption("pr"))
 					projectLabel = cmd.getOptionValue("pr");
 				else {
 					logger.error("No project label provided");
-					throw new IllegalArgumentException("No project label provided");
+					System.err.println("No project label provided");
+					new HelpFormatter().printHelp("jMonDB-core", options);
 				}
 				Run run = new ThermoRawFileExtractor(rawFile).extractInstrumentData();
 				writer.writeRun(run, projectLabel);
@@ -80,9 +84,7 @@ public class CLI {
 
 		} catch (ParseException e) {
 			logger.error("Error while parsing the command-line arguments: {}", e.getMessage());
-			new HelpFormatter().printHelp("jMonDB-core", options);
-		} catch (IllegalArgumentException e) {
-			logger.error("Invalid command-line arguments: {}", e.getMessage());
+			System.err.println("Error while parsing the command-line arguments: " + e.getMessage());
 			new HelpFormatter().printHelp("jMonDB-core", options);
 		}
 		finally {

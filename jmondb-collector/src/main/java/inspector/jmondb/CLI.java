@@ -30,19 +30,21 @@ public class CLI {
 					new Collector();
 				else if(cmd.hasOption("rd") || cmd.hasOption("rw")) {
 					// scheduled execution
-					int hour;
-					int minute;
+					int hour = 0;
+					int minute = 0;
 					if(cmd.hasOption("h"))
 						hour = Integer.parseInt(cmd.getOptionValue("h"));
 					else {
 						logger.error("No hour provided");
-						throw new IllegalArgumentException("No hour provided");
+						System.err.println("No hour provided");
+						new HelpFormatter().printHelp("jMonDB-collector", options);
 					}
 					if(cmd.hasOption("m"))
 						minute = Integer.parseInt(cmd.getOptionValue("m"));
 					else {
 						logger.error("No minute provided");
-						throw new IllegalArgumentException("No minute provided");
+						System.err.println("No minute provided");
+						new HelpFormatter().printHelp("jMonDB-collector", options);
 					}
 
 					if(cmd.hasOption("rd")) {
@@ -84,24 +86,25 @@ public class CLI {
 						}
 						else {
 							logger.error("No day provided");
-							throw new IllegalArgumentException("No day provided");
+							System.err.println("No day provided");
+							new HelpFormatter().printHelp("jMonDB-collector", options);
 						}
 					}
 				}
 				else {
 					logger.error("No schedule information provided");
-					throw new IllegalArgumentException("No schedule information provided");
+					System.err.println("No schedule information provided");
+					new HelpFormatter().printHelp("jMonDB-collector", options);
 				}
 			}
 
 		} catch (ParseException e) {
 			logger.error("Error while parsing the command-line arguments: {}", e.getMessage());
-			new HelpFormatter().printHelp("jMonDB-collector", options);
-		} catch (IllegalArgumentException e) {
-			logger.error("Invalid command-line arguments: {}", e.getMessage());
+			System.err.println("Error while parsing the command-line arguments: " + e.getMessage());
 			new HelpFormatter().printHelp("jMonDB-collector", options);
 		} catch(SchedulerException e) {
 			logger.error("Error while executing the scheduler: {}", e.getMessage());
+			System.err.println("Error while executing the scheduler: " + e.getMessage());
 		}
 	}
 
