@@ -89,7 +89,7 @@ public class Collector {
 			for(int i = 0; i < threadsSubmitted; i++) {
 				try {
 					Timestamp runTimestamp = pool.take().get();
-					newestTimestamp = newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
+					newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
 				} catch(Exception e) {	// catch all possible exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
 					logger.error("Error while executing a thread: {}", e.getMessage());
 				}

@@ -66,8 +66,7 @@ public class FileProcessor implements Callable<Timestamp> {
 		}
 		else {
 			logger.info("Run <{}> already found in the database; skipping...", runName);
+			return null;
 		}
-
-		return null;
 	}
 }
