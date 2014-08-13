@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>inspector.jmondb</groupId>
+        <artifactId>jmondb</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <!-- Project information -->
+    <groupId>inspector.jmondb.jmondb-viewer</groupId>
+    <artifactId>jmondb-viewer</artifactId>
+    <packaging>jar</packaging>
+    <version>1.0.0-alpha1</version>
+
+    <name>jMonDB Collector</name>
+    <url>https://bitbucket.org/proteinspector/jmondb</url>
+    <description>The jMonDB graph viewer</description>
+
+    <!-- Developers -->
+    <developers>
+        <developer>
+            <name>Wout Bittremieux</name>
+            <id>wout</id>
+            <email>wout.bittremieux@uantwerpen.be</email>
+            <organization>Advanced Database Research and Modelling, University of Antwerp, Belgium</organization>
+            <organizationUrl>http://www.uantwerpen.be/adrem/</organizationUrl>
+        </developer>
+    </developers>
+
+    <!-- Dependencies -->
+    <dependencies>
+        <dependency>
+            <groupId>inspector.jmondb.jmondb-core</groupId>
+            <artifactId>jmondb-core</artifactId>
+            <version>1.0.0-alpha1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
