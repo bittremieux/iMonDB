@@ -469,7 +469,7 @@ public class ThermoRawFileExtractor {
 			}
 			n = (int) freq.getSumFreq();
 			nDiff = freq.getUniqueCount();
-			if(isNumeric && n > 1) {
+			if(isNumeric) {
 				min = (float) stats.getMin();
 				max = (float) stats.getMax();
 				mean = (float) stats.getMean();
