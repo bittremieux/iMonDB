@@ -42,7 +42,7 @@ public class IMonDBReaderWriterTest {
 		em.createNativeQuery("TRUNCATE TABLE imon_value").executeUpdate();
 		em.createNativeQuery("TRUNCATE TABLE imon_cv").executeUpdate();
 		em.createNativeQuery("TRUNCATE TABLE imon_run").executeUpdate();
-		em.createNativeQuery("TRUNCATE TABLE project").executeUpdate();
+		em.createNativeQuery("TRUNCATE TABLE imon_project").executeUpdate();
 		em.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
 		em.getTransaction().commit();
 
