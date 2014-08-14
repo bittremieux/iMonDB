@@ -26,32 +26,36 @@ public class CLI {
 				new HelpFormatter().printHelp("jMonDB-collector", options);
 			else {
 				// immediate execution
-				if(cmd.hasOption("rn"))
-					new Collector();
+				if(cmd.hasOption("rn")) {
+					Collector collector = new Collector();
+					collector.collect();
+				}
 				else if(cmd.hasOption("rd") || cmd.hasOption("rw")) {
+					boolean error = false;
+
 					// scheduled execution
 					int hour = 0;
 					int minute = 0;
 					if(cmd.hasOption("h"))
 						hour = Integer.parseInt(cmd.getOptionValue("h"));
 					else {
+						error = true;
 						logger.error("No hour provided");
 						System.err.println("No hour provided");
-						new HelpFormatter().printHelp("jMonDB-collector", options);
 					}
 					if(cmd.hasOption("m"))
 						minute = Integer.parseInt(cmd.getOptionValue("m"));
 					else {
+						error = true;
 						logger.error("No minute provided");
 						System.err.println("No minute provided");
-						new HelpFormatter().printHelp("jMonDB-collector", options);
 					}
 
-					if(cmd.hasOption("rd")) {
+					if(!error && cmd.hasOption("rd")) {
 						logger.info("Start daily scheduling at {}:{}", String.format("%02d", hour), String.format("%02d", minute));
 						new IMonDBScheduler().startDaily(hour, minute);
 					}
-					else if(cmd.hasOption("rw")) {
+					else if(!error && cmd.hasOption("rw")) {
 						if(cmd.hasOption("d")) {
 							int day = Integer.parseInt(cmd.getOptionValue("d"));
 							String dayName;
@@ -85,11 +89,14 @@ public class CLI {
 							new IMonDBScheduler().startWeekly(day, hour, minute);
 						}
 						else {
+							error = true;
 							logger.error("No day provided");
 							System.err.println("No day provided");
-							new HelpFormatter().printHelp("jMonDB-collector", options);
 						}
 					}
+
+					if(error)
+						new HelpFormatter().printHelp("jMonDB-collector", options);
 				}
 				else {
 					logger.error("No schedule information provided");
