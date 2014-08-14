@@ -24,12 +24,14 @@ public class IMonDBReaderWriterTest {
 	private EntityManagerFactory emf;
 	private IMonDBReader reader;
 	private IMonDBWriter writer;
+	private ThermoRawFileExtractor extractor;
 
 	@Before
 	public void setUp() {
 		emf = IMonDBManagerFactory.createMySQLFactory(null, null, "iMonDBtest", "iMonDB", "iMonDB");
 		reader = new IMonDBReader(emf);
 		writer = new IMonDBWriter(emf);
+		extractor = new ThermoRawFileExtractor();
 	}
 
 	@After
@@ -230,7 +232,7 @@ public class IMonDBReaderWriterTest {
 
 	@Test
 	public void writeReadOrbitrapVelos() {
-		Run run = new ThermoRawFileExtractor(new File(getClass().getResource("/OrbitrapVelos.raw").getFile()).getAbsolutePath()).extractInstrumentData();
+		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapVelos.raw").getFile()).getAbsolutePath());
 
 		writer.writeRun(run, "Wout");
 
@@ -242,7 +244,7 @@ public class IMonDBReaderWriterTest {
 
 	@Test
 	public void writeReadOrbitrapXL() {
-		Run run = new ThermoRawFileExtractor(new File(getClass().getResource("/OrbitrapXL.raw").getFile()).getAbsolutePath()).extractInstrumentData();
+		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapXL.raw").getFile()).getAbsolutePath());
 
 		writer.writeRun(run, "Wout");
 
@@ -254,7 +256,7 @@ public class IMonDBReaderWriterTest {
 
 	@Test
 	public void writeReadQExactive() {
-		Run run = new ThermoRawFileExtractor(new File(getClass().getResource("/QExactive.raw").getFile()).getAbsolutePath()).extractInstrumentData();
+		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/QExactive.raw").getFile()).getAbsolutePath());
 
 		writer.writeRun(run, "Wout");
 
@@ -266,7 +268,7 @@ public class IMonDBReaderWriterTest {
 
 	@Test
 	public void writeReadQQQ() {
-		Run run = new ThermoRawFileExtractor(new File(getClass().getResource("/QQQ.raw").getFile()).getAbsolutePath()).extractInstrumentData();
+		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/QQQ.raw").getFile()).getAbsolutePath());
 
 		writer.writeRun(run, "Wout");
 

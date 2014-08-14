@@ -3,6 +3,7 @@ package inspector.jmondb.convert.Thermo;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import inspector.jmondb.convert.InstrumentModel;
+import inspector.jmondb.convert.RawFileDateAndValues;
 import inspector.jmondb.model.CV;
 import inspector.jmondb.model.Run;
 import inspector.jmondb.model.Value;
@@ -26,16 +27,17 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+/**
+ * An extractor to retrieve instrument data (either status log or tune method data) from Thermo raw files.
+ *
+ * Attention: instrument data extraction is only possible on a Microsoft Windows platform!
+ */
 public class ThermoRawFileExtractor {
 
 	protected static final Logger logger = LogManager.getLogger(ThermoRawFileExtractor.class);
 
-	private File rawFile;
-
-	private InstrumentModel model;
-	private Timestamp date;
-
-	private static PropertiesConfiguration exclusionProperties = initializeExclusionProperties();
+	/** Properties containing a list of value names that have to be excluded */
+	private PropertiesConfiguration exclusionProperties;
 
 	//TODO 1: correctly specify the used cv
 	//TODO 1: maybe we can even re-use some terms from the PSI-MS cv?
@@ -43,7 +45,30 @@ public class ThermoRawFileExtractor {
 	//TODO 2: fix this by having a global CV list or something
 	private CV cv = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
 
-	private static PropertiesConfiguration initializeExclusionProperties() {
+	/**
+	 * Creates an extractor to retrieve instrument data from Thermo raw files.
+	 */
+	public ThermoRawFileExtractor() {
+		// read the exclusion properties
+		exclusionProperties = initializeExclusionProperties();
+
+		// make sure the extractor exe's are available outside the jar
+		if(!new File("./Thermo/ThermoStatusLog.exe").exists() || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
+			// copy the resources outside the jar
+			logger.info("Copying the Thermo extractor CLI's to a new folder in the base directory");
+			copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
+		}
+	}
+
+	/**
+	 * Reads a properties file containing a list of value names that have to be excluded.
+	 *
+	 * A file with exclusion properties can be provided as command-line argument "-Dexclusion.properties=file-name".
+	 * Otherwise, the default exclusion properties are used.
+	 *
+	 * @return A {@link PropertiesConfiguration} for the exclusion properties
+	 */
+	private PropertiesConfiguration initializeExclusionProperties() {
 		try {
 			// check whether the exclusion properties were specified as argument
 			String systemProperties = System.getProperty("exclusion.properties");
@@ -65,15 +90,99 @@ public class ThermoRawFileExtractor {
 		}
 	}
 
-	public ThermoRawFileExtractor(String fileName) {
-		// test if the file name is valid
-		rawFile = getFile(fileName);
+	/**
+	 * Copies resources to a new destination.
+	 *
+	 * @param originUrl  The URL where the resources originate
+	 * @param destinationDir  The destination directory to which the resources are copied
+	 */
+	private void copyResources(URL originUrl, File destinationDir) {
+		try {
+			URLConnection urlConnection = originUrl.openConnection();
+			if(urlConnection instanceof JarURLConnection) {	// resources inside a jar file
+				copyJarResources((JarURLConnection) urlConnection, destinationDir);
+			} else if(urlConnection instanceof FileURLConnection) {	// resources in a folder
+				FileUtils.copyDirectory(new File(originUrl.getFile()), destinationDir);
+			} else {
+				logger.error("Could not copy resources, unknown URLConnection: {}", urlConnection.getClass().getSimpleName());
+				throw new IllegalStateException("Unknown URLConnection: " + urlConnection.getClass().getSimpleName());
+			}
+		} catch(IOException e) {
+			logger.error("Could not copy resources: {}", e.getMessage());
+			throw new IllegalStateException("Could not copy resources: " + e.getMessage());
+		}
 
-		// make sure the extractor exe's are available outside the jar
-		if(!new File("./Thermo/ThermoStatusLog.exe").exists() || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
-			// copy the resources outside the jar
-			logger.info("Copying the Thermo extractor CLI's to a new folder in the base directory");
-			copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
+	}
+
+	/**
+	 * Copies resources from inside a jar file to a new destination.
+	 *
+	 * This is necessary because the CLI exe's can't be run from inside a packaged jar.
+	 *
+	 * @param jarConnection  The connection to the resources in the jar file
+	 * @param destinationDir  The destination directory to which the resources are copied
+	 */
+	private void copyJarResources(JarURLConnection jarConnection, File destinationDir) {
+		try {
+			JarFile jarFile = jarConnection.getJarFile();
+			for(Enumeration<JarEntry> entries = jarFile.entries(); entries.hasMoreElements(); ) {
+				JarEntry entry = entries.nextElement();
+
+				// find all items in the jar that need to be copied
+				if(entry.getName().startsWith(jarConnection.getEntryName())) {
+					String fileName = StringUtils.removeStart(entry.getName(), jarConnection.getEntryName());
+
+					if(!entry.isDirectory()) {
+						// copy each individual file
+						InputStream entryInputStream = null;
+						try {
+							entryInputStream = jarFile.getInputStream(entry);
+							FileUtils.copyInputStreamToFile(entryInputStream, new File(destinationDir, fileName));
+						} finally {
+							if(entryInputStream != null)
+								entryInputStream.close();
+						}
+					} else {
+						// create the required directories
+						File newDir = new File(destinationDir, fileName);
+						if(!newDir.exists() && !newDir.mkdir())
+							throw new IOException("Failed to create a new directory: " + newDir.getPath());
+					}
+				}
+			}
+		} catch(IOException e) {
+			logger.error("Could not copy jar resources: {}", e.getMessage());
+			throw new IllegalStateException("Could not copy jar resources: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Creates a {@link Run} containing as {@link Value}s the status log and tune method data.
+	 *
+	 * @param fileName  The name of the raw file from which the instrument data will be extracted
+	 * @return A Run containing the instrument data as Values
+	 */
+	public Run extractInstrumentData(String fileName) {
+		try {
+			// test if the file name is valid
+			File rawFile = getFile(fileName);
+
+			// extract the data from the row file
+			RawFileDateAndValues statusLogValues = getValues(rawFile, true);
+			RawFileDateAndValues tuneMethodValues = getValues(rawFile, false);
+
+			// create a run containing all the instrument data values
+			String runName = FilenameUtils.getBaseName(rawFile.getName());
+			Run run = new Run(runName, rawFile.getCanonicalPath(), statusLogValues.getDate());
+			// add the values to the run
+			statusLogValues.getValues().forEach(run::addValue);
+			tuneMethodValues.getValues().forEach(run::addValue);
+
+			return run;
+
+		} catch(IOException e) {
+			logger.error("Error while resolving the canonical path for file <{}>", fileName);
+			throw new IllegalStateException("Error while resolving the canonical path for file <" + fileName + ">");
 		}
 	}
 
@@ -106,105 +215,13 @@ public class ThermoRawFileExtractor {
 	}
 
 	/**
-	 * Copies resources to a new destination.
+	 * Extracts instrument data from the raw file and computes (summary) statistics for the desired values.
 	 *
-	 * @param originUrl  The URL where the resources originate
-	 * @param destinationDir  The destinationDir directory to which the resources are copied
-	 */
-	private void copyResources(URL originUrl, File destinationDir) {
-		try {
-			URLConnection urlConnection = originUrl.openConnection();
-			if(urlConnection instanceof JarURLConnection) {	// resources inside a jar file
-				copyJarResources((JarURLConnection) urlConnection, destinationDir);
-			} else if(urlConnection instanceof FileURLConnection) {	// resources in a folder
-				FileUtils.copyDirectory(new File(originUrl.getFile()), destinationDir);
-			} else {
-				logger.error("Could not copy resources, unknown URLConnection: {}", urlConnection.getClass().getSimpleName());
-				throw new IllegalStateException("Unknown URLConnection: " + urlConnection.getClass().getSimpleName());
-			}
-		} catch(IOException e) {
-			logger.error("Could not copy resources: {}", e.getMessage());
-			throw new IllegalStateException("Could not copy resources: " + e.getMessage());
-		}
-
-	}
-
-	/**
-	 * Copies resources from inside a jar file to a new destination.
-	 *
-	 * This is necessary because the CLI exe's can't be run from inside a packaged jar.
-	 *
-	 * @param jarConnection  The connection to the resources in the jar file
-	 * @param destinationDir  The destinationDir directory to which the resources are copied
-	 */
-	private void copyJarResources(JarURLConnection jarConnection, File destinationDir) {
-		try {
-			JarFile jarFile = jarConnection.getJarFile();
-			for(Enumeration<JarEntry> entries = jarFile.entries(); entries.hasMoreElements(); ) {
-				JarEntry entry = entries.nextElement();
-
-				// find all items in the jar that need to be copied
-				if(entry.getName().startsWith(jarConnection.getEntryName())) {
-					String fileName = StringUtils.removeStart(entry.getName(), jarConnection.getEntryName());
-
-					if(!entry.isDirectory()) {
-						// copy each individual file
-						InputStream entryInputStream = null;
-						try {
-							entryInputStream = jarFile.getInputStream(entry);
-							FileUtils.copyInputStreamToFile(entryInputStream, new File(destinationDir, fileName));
-						} finally {
-							if(entryInputStream != null)
-								entryInputStream.close();
-						}
-					} else {
-						// create the required directories
-						File newDir = new File(destinationDir, fileName);
-						if(!newDir.exists())
-							newDir.mkdir();
-					}
-				}
-			}
-		} catch(IOException e) {
-			logger.error("Could not copy jar resources: {}", e.getMessage());
-			throw new IllegalStateException("Could not copy jar resources: " + e.getMessage());
-		}
-	}
-
-	/**
-	 * Creates a {@link Run} containing as {@link Value}s the status log and tune method data.
-	 *
-	 * @return A Run containing the instrument data as Values
-	 */
-	public Run extractInstrumentData() {
-		try {
-			// extract the data from the row file
-			ArrayList<Value> statusLogValues = getValues(true);
-			ArrayList<Value> tuneMethodValues = getValues(false);
-
-			// create a run containing all the instrument data values
-			String runName = FilenameUtils.getBaseName(rawFile.getName());
-			Run run = new Run(runName, rawFile.getCanonicalPath(), date);
-
-			// add the values to the run
-			statusLogValues.forEach(run::addValue);
-			tuneMethodValues.forEach(run::addValue);
-
-			return run;
-
-		} catch(IOException e) {
-			logger.error("Error while resolving the canonical path for file <{}>", rawFile.getPath());
-			throw new IllegalStateException("Error while resolving the canonical path for file <" + rawFile.getPath() + ">");
-		}
-	}
-
-	/**
-	 * Extracts data from the raw file and computes (summary) statistics for the desired values.
-	 *
+	 * @param rawFile  The raw file from which the instrument data will be read
 	 * @param isStatusLog  True if the status log values have to be generated, false if the tune method values have to be generated
-	 * @return An ArrayList containing the various Values
+	 * @return A {@link RawFileDateAndValues} containing the sample date and the computed instrument data {@link Value}s
 	 */
-	private ArrayList<Value> getValues(boolean isStatusLog) {
+	private RawFileDateAndValues getValues(File rawFile, boolean isStatusLog) {
 		String cliPath;
 		String valueType;
 		if(isStatusLog) {
@@ -216,88 +233,128 @@ public class ThermoRawFileExtractor {
 			valueType = "tunemethod";
 		}
 
-		// execute the command-line application to extract the status log
-		Table<String, String, ArrayList<String>> data = readRawFile(cliPath);
+		// execute the CLI process
+		Process process = executeProcess(cliPath, rawFile);
 
-		// filter out unwanted values
-		filter(data, valueType);
-
-		// compute the (summary) statistics
-		return computeStatistics(data, valueType);
-	}
-
-	/**
-	 * Extracts data from the raw file by executing a command-line application and interpreting this output.
-	 *
-	 * @param cliPath  The path to the specific CLI application used to extract data from the raw file
-	 * @return A Table with as key a possible header and the property name, and a list of values for each property
-	 */
-	private Table<String, String, ArrayList<String>> readRawFile(String cliPath) {
+		// read the CLI output data
+		BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 		try {
-			// execute the CLI process
-			Process process = Runtime.getRuntime().exec(new File(cliPath).getAbsolutePath() + " \"" + rawFile.getAbsoluteFile() + "\"");
-
-			// read the CLI output data
-			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 			// the first line contains information about the instrument model
-			String modelLine = reader.readLine();
-			if(model == null && modelLine != null) {
-				String modelCv = modelLine.split("\t")[1];
-				//TODO: interpret the PSI-MS OBO file
-				switch(modelCv) {
-					case "MS:1001742":
-						model = InstrumentModel.THERMO_ORBITRAP_VELOS;
-						break;
-					case "MS:1000556":
-						model = InstrumentModel.THERMO_ORBITRAP_XL;
-						break;
-					case "MS:1001911":
-						model = InstrumentModel.THERMO_Q_EXACTIVE;
-						break;
-					case "MS:1001510":
-						model = InstrumentModel.THERMO_TSQ_VANTAGE;
-						break;
-					default:
-						model = InstrumentModel.UNKNOWN_MODEL;
-						logger.info("Unknown instrument model <{}>", modelCv);
-						break;
-				}
-			}
+			InstrumentModel model = readInstrumentModel(reader);
 
 			// the second line contains the experiment date
-			String dateLine = reader.readLine();
-			if(date == null && dateLine != null) {
-				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MMM-dd hh:mm:ss zzz", Locale.US);
-				date = new Timestamp(dateFormat.parse(dateLine.split("\t")[1]).getTime());
-			}
+			Timestamp date = readDate(reader);
 
-			// read the remainder of the data containing the values
-			Table<String, String, ArrayList<String>> data = readData(reader);
+			// the following lines contain the rawValues
+			Table<String, String, ArrayList<String>> rawValues = readRawValues(reader, model);
 
 			// make sure the process has finished
 			process.waitFor();
+			// close resources
+			reader.close();
 
-			return data;
+			// filter out unwanted rawValues
+			filter(rawValues, valueType);
+
+			// compute the summary statistics
+			ArrayList<Value> values = computeStatistics(rawValues, valueType);
+
+			return new RawFileDateAndValues(date, values);
 
 		} catch(IOException e) {
-			logger.error("Could not execute the raw file extractor: {}", e);
-			throw new IllegalStateException("Could not execute the raw file extractor. Are you running this on a Windows platform? " + e);
+			logger.error("Could not read the raw file extractor output: {}", e.getMessage());
+			throw new IllegalStateException("Could not read the raw file extractor output: " + e.getMessage());
 		} catch(InterruptedException e) {
 			logger.error("Error while extracting the raw file: {}", e);
 			throw new IllegalStateException("Error while extracting the raw file: " + e);
+		}
+	}
+
+	/**
+	 * Starts a process to execute the given C++ exe.
+	 *
+	 * @param cliPath  The path to the C++ exe that will be executed
+	 * @param rawFile  The raw file that will be processed by the C++ exe
+	 * @return  A {@link Process} to execute the given C++ exe
+	 */
+	private Process executeProcess(String cliPath, File rawFile) {
+		try {
+			// execute the CLI process
+			return Runtime.getRuntime().exec(new File(cliPath).getAbsolutePath() + " \"" + rawFile.getAbsoluteFile() + "\"");
+		} catch(IOException e) {
+			logger.error("Could not execute the raw file extractor: {}", e);
+			throw new IllegalStateException("Could not execute the raw file extractor. Are you running this on a Windows platform? " + e);
+		}
+	}
+
+	/**
+	 * Converts an MS CV-term to an instrument model.
+	 *
+	 * @param reader  A reader that reads as next line the instrument model description
+	 * @return The {@link InstrumentModel}
+	 * @throws IOException
+	 */
+	private InstrumentModel readInstrumentModel(BufferedReader reader) throws IOException {
+
+		String modelLine = reader.readLine();
+		InstrumentModel model = null;
+		if(modelLine != null) {
+			String modelCv = modelLine.split("\t")[1];
+			//TODO: interpret the PSI-MS OBO file
+			switch(modelCv) {
+				case "MS:1001742":
+					model = InstrumentModel.THERMO_ORBITRAP_VELOS;
+					break;
+				case "MS:1000556":
+					model = InstrumentModel.THERMO_ORBITRAP_XL;
+					break;
+				case "MS:1001911":
+					model = InstrumentModel.THERMO_Q_EXACTIVE;
+					break;
+				case "MS:1001510":
+					model = InstrumentModel.THERMO_TSQ_VANTAGE;
+					break;
+				default:
+					model = InstrumentModel.UNKNOWN_MODEL;
+					logger.info("Unknown instrument model <{}>", modelCv);
+					break;
+			}
+		}
+
+		return model;
+	}
+
+	/**
+	 * Converts the sample date description to a {@link Timestamp}.
+	 *
+	 * @param reader  A reader that reads as next line the sample date description
+	 * @return The sample date
+	 * @throws IOException
+	 */
+	private Timestamp readDate(BufferedReader reader) throws IOException {
+		try {
+			String dateLine = reader.readLine();
+			Timestamp date = null;
+			if(dateLine != null) {
+				SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MMM-dd hh:mm:ss zzz", Locale.US);
+				date = new Timestamp(dateFormat.parse(dateLine.split("\t")[1]).getTime());
+			}
+			return date;
+
 		} catch(ParseException e) {
-			logger.error("Error while parsing the date: {}", e);
-			throw new IllegalStateException("Error while parsing the date: " + e);
+			logger.error("Error while parsing the date: {}", e.getMessage());
+			throw new IllegalStateException("Error while parsing the date: " + e.getMessage());
 		}
 	}
 
 	/**
 	 * Reads the instrument data from the given reader.
 	 *
-	 * @param reader  BufferedReader to read the instrument data
-	 * @return A Table with as key a possible header and the property name, and a list of values for each property
+	 * @param reader  A reader to read the instrument data
+	 * @param model  The mass spectrometer {@link InstrumentModel}
+	 * @return A {@link Table} with as key a possible header and the property name, and a list of values for each property
 	 */
-	private Table<String, String, ArrayList<String>> readData(BufferedReader reader) {
+	private Table<String, String, ArrayList<String>> readRawValues(BufferedReader reader, InstrumentModel model) {
 		try {
 			Table<String, String, ArrayList<String>> data = HashBasedTable.create();
 

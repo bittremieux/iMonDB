@@ -78,7 +78,7 @@ public class CLI {
 					System.err.println("No project label provided");
 					new HelpFormatter().printHelp("jMonDB-core", options);
 				}
-				Run run = new ThermoRawFileExtractor(rawFile).extractInstrumentData();
+				Run run = new ThermoRawFileExtractor().extractInstrumentData(rawFile);
 				writer.writeRun(run, projectLabel);
 			}
 

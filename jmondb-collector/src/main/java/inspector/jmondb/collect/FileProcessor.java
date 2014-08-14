@@ -18,6 +18,7 @@ public class FileProcessor implements Callable<Timestamp> {
 
 	private IMonDBReader dbReader;
 	private IMonDBWriter dbWriter;
+	private ThermoRawFileExtractor extractor;
 	private String renameMask;
 	private String projectLabel;
 	private File file;
@@ -31,9 +32,10 @@ public class FileProcessor implements Callable<Timestamp> {
 	 * @param projectLabel  The label of the project to which the run belongs
 	 * @param file  The raw file that will be processed
 	 */
-	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, String renameMask, String projectLabel, File file) {
+	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, String renameMask, String projectLabel, File file) {
 		this.dbReader = dbReader;
 		this.dbWriter = dbWriter;
+		this.extractor = extractor;
 		this.renameMask = renameMask;
 		this.projectLabel = projectLabel;
 		this.file = file;
@@ -52,8 +54,7 @@ public class FileProcessor implements Callable<Timestamp> {
 		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class).get(0).equals(1L);
 
 		if(!exists) {
-			ThermoRawFileExtractor extractor = new ThermoRawFileExtractor(file.getAbsolutePath());
-			Run run = extractor.extractInstrumentData();
+			Run run = extractor.extractInstrumentData(file.getAbsolutePath());
 
 			// rename run based on the mask
 			run.setName(runName);
@@ -61,7 +62,7 @@ public class FileProcessor implements Callable<Timestamp> {
 			// write the run to the database
 			dbWriter.writeRun(run, projectLabel);
 
-			// return the run's execution time
+			// return the run's sample date
 			return run.getSampleDate();
 		}
 		else {
