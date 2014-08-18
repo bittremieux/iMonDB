@@ -243,6 +243,14 @@ public class Viewer extends JPanel {
 			}
 	}
 
+	private void removeInterventions() {
+		for(Intervention i : interventions.values()) {
+			ValueMarker marker = new ValueMarker(i.getDate().getTime());
+			((XYPlot)chartPanel.getChart().getPlot()).removeDomainMarker(marker);
+		}
+		interventions.clear();
+	}
+
 	private class ListenerConnectToDatabase implements ActionListener {
 
 		public void actionPerformed(ActionEvent e) {
@@ -432,7 +440,7 @@ public class Viewer extends JPanel {
 			int returnVal = fileChooser.showOpenDialog(frameParent);
 			if(returnVal == JFileChooser.APPROVE_OPTION) {
 				// remove previous interventions
-				interventions.clear();
+				removeInterventions();
 
 				// read new interventions
 				File file = fileChooser.getSelectedFile();
