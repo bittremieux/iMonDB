@@ -21,6 +21,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.io.IOException;;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
@@ -55,6 +57,9 @@ public class Viewer extends JPanel {
 	public Viewer() {
 		frameParent = new JFrame("iMonDB Viewer");
 		frameParent.setBackground(Color.WHITE);
+
+		UIManager.put("OptionPane.background", Color.white);
+		UIManager.put("Panel.background", Color.white);
 
 		JPanel panelParent = new JPanel(new GridBagLayout());
 		panelParent.setBackground(Color.WHITE);
@@ -105,8 +110,7 @@ public class Viewer extends JPanel {
 		// help menu
 		JMenu menuHelp = new JMenu("Help");
 		JMenuItem menuItemAbout = new JMenuItem("About");
-		//TODO
-		menuItemAbout.addActionListener(null);
+		menuItemAbout.addActionListener(new ListenerAbout());
 		menuHelp.add(menuItemAbout);
 
 		// add to menu bar
@@ -374,6 +378,43 @@ public class Viewer extends JPanel {
 		public void actionPerformed(ActionEvent e) {
 			closeDbConnection();
 			System.exit(0);
+		}
+	}
+
+	private class ListenerAbout implements ActionListener {
+
+		public void actionPerformed(ActionEvent e) {
+			try {
+				URI uri = new URI("https://bitbucket.org/proteinspector/jmondb");
+				class OpenUrlAction implements ActionListener {
+					public void actionPerformed(ActionEvent e) {
+						if(Desktop.isDesktopSupported()) {
+							try {
+								Desktop.getDesktop().browse(uri);
+							} catch(IOException e2) {
+								JOptionPane.showMessageDialog(frameParent, e2.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+							}
+						} else {
+							JOptionPane.showMessageDialog(frameParent, "Could not open the website", "Error", JOptionPane.ERROR_MESSAGE);
+						}
+					}
+				}
+
+				JButton button = new JButton();
+				button.setText("<html>For more information, please visit our <font color=\"#000099\"><u>website</u></font>.</html>");
+				button.setHorizontalAlignment(SwingConstants.LEFT);
+				button.setBorderPainted(false);
+				button.setOpaque(false);
+				button.setBackground(Color.WHITE);
+
+				button.setToolTipText(uri.toString());
+				button.addActionListener(new OpenUrlAction());
+
+				JOptionPane.showMessageDialog(frameParent, button, "About", JOptionPane.INFORMATION_MESSAGE);
+
+			} catch(URISyntaxException e1) {
+				JOptionPane.showMessageDialog(frameParent, "Could not open the website", "Error", JOptionPane.ERROR_MESSAGE);
+			}
 		}
 	}
 }
