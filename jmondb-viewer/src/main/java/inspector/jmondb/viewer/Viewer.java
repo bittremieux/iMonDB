@@ -11,6 +11,7 @@ import org.jfree.chart.axis.DateTickUnitType;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.StandardXYItemRenderer;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
@@ -267,47 +268,56 @@ public class Viewer extends JPanel {
 
 				List<Value> values = dbReader.getFromCustomQuery("SELECT val FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" AND val.name = \"" + valueName + "\"", Value.class);
 
-				// create graph
-				XYSeriesCollection dataset = new XYSeriesCollection();
-				XYSeries valueSeries = new XYSeries("Value");
-				XYSeries minSeries = new XYSeries("Min");
-				XYSeries maxSeries = new XYSeries("Max");
-				for(Value value : values) {
-					valueSeries.add(value.getFromRun().getSampleDate().getTime(), Double.parseDouble(value.getFirstValue()));
-					minSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMin());
-					maxSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMax());
+				if(values.size() == 0)
+					JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
+				if(values.size() > 0 && !values.get(0).getNumeric())
+					JOptionPane.showMessageDialog(frameParent, "Value <" + valueName + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
+				else {
+					// add data
+					XYSeriesCollection dataset = new XYSeriesCollection();
+					XYSeries meanSeries = new XYSeries("Mean");
+					XYSeries minSeries = new XYSeries("Min");
+					XYSeries maxSeries = new XYSeries("Max");
+					XYSeries q1Series = new XYSeries("Q1");
+					XYSeries q3Series = new XYSeries("Q3");
+					for(Value value : values) {
+						meanSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMean());
+						minSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMin());
+						maxSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMax());
+						q1Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ1());
+						q3Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ3());
+					}
+					dataset.addSeries(meanSeries);
+					dataset.addSeries(minSeries);
+					dataset.addSeries(maxSeries);
+					dataset.addSeries(q1Series);
+					dataset.addSeries(q3Series);
+
+					// create axis
+					DateAxis dateAxis = new DateAxis("Date");
+					dateAxis.setDateFormatOverride(new SimpleDateFormat("dd/MM/yyyy"));
+					DateTickUnit unit = new DateTickUnit(DateTickUnitType.DAY, 7);
+					dateAxis.setTickUnit(unit);
+
+					NumberAxis valueAxis = new NumberAxis("Value");
+					valueAxis.setAutoRangeIncludesZero(false);
+
+					// renderer
+					XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer(true, true);
+
+					// create plot and draw graph
+					XYPlot plot = new XYPlot(dataset, dateAxis, valueAxis, renderer);
+					JFreeChart chart = new JFreeChart(valueName, plot);
+					chart.setBackgroundPaint(java.awt.Color.WHITE);
+					chartPanel = new ChartPanel(chart, false, true, false, true, false);
+					chartPanel.setPreferredSize(new Dimension(1200, 740));
+
+					panelGraph.removeAll();
+					panelGraph.add(chartPanel);
+					panelGraph.validate();
 				}
-				dataset.addSeries(valueSeries);
-				dataset.addSeries(minSeries);
-				dataset.addSeries(maxSeries);
-
-				DateAxis dateAxis = new DateAxis("Date");
-
-				DateTickUnit unit = new DateTickUnit(DateTickUnitType.DAY, 7);
-
-				DateFormat chartFormatter = new SimpleDateFormat("dd/MM/yyyy");
-				dateAxis.setDateFormatOverride(chartFormatter);
-
-				dateAxis.setTickUnit(unit);
-
-				NumberAxis valueAxis = new NumberAxis("Value");
-				valueAxis.setAutoRangeIncludesZero(false);
-
-				StandardXYItemRenderer renderer = new StandardXYItemRenderer(StandardXYItemRenderer.SHAPES_AND_LINES, null, null);
-
-				XYPlot plot = new XYPlot(dataset, dateAxis, valueAxis, renderer);
-
-				//JFreeChart chart = ChartFactory.createXYLineChart(valueName, "Date", "Value", dataset, PlotOrientation.VERTICAL, true, false, false);
-				JFreeChart chart = new JFreeChart(valueName, JFreeChart.DEFAULT_TITLE_FONT, plot, true);
-				chart.setBackgroundPaint(java.awt.Color.WHITE);
-				chartPanel = new ChartPanel(chart, false, true, false, true, false);
-				chartPanel.setPreferredSize(new Dimension(1200, 740));
-				panelGraph.removeAll();
-				panelGraph.add(chartPanel);
-				panelGraph.validate();
 			}
 		}
-
 	}
 
 	private class ListenerSaveGraph implements  ActionListener {
