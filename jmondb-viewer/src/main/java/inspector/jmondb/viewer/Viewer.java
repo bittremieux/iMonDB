@@ -7,15 +7,16 @@ import inspector.jmondb.model.Value;
 import org.apache.commons.io.FilenameUtils;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.annotations.XYLineAnnotation;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.DateTickUnit;
 import org.jfree.chart.axis.DateTickUnitType;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYDifferenceRenderer;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
+import org.jfree.ui.Layer;
 
 import javax.persistence.EntityManagerFactory;
 import javax.swing.*;
@@ -228,26 +229,28 @@ public class Viewer extends JPanel {
 	}
 
 	private void drawInterventions() {
-		if(chartPanel != null)
+		if(chartPanel != null) {
+			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 			for(Intervention i : interventions.values()) {
-				ValueMarker marker = new ValueMarker(i.getDate().getTime());
+				Paint paint;
 				if(i.isIncident())
-					marker.setPaint(Color.RED);
+					paint = Color.RED;
 				else if(i.isEvent())
-					marker.setPaint(Color.BLUE);
+					paint = Color.BLUE;
 				else if(i.isCalibration())
-					marker.setPaint(Color.GREEN);
+					paint = Color.GREEN;
 				else
-					marker.setPaint(Color.YELLOW);
-				((XYPlot)chartPanel.getChart().getPlot()).addDomainMarker(marker);
+					paint = Color.YELLOW;
+				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
+						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), paint);
+				annotation.setToolTipText(i.getComment());
+				plot.getRenderer().addAnnotation(annotation, Layer.BACKGROUND);
 			}
+		}
 	}
 
 	private void removeInterventions() {
-		for(Intervention i : interventions.values()) {
-			ValueMarker marker = new ValueMarker(i.getDate().getTime());
-			((XYPlot)chartPanel.getChart().getPlot()).removeDomainMarker(marker);
-		}
+		((XYPlot) chartPanel.getChart().getPlot()).getRenderer().removeAnnotations();
 		interventions.clear();
 	}
 
