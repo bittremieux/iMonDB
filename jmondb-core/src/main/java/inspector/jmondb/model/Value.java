@@ -289,6 +289,10 @@ public class Value {
 		this.q3 = q3;
 	}
 
+	public Run getFromRun() {
+		return fromRun;
+	}
+
 	public void setFromRun(Run run) {
 		this.fromRun = run;
 	}
