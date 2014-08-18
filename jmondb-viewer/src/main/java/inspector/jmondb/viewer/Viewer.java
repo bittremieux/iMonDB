@@ -211,22 +211,27 @@ public class Viewer extends JPanel {
 			int option = JOptionPane.showConfirmDialog(frameParent, connectionDialog, "Connect to the database", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
 			if(option == JOptionPane.OK_OPTION) {
-				// first close an existing connection
-				closeDbConnection();
+				try {
+					// first close an existing connection
+					closeDbConnection();
 
-				// create the new connection
-				String password = !connectionDialog.getPassword().equals("") ? connectionDialog.getPassword() : null;
-				emf = IMonDBManagerFactory.createMySQLFactory(connectionDialog.getHost(), connectionDialog.getPort(),
-						connectionDialog.getUserName(), password, connectionDialog.getDatabase());
-				dbReader = new IMonDBReader(emf);
+					// create the new connection
+					String password = !connectionDialog.getPassword().equals("") ? connectionDialog.getPassword() : null;
+					emf = IMonDBManagerFactory.createMySQLFactory(connectionDialog.getHost(), connectionDialog.getPort(),
+							connectionDialog.getUserName(), password, connectionDialog.getDatabase());
+					dbReader = new IMonDBReader(emf);
 
-				// show the connection information
-				labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
-				labelDbIcon.setIcon(iconConnected);
+					// show the connection information
+					labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
+					labelDbIcon.setIcon(iconConnected);
 
-				// fill in possible projects in the combo box
-				List<String> projectLabels = dbReader.getFromCustomQuery("SELECT project.label FROM Project project ORDER BY project.label", String.class);
-				projectLabels.forEach(comboBoxProject::addItem);
+					// fill in possible projects in the combo box
+					List<String> projectLabels = dbReader.getFromCustomQuery("SELECT project.label FROM Project project ORDER BY project.label", String.class);
+					projectLabels.forEach(comboBoxProject::addItem);
+				}
+				catch(Exception e1) {
+					JOptionPane.showMessageDialog(frameParent, "<html><b>Could not connect to the database</b></html>\n" + e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+				}
 			}
 		}
 	}
