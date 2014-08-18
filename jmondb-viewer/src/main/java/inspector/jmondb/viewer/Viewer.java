@@ -1,14 +1,17 @@
 package inspector.jmondb.viewer;
 
+import inspector.jmondb.intervention.Intervention;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.model.Value;
+import org.apache.commons.io.FilenameUtils;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.DateTickUnit;
 import org.jfree.chart.axis.DateTickUnitType;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYDifferenceRenderer;
 import org.jfree.data.xy.XYSeries;
@@ -16,14 +19,19 @@ import org.jfree.data.xy.XYSeriesCollection;
 
 import javax.persistence.EntityManagerFactory;
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
-import java.io.IOException;;
+import java.io.*;
+;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 public class Viewer extends JPanel {
@@ -47,6 +55,9 @@ public class Viewer extends JPanel {
 	// connection to the iMonDB
 	private EntityManagerFactory emf;
 	private IMonDBReader dbReader;
+
+	// list of interventions
+	private HashMap<Date, Intervention> interventions;
 
 	public static void main(String[] args) throws Exception {
 
@@ -78,6 +89,8 @@ public class Viewer extends JPanel {
 
 		// database connection panel
 		createDbConnectionPanel(panelDbConnection);
+
+		interventions = new HashMap<>();
 	}
 
 	private JMenuBar createMenuBar() {
@@ -97,6 +110,15 @@ public class Viewer extends JPanel {
 		JMenuItem menuItemSaveGraph = new JMenuItem("Save graph as...");
 		menuItemSaveGraph.addActionListener(new ListenerSaveGraph());
 		menuFile.add(menuItemSaveGraph);
+		JMenuItem menuItemLoadInterventions = new JMenuItem("Load interventions");
+		menuItemLoadInterventions.addActionListener(new ListenerLoadInterventions());
+		menuFile.add(menuItemLoadInterventions);
+		JMenuItem menuItemAddIntervention = new JMenuItem("Add intervention");
+		menuItemAddIntervention.addActionListener(new ListenerAddIntervention());
+		menuFile.add(menuItemAddIntervention);
+		JMenuItem menuItemRemoveIntervention = new JMenuItem("Remove intervention");
+		menuItemRemoveIntervention.addActionListener(new ListenerRemoveIntervention());
+		menuFile.add(menuItemRemoveIntervention);
 
 		menuFile.addSeparator();
 
@@ -203,6 +225,22 @@ public class Viewer extends JPanel {
 		// show information
 		labelDbConnection.setText("Not connected");
 		labelDbIcon.setIcon(iconNotConnected);
+	}
+
+	private void drawInterventions() {
+		if(chartPanel != null)
+			for(Intervention i : interventions.values()) {
+				ValueMarker marker = new ValueMarker(i.getDate().getTime());
+				if(i.isIncident())
+					marker.setPaint(Color.RED);
+				else if(i.isEvent())
+					marker.setPaint(Color.BLUE);
+				else if(i.isCalibration())
+					marker.setPaint(Color.GREEN);
+				else
+					marker.setPaint(Color.YELLOW);
+				((XYPlot)chartPanel.getChart().getPlot()).addDomainMarker(marker);
+			}
 	}
 
 	private class ListenerConnectToDatabase implements ActionListener {
@@ -354,6 +392,8 @@ public class Viewer extends JPanel {
 					panelGraph.removeAll();
 					panelGraph.add(chartPanel);
 					panelGraph.validate();
+
+					drawInterventions();
 				}
 			}
 		}
@@ -370,6 +410,70 @@ public class Viewer extends JPanel {
 				}
 			else
 				JOptionPane.showMessageDialog(frameParent, "No graph available yet.", "Warning", JOptionPane.WARNING_MESSAGE);
+		}
+	}
+
+	private class ListenerLoadInterventions implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			JFileChooser fileChooser = new JFileChooser();
+			fileChooser.setFileFilter(new FileFilter() {
+				@Override
+				public boolean accept(File f) {
+					return FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("csv");
+				}
+
+				@Override
+				public String getDescription() {
+					return "Interventions CSV file";
+				}
+			});
+			int returnVal = fileChooser.showOpenDialog(frameParent);
+			if(returnVal == JFileChooser.APPROVE_OPTION) {
+				// remove previous interventions
+				interventions.clear();
+
+				// read new interventions
+				File file = fileChooser.getSelectedFile();
+				try {
+					BufferedReader fileReader = new BufferedReader(new FileReader(file));
+					SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+					String line = fileReader.readLine();	// skip header line
+					while((line = fileReader.readLine()) != null) {
+						String[] lineSplit = line.split(",", -1);
+						Date date = sdf.parse(lineSplit[0]);
+						boolean isCalibrationCheck = lineSplit[1].equals("1");
+						boolean isCalibration = lineSplit[2].equals("1");
+						boolean isEvent = lineSplit[3].equals("1");
+						boolean isIncident = lineSplit[4].equals("1");
+						String comment = lineSplit[5];
+
+						Intervention intervention = new Intervention(date, isCalibrationCheck, isCalibration, isEvent, isIncident, comment);
+						interventions.put(date, intervention);
+					}
+				} catch(ParseException | IOException e1) {
+					JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+				}
+
+				drawInterventions();
+			}
+		}
+	}
+
+	private class ListenerAddIntervention implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+
+		}
+	}
+
+	private class ListenerRemoveIntervention implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+
 		}
 	}
 
