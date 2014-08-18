@@ -207,7 +207,8 @@ public class Viewer extends JPanel {
 
 			// create connection dialog
 			DatabaseConnectionDialog connectionDialog = new DatabaseConnectionDialog();
-			int option = JOptionPane.showConfirmDialog(frameParent, connectionDialog, "Connect to the database", JOptionPane.OK_CANCEL_OPTION);
+
+			int option = JOptionPane.showConfirmDialog(frameParent, connectionDialog, "Connect to the database", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
 			if(option == JOptionPane.OK_OPTION) {
 				// first close an existing connection
