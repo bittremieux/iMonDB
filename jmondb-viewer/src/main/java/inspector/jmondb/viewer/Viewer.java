@@ -10,8 +10,7 @@ import org.jfree.chart.axis.DateTickUnit;
 import org.jfree.chart.axis.DateTickUnitType;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.StandardXYItemRenderer;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.chart.renderer.xy.XYDifferenceRenderer;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
@@ -20,8 +19,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
-import java.text.DateFormat;
+import java.awt.geom.Ellipse2D;
+import java.io.IOException;;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
@@ -274,24 +273,52 @@ public class Viewer extends JPanel {
 					JOptionPane.showMessageDialog(frameParent, "Value <" + valueName + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
 				else {
 					// add data
-					XYSeriesCollection dataset = new XYSeriesCollection();
 					XYSeries meanSeries = new XYSeries("Mean");
-					XYSeries minSeries = new XYSeries("Min");
-					XYSeries maxSeries = new XYSeries("Max");
 					XYSeries q1Series = new XYSeries("Q1");
 					XYSeries q3Series = new XYSeries("Q3");
+					XYSeries minSeries = new XYSeries("Min");
+					XYSeries maxSeries = new XYSeries("Max");
 					for(Value value : values) {
 						meanSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMean());
-						minSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMin());
-						maxSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMax());
 						q1Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ1());
 						q3Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ3());
+						minSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMin());
+						maxSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMax());
 					}
-					dataset.addSeries(meanSeries);
-					dataset.addSeries(minSeries);
-					dataset.addSeries(maxSeries);
-					dataset.addSeries(q1Series);
-					dataset.addSeries(q3Series);
+					XYSeriesCollection q1Collection = new XYSeriesCollection();
+					q1Collection.addSeries(meanSeries);
+					q1Collection.addSeries(q1Series);
+					XYSeriesCollection q3Collection = new XYSeriesCollection();
+					q3Collection.addSeries(meanSeries);
+					q3Collection.addSeries(q3Series);
+					XYSeriesCollection minCollection = new XYSeriesCollection();
+					minCollection.addSeries(q1Series);
+					minCollection.addSeries(minSeries);
+					XYSeriesCollection maxCollection = new XYSeriesCollection();
+					maxCollection.addSeries(q3Series);
+					maxCollection.addSeries(maxSeries);
+
+					// renderer
+					XYDifferenceRenderer q1Renderer = new XYDifferenceRenderer(Color.GRAY, Color.GRAY, true);
+					q1Renderer.setSeriesPaint(0, Color.BLACK);
+					q1Renderer.setSeriesPaint(1, Color.GRAY);
+					q1Renderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
+					q1Renderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
+					XYDifferenceRenderer q3Renderer = new XYDifferenceRenderer(Color.GRAY, Color.GRAY, true);
+					q3Renderer.setSeriesPaint(0, Color.BLACK);
+					q3Renderer.setSeriesPaint(1, Color.GRAY);
+					q3Renderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
+					q3Renderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
+					XYDifferenceRenderer minRenderer = new XYDifferenceRenderer(Color.LIGHT_GRAY, Color.LIGHT_GRAY, true);
+					minRenderer.setSeriesPaint(0, Color.GRAY);
+					minRenderer.setSeriesPaint(1, Color.LIGHT_GRAY);
+					minRenderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
+					minRenderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
+					XYDifferenceRenderer maxRenderer = new XYDifferenceRenderer(Color.LIGHT_GRAY, Color.LIGHT_GRAY, true);
+					maxRenderer.setSeriesPaint(0, Color.GRAY);
+					maxRenderer.setSeriesPaint(1, Color.LIGHT_GRAY);
+					maxRenderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
+					maxRenderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
 
 					// create axis
 					DateAxis dateAxis = new DateAxis("Date");
@@ -302,14 +329,22 @@ public class Viewer extends JPanel {
 					NumberAxis valueAxis = new NumberAxis("Value");
 					valueAxis.setAutoRangeIncludesZero(false);
 
-					// renderer
-					XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer(true, true);
-
 					// create plot and draw graph
-					XYPlot plot = new XYPlot(dataset, dateAxis, valueAxis, renderer);
+					XYPlot plot = new XYPlot();
+					plot.setDomainAxis(dateAxis);
+					plot.setRangeAxis(valueAxis);
+					plot.setDataset(0, q1Collection);
+					plot.setDataset(1, q3Collection);
+					plot.setDataset(2, minCollection);
+					plot.setDataset(3, maxCollection);
+					plot.setRenderer(0, q1Renderer);
+					plot.setRenderer(1, q3Renderer);
+					plot.setRenderer(2, minRenderer);
+					plot.setRenderer(3, maxRenderer);
 					JFreeChart chart = new JFreeChart(valueName, plot);
 					chart.setBackgroundPaint(java.awt.Color.WHITE);
 					chartPanel = new ChartPanel(chart, false, true, false, true, false);
+					chart.removeLegend();
 					chartPanel.setPreferredSize(new Dimension(1200, 740));
 
 					panelGraph.removeAll();
