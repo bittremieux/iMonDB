@@ -283,6 +283,7 @@ public class Viewer extends JPanel {
 					projectLabels.forEach(comboBoxProject::addItem);
 				}
 				catch(Exception e1) {
+					closeDbConnection();
 					JOptionPane.showMessageDialog(frameParent, "<html><b>Could not connect to the database</b></html>\n" + e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 				}
 			}
