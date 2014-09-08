@@ -302,17 +302,26 @@ public class ThermoRawFileExtractor {
 			String modelCv = modelLine.split("\t")[1];
 			//TODO: interpret the PSI-MS OBO file
 			switch(modelCv) {
-				case "MS:1001742":
-					model = InstrumentModel.THERMO_ORBITRAP_VELOS;
+				case "MS:1000449":
+					model = InstrumentModel.THERMO_LTQ_ORBITRAP;
 					break;
 				case "MS:1000556":
 					model = InstrumentModel.THERMO_ORBITRAP_XL;
 					break;
-				case "MS:1001911":
-					model = InstrumentModel.THERMO_Q_EXACTIVE;
+				case "MS:1000855":
+					model = InstrumentModel.THERMO_LTQ_VELOS;
 					break;
 				case "MS:1001510":
 					model = InstrumentModel.THERMO_TSQ_VANTAGE;
+					break;
+				case "MS:1001742":
+					model = InstrumentModel.THERMO_ORBITRAP_VELOS;
+					break;
+				case "MS:1001911":
+					model = InstrumentModel.THERMO_Q_EXACTIVE;
+					break;
+				case "MS:1002416":
+					model = InstrumentModel.THERMO_ORBITRAP_FUSION;
 					break;
 				default:
 					model = InstrumentModel.UNKNOWN_MODEL;
@@ -366,15 +375,20 @@ public class ThermoRawFileExtractor {
 				// header
 				if(values.length == 1 && values[0].length() > 0) {
 					switch(model) {
-						case THERMO_ORBITRAP_VELOS:
+						case THERMO_LTQ_ORBITRAP:
 						case THERMO_ORBITRAP_XL:
+						case THERMO_LTQ_VELOS:
+						case THERMO_ORBITRAP_VELOS:
 							header = headerOrbitrap(values[0]);
+							break;
+						case THERMO_TSQ_VANTAGE:
+							header = headerTsqVantage(values[0], header);
 							break;
 						case THERMO_Q_EXACTIVE:
 							header = headerQExactive(values[0]);
 							break;
-						case THERMO_TSQ_VANTAGE:
-							header = headerTsqVantage(values[0], header);
+						case THERMO_ORBITRAP_FUSION:
+							header = headerOrbitrapFusion(values[0], header);
 							break;
 						default:
 							header = values[0];
@@ -385,15 +399,18 @@ public class ThermoRawFileExtractor {
 				else if(values.length == 2) {
 					String[] nameValue;
 					switch(model) {
-						case THERMO_ORBITRAP_VELOS:
+						case THERMO_LTQ_ORBITRAP:
 						case THERMO_ORBITRAP_XL:
+						case THERMO_LTQ_VELOS:
+						case THERMO_ORBITRAP_VELOS:
 							nameValue = valueOrbitrap(values);
-							break;
-						case THERMO_Q_EXACTIVE:
-							nameValue = valueQExactive(values);
 							break;
 						case THERMO_TSQ_VANTAGE:
 							nameValue = valueTsqVantage(values);
+							break;
+						case THERMO_Q_EXACTIVE:
+						case THERMO_ORBITRAP_FUSION:
+							nameValue = valueQExactiveFusion(values);
 							break;
 						default:
 							nameValue = values;
@@ -419,11 +436,6 @@ public class ThermoRawFileExtractor {
 		return new String(header.trim().getBytes("ascii"));
 	}
 
-	private String headerQExactive(String header) throws UnsupportedEncodingException {
-		String result = header.substring(header.indexOf(' '), header.indexOf(':')).trim();
-		return new String(result.getBytes("ascii"));
-	}
-
 	private String headerTsqVantage(String newHeader, String oldHeader) throws UnsupportedEncodingException {
 		newHeader = newHeader.trim();
 		if(oldHeader.contains("-"))
@@ -437,6 +449,18 @@ public class ThermoRawFileExtractor {
 			return new String(newHeader.getBytes("ascii"));
 	}
 
+	private String headerQExactive(String header) throws UnsupportedEncodingException {
+		String result = header.substring(header.indexOf(' '), header.indexOf(':')).trim();
+		return new String(result.getBytes("ascii"));
+	}
+
+	private String headerOrbitrapFusion(String newHeader, String oldHeader) throws UnsupportedEncodingException {
+		if(newHeader.contains(":"))
+			return oldHeader;
+		else
+			return new String(newHeader.trim().getBytes("ascii"));
+	}
+
 	private String[] valueOrbitrap(String[] line) throws UnsupportedEncodingException {
 		String name = line[0].trim();
 		name = name.substring(0, name.lastIndexOf(':'));
@@ -445,17 +469,17 @@ public class ThermoRawFileExtractor {
 		return new String[] { new String(name.getBytes("ascii")), value };
 	}
 
-	private String[] valueQExactive(String[] line) throws UnsupportedEncodingException {
+	private String[] valueTsqVantage(String[] line) throws UnsupportedEncodingException {
+		return new String[] { new String(line[0].getBytes("ascii")), line[1] };
+	}
+
+	private String[] valueQExactiveFusion(String[] line) throws UnsupportedEncodingException {
 		String name = line[0].trim();
 		if(name.contains(":"))
 			name = name.substring(0, name.lastIndexOf(':'));
 		String value = line[1].trim();
 
 		return new String[] { new String(name.getBytes("ascii")), value };
-	}
-
-	private String[] valueTsqVantage(String[] line) throws UnsupportedEncodingException {
-		return new String[] { new String(line[0].getBytes("ascii")), line[1] };
 	}
 
 	/**
