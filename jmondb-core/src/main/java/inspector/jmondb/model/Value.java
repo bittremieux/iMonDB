@@ -49,25 +49,25 @@ public class Value {
 	private Integer nNotMissingValues;
 	/** the minimum observation */
 	@Column(name="min")
-	private Float min;
+	private Double min;
 	/** the maximum observation */
 	@Column(name="max")
-	private Float max;
+	private Double max;
 	/** the mean observation */
 	@Column(name="mean")
-	private Float mean;
+	private Double mean;
 	/** the median observation */
 	@Column(name="median")
-	private Float median;
+	private Double median;
 	/** the standard deviation */
 	@Column(name="sd")
-	private Float sd;
+	private Double sd;
 	/** the first quartile */
 	@Column(name="q1")
-	private Float q1;
+	private Double q1;
 	/** the third quartile */
 	@Column(name="q3")
-	private Float q3;
+	private Double q3;
 
 	/** inverse part of the bi-directional relationship with {@link Run} */
 	@ManyToOne(fetch=FetchType.LAZY)
@@ -106,7 +106,7 @@ public class Value {
 	 * @param q1  The first quartile
 	 * @param q3  The third quartile
 	 */
-	public Value(String name, String type, String accession, CV cv, Boolean isNumeric, String firstValue, Integer n, Integer nDiffValues, Integer nNotMissingValues, Float min, Float max, Float mean, Float median, Float sd, Float q1, Float q3) {
+	public Value(String name, String type, String accession, CV cv, Boolean isNumeric, String firstValue, Integer n, Integer nDiffValues, Integer nNotMissingValues, Double min, Double max, Double mean, Double median, Double sd, Double q1, Double q3) {
 		this();
 
 		setName(name);
@@ -233,59 +233,59 @@ public class Value {
 		this.nNotMissingValues = nNotMissingValues;
 	}
 
-	public Float getMin() {
+	public Double getMin() {
 		return min;
 	}
 
-	public void setMin(Float min) {
+	public void setMin(Double min) {
 		this.min = min;
 	}
 
-	public Float getMax() {
+	public Double getMax() {
 		return max;
 	}
 
-	public void setMax(Float max) {
+	public void setMax(Double max) {
 		this.max = max;
 	}
 
-	public Float getMean() {
+	public Double getMean() {
 		return mean;
 	}
 
-	public void setMean(Float mean) {
+	public void setMean(Double mean) {
 		this.mean = mean;
 	}
 
-	public Float getMedian() {
+	public Double getMedian() {
 		return median;
 	}
 
-	public void setMedian(Float median) {
+	public void setMedian(Double median) {
 		this.median = median;
 	}
 
-	public Float getSd() {
+	public Double getSd() {
 		return sd;
 	}
 
-	public void setSd(Float sd) {
+	public void setSd(Double sd) {
 		this.sd = sd;
 	}
 
-	public Float getQ1() {
+	public Double getQ1() {
 		return q1;
 	}
 
-	public void setQ1(Float q1) {
+	public void setQ1(Double q1) {
 		this.q1 = q1;
 	}
 
-	public Float getQ3() {
+	public Double getQ3() {
 		return q3;
 	}
 
-	public void setQ3(Float q3) {
+	public void setQ3(Double q3) {
 		this.q3 = q3;
 	}
 

@@ -526,13 +526,13 @@ public class ThermoRawFileExtractor {
 			Integer n;
 			Integer nDiff;
 			Integer nNotMissing = 0;
-			Float min = null;
-			Float max = null;
-			Float mean = null;
-			Float median = null;
-			Float sd = null;
-			Float q1 = null;
-			Float q3 = null;
+			Double min = null;
+			Double max = null;
+			Double mean = null;
+			Double median = null;
+			Double sd = null;
+			Double q1 = null;
+			Double q3 = null;
 
 			DescriptiveStatistics stats = new DescriptiveStatistics(cell.getValue().size());
 			Frequency freq = new Frequency();
@@ -551,13 +551,13 @@ public class ThermoRawFileExtractor {
 			n = (int) freq.getSumFreq();
 			nDiff = freq.getUniqueCount();
 			if(isNumeric) {
-				min = (float) stats.getMin();
-				max = (float) stats.getMax();
-				mean = (float) stats.getMean();
-				median = (float) stats.getPercentile(50);
-				sd = (float) stats.getStandardDeviation();
-				q1 = (float) stats.getPercentile(25);
-				q3 = (float) stats.getPercentile(75);
+				min = stats.getMin();
+				max = stats.getMax();
+				mean = stats.getMean();
+				median = stats.getPercentile(50);
+				sd = stats.getStandardDeviation();
+				q1 = stats.getPercentile(25);
+				q3 = stats.getPercentile(75);
 			}
 
 			//TODO: correctly set the accession number once we have a valid cv
