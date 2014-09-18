@@ -73,7 +73,7 @@ public class Viewer extends JPanel {
 		UIManager.put("OptionPane.background", Color.white);
 		UIManager.put("Panel.background", Color.white);
 
-		JPanel panelParent = new JPanel(new GridBagLayout());
+		JPanel panelParent = new JPanel(new BorderLayout());
 		panelParent.setBackground(Color.WHITE);
 		frameParent.setContentPane(panelParent);
 
@@ -83,13 +83,17 @@ public class Viewer extends JPanel {
 		// arrange panels
 		JPanel panelSelection = new JPanel();
 		JPanel panelDbConnection = new JPanel();
-		arrangePanels(panelParent, panelSelection, panelDbConnection);
+		JPanel panelInterventions = new JPanel();
+		arrangePanels(panelParent, panelSelection, panelDbConnection, panelInterventions);
 
 		// value selection panel
 		createSelectionPanel(panelSelection);
 
 		// database connection panel
 		createDbConnectionPanel(panelDbConnection);
+
+		// interventions panel
+		createInterventionsPanel(panelInterventions);
 
 		interventions = new HashMap<>();
 	}
@@ -142,34 +146,21 @@ public class Viewer extends JPanel {
 		return menuBar;
 	}
 
-	private void arrangePanels(JPanel panelParent, JPanel panelSelection, JPanel panelDbConnection) {
-		GridBagConstraints constraints;
+	private void arrangePanels(JPanel panelParent, JPanel panelSelection, JPanel panelDbConnection, JPanel panelInterventions) {
 		panelSelection.setBackground(Color.WHITE);
-		constraints = new GridBagConstraints();
-		constraints.gridx = 0;
-		constraints.gridy = 0;
-		constraints.anchor = GridBagConstraints.PAGE_START;
-		constraints.fill = GridBagConstraints.HORIZONTAL;
-		panelParent.add(panelSelection, constraints);
+		panelParent.add(panelSelection, BorderLayout.PAGE_START);
 
 		panelGraph = new JPanel();
 		panelGraph.setBackground(Color.WHITE);
 		panelGraph.setPreferredSize(new Dimension(1200, 750));
-		constraints = new GridBagConstraints();
-		constraints.gridx = 0;
-		constraints.gridy = 1;
-		constraints.weighty = 1;
-		constraints.anchor = GridBagConstraints.CENTER;
-		constraints.fill = GridBagConstraints.HORIZONTAL;
-		panelParent.add(panelGraph, constraints);
+		panelParent.add(panelGraph, BorderLayout.CENTER);
 
 		panelDbConnection.setBackground(Color.WHITE);
-		constraints = new GridBagConstraints();
-		constraints.gridx = 0;
-		constraints.gridy = 2;
-		constraints.anchor = GridBagConstraints.PAGE_END;
-		constraints.fill = GridBagConstraints.HORIZONTAL;
-		panelParent.add(panelDbConnection, constraints);
+		panelParent.add(panelDbConnection, BorderLayout.PAGE_END);
+
+		panelInterventions.setBackground(Color.WHITE);
+		panelInterventions.setPreferredSize(new Dimension(300, 750));
+		panelParent.add(panelInterventions, BorderLayout.LINE_END);
 	}
 
 	private void createSelectionPanel(JPanel panelSelection) {
@@ -207,9 +198,27 @@ public class Viewer extends JPanel {
 		panelDbConnection.add(labelDbIcon);
 	}
 
+	private void createInterventionsPanel(JPanel interventionsPanel) {
+		nodeInterventions = new DefaultMutableTreeNode("Interventions");
+		treeInterventions = new JTree(nodeInterventions);
+		JScrollPane scrollPaneInterventions = new JScrollPane(treeInterventions);
+		scrollPaneInterventions.setPreferredSize(new Dimension(250, 750));
+
+		interventionsPanel.add(scrollPaneInterventions);
+
+		nodeCalibration = new DefaultMutableTreeNode("Calibration");
+		nodeInterventions.add(nodeCalibration);
+		nodeEvent = new DefaultMutableTreeNode("Event");
+		nodeInterventions.add(nodeEvent);
+		nodeIncident = new DefaultMutableTreeNode("Incident");
+		nodeInterventions.add(nodeIncident);
+
+		expandInterventionsTree();
+	}
+
 	public void display() {
 		frameParent.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-		frameParent.setPreferredSize(new Dimension(1200, 900));
+		frameParent.setPreferredSize(new Dimension(1500, 900));
 		frameParent.pack();
 		frameParent.setVisible(true);
 	}
