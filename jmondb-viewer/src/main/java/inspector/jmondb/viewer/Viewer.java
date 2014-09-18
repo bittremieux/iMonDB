@@ -286,9 +286,13 @@ public class Viewer extends JPanel {
 	}
 
 	private void removeInterventions() {
+		// remove from interventions panel
+		nodeIncident.removeAllChildren();
+		nodeEvent.removeAllChildren();
+		nodeCalibration.removeAllChildren();
+		// remove from graph
 		if(chartPanel != null)
 			((XYPlot) chartPanel.getChart().getPlot()).getRenderer().removeAnnotations();
-		interventions.clear();
 	}
 
 	private class ListenerConnectToDatabase implements ActionListener {
