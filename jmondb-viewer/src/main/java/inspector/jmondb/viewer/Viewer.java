@@ -33,6 +33,7 @@ import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 
@@ -252,29 +253,41 @@ public class Viewer extends JPanel {
 	}
 
 	private void drawInterventions() {
-
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
-			for(Intervention i : interventions.values()) {
-				Paint paint;
-				if(i.isIncident())
-					paint = Color.RED;
-				else if(i.isEvent())
-					paint = Color.BLUE;
-				else if(i.isCalibration())
-					paint = Color.GREEN;
-				else
-					paint = Color.YELLOW;
+
+			Enumeration incidents = nodeIncident.children();
+			while(incidents.hasMoreElements()) {
+				Intervention i = ((InterventionNode)incidents.nextElement()).getIntervention();
 				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
-						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), paint);
+						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.RED);
 				annotation.setToolTipText(i.getComment());
 				plot.getRenderer().addAnnotation(annotation, Layer.BACKGROUND);
+			}
+
+			Enumeration events = nodeEvent.children();
+			while(events.hasMoreElements()) {
+				Intervention i = ((InterventionNode)events.nextElement()).getIntervention();
+				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
+						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.BLUE);
+				annotation.setToolTipText(i.getComment());
+				plot.getRenderer().addAnnotation(annotation, Layer.BACKGROUND);
+			}
+
+			Enumeration calibrations = nodeCalibration.children();
+			while(calibrations.hasMoreElements()) {
+				Intervention i = ((InterventionNode)calibrations.nextElement()).getIntervention();
+				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
+						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.RED);
+				annotation.setToolTipText(i.getComment());
+				plot.getRenderer().addAnnotation(annotation, Layer.FOREGROUND);
 			}
 		}
 	}
 
 	private void removeInterventions() {
-		((XYPlot) chartPanel.getChart().getPlot()).getRenderer().removeAnnotations();
+		if(chartPanel != null)
+			((XYPlot) chartPanel.getChart().getPlot()).getRenderer().removeAnnotations();
 		interventions.clear();
 	}
 
