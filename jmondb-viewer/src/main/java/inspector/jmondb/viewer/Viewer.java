@@ -418,8 +418,6 @@ public class Viewer extends JPanel {
 					// create axis
 					DateAxis dateAxis = new DateAxis("Date");
 					dateAxis.setDateFormatOverride(new SimpleDateFormat("dd/MM/yyyy"));
-					DateTickUnit unit = new DateTickUnit(DateTickUnitType.DAY, 7);
-					dateAxis.setTickUnit(unit);
 
 					NumberAxis valueAxis = new NumberAxis("Value");
 					valueAxis.setAutoRangeIncludesZero(false);
