@@ -21,12 +21,13 @@ import org.jfree.ui.Layer;
 import javax.persistence.EntityManagerFactory;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.MutableTreeNode;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.io.*;
-;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
@@ -52,6 +53,13 @@ public class Viewer extends JPanel {
 	private JLabel labelDbIcon;
 	private static ImageIcon iconNotConnected = new ImageIcon(Viewer.class.getResource("/images/nok.png"), "not connected");
 	private static ImageIcon iconConnected = new ImageIcon(Viewer.class.getResource("/images/ok.png"), "connected");
+
+	// interventions information
+	private DefaultMutableTreeNode nodeInterventions;
+	private DefaultMutableTreeNode nodeCalibration;
+	private DefaultMutableTreeNode nodeEvent;
+	private DefaultMutableTreeNode nodeIncident;
+	private JTree treeInterventions;
 
 	// connection to the iMonDB
 	private EntityManagerFactory emf;
@@ -237,7 +245,14 @@ public class Viewer extends JPanel {
 		labelDbIcon.setIcon(iconNotConnected);
 	}
 
+	private void expandInterventionsTree() {
+		for(int i = 0; i < treeInterventions.getRowCount(); i++) {
+			treeInterventions.expandRow(i);
+		}
+	}
+
 	private void drawInterventions() {
+
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 			for(Intervention i : interventions.values()) {
@@ -471,12 +486,24 @@ public class Viewer extends JPanel {
 						String comment = lineSplit[5];
 
 						Intervention intervention = new Intervention(date, isCalibrationCheck, isCalibration, isEvent, isIncident, comment);
-						interventions.put(date, intervention);
+						InterventionNode node = new InterventionNode(intervention);
+
+						// add to the correct intervention type
+						if(intervention.isIncident())
+							nodeIncident.add(node);
+						else if(intervention.isEvent())
+							nodeEvent.add(node);
+						else if(intervention.isCalibration())
+							nodeCalibration.add(node);
 					}
+
 				} catch(ParseException | IOException e1) {
 					JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 				}
 
+				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
+				expandInterventionsTree();
+				// draw the interventions on the graph
 				drawInterventions();
 			}
 		}
