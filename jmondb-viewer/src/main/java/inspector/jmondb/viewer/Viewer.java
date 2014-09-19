@@ -55,11 +55,11 @@ public class Viewer extends JPanel {
 
 	// interventions information
 	private DefaultMutableTreeNode nodeCalibration;
-	private ArrayList<ValueMarker> markerCalibration;
+	private HashMap<Date, ValueMarker> markerCalibration;
 	private DefaultMutableTreeNode nodeEvent;
-	private ArrayList<ValueMarker> markerEvent;
+	private HashMap<Date, ValueMarker> markerEvent;
 	private DefaultMutableTreeNode nodeIncident;
-	private ArrayList<ValueMarker> markerIncident;
+	private HashMap<Date, ValueMarker> markerIncident;
 
 	private JTree treeInterventions;
 
@@ -104,9 +104,9 @@ public class Viewer extends JPanel {
 		createDbConnectionPanel(panelDbConnection);
 
 		// interventions panel
-		markerCalibration = new ArrayList<>();
-		markerEvent = new ArrayList<>();
-		markerIncident = new ArrayList<>();
+		markerCalibration = new HashMap<>();
+		markerEvent = new HashMap<>();
+		markerIncident = new HashMap<>();
 		createInterventionsPanel(panelInterventions);
 	}
 
@@ -325,17 +325,17 @@ public class Viewer extends JPanel {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 
 			if(checkBoxCalibration.isSelected())
-				markerCalibration.forEach(plot::addDomainMarker);
+				markerCalibration.values().forEach(plot::addDomainMarker);
 			else
-				markerCalibration.forEach(plot::removeDomainMarker);
+				markerCalibration.values().forEach(plot::removeDomainMarker);
 			if(checkBoxEvent.isSelected())
-				markerEvent.forEach(plot::addDomainMarker);
+				markerEvent.values().forEach(plot::addDomainMarker);
 			else
-				markerEvent.forEach(plot::removeDomainMarker);
+				markerEvent.values().forEach(plot::removeDomainMarker);
 			if(checkBoxIncident.isSelected())
-				markerIncident.forEach(plot::addDomainMarker);
+				markerIncident.values().forEach(plot::addDomainMarker);
 			else
-				markerIncident.forEach(plot::removeDomainMarker);
+				markerIncident.values().forEach(plot::removeDomainMarker);
 		}
 	}
 
@@ -343,9 +343,9 @@ public class Viewer extends JPanel {
 		// remove from graph
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
-			markerCalibration.forEach(plot::removeDomainMarker);
-			markerEvent.forEach(plot::removeDomainMarker);
-			markerIncident.forEach(plot::removeDomainMarker);
+			markerCalibration.values().forEach(plot::removeDomainMarker);
+			markerEvent.values().forEach(plot::removeDomainMarker);
+			markerIncident.values().forEach(plot::removeDomainMarker);
 		}
 		// remove from interventions panel
 		nodeIncident.removeAllChildren();
@@ -357,6 +357,17 @@ public class Viewer extends JPanel {
 		markerIncident.clear();
 		markerEvent.clear();
 		markerCalibration.clear();
+	}
+
+	private ValueMarker removeMarker(Intervention intervention) {
+		if(intervention.isIncident())
+			return markerIncident.remove(intervention.getDate());
+		else if(intervention.isEvent())
+			return markerEvent.remove(intervention.getDate());
+		else if(intervention.isCalibration())
+			return markerCalibration.remove(intervention.getDate());
+		else
+			return null;
 	}
 
 	private class ListenerConnectToDatabase implements ActionListener {
@@ -571,17 +582,17 @@ public class Viewer extends JPanel {
 						if(intervention.isIncident()) {
 							nodeIncident.add(node);
 							ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
-							markerIncident.add(marker);
+							markerIncident.put(intervention.getDate(), marker);
 						}
 						else if(intervention.isEvent()) {
 							nodeEvent.add(node);
 							ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-							markerEvent.add(marker);
+							markerEvent.put(intervention.getDate(), marker);
 						}
 						else if(intervention.isCalibration()) {
 							nodeCalibration.add(node);
 							ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
-							markerCalibration.add(marker);
+							markerCalibration.put(intervention.getDate(), marker);
 						}
 					}
 
@@ -591,6 +602,8 @@ public class Viewer extends JPanel {
 
 				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
 				expandInterventionsTree();
+				// show the interventions on the graph
+				drawInterventions();
 			}
 		}
 	}
@@ -710,19 +723,19 @@ public class Viewer extends JPanel {
 				if(intervention.isIncident()) {
 					nodeIncident.add(new InterventionNode(intervention));
 					marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
-					markerIncident.add(marker);
+					markerIncident.put(intervention.getDate(), marker);
 					toDraw = checkBoxIncident.isSelected();
 				}
 				else if(intervention.isEvent()) {
 					nodeEvent.add(new InterventionNode(intervention));
 					marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-					markerEvent.add(marker);
+					markerEvent.put(intervention.getDate(), marker);
 					toDraw = checkBoxEvent.isSelected();
 				}
 				else if(intervention.isCalibration()) {
 					nodeCalibration.add(new InterventionNode(intervention));
 					marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
-					markerCalibration.add(marker);
+					markerCalibration.put(intervention.getDate(), marker);
 					toDraw = checkBoxCalibration.isSelected();
 				}
 
@@ -742,6 +755,18 @@ public class Viewer extends JPanel {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
+			if(treeInterventions.getSelectionPath().getLastPathComponent() instanceof InterventionNode) {
+				InterventionNode selectedNode = (InterventionNode) treeInterventions.getSelectionPath().getLastPathComponent();
+				// remove from tree
+				DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
+				treeModel.removeNodeFromParent(selectedNode);
+				// remove from graph
+				ValueMarker marker = removeMarker(selectedNode.getIntervention());
+				if(chartPanel != null && marker != null) {
+					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+					plot.removeDomainMarker(marker);
+				}
+			}
 		}
 	}
 
@@ -768,21 +793,21 @@ public class Viewer extends JPanel {
 				// show or hide the specific interventions
 				if(source == checkBoxCalibration) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
-						markerCalibration.forEach(plot::removeDomainMarker);
+						markerCalibration.values().forEach(plot::removeDomainMarker);
 					else
-						markerCalibration.forEach(plot::addDomainMarker);
+						markerCalibration.values().forEach(plot::addDomainMarker);
 				}
 				if(source == checkBoxEvent) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
-						markerEvent.forEach(plot::removeDomainMarker);
+						markerEvent.values().forEach(plot::removeDomainMarker);
 					else
-						markerEvent.forEach(plot::addDomainMarker);
+						markerEvent.values().forEach(plot::addDomainMarker);
 				}
 				if(source == checkBoxIncident) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
-						markerIncident.forEach(plot::removeDomainMarker);
+						markerIncident.values().forEach(plot::removeDomainMarker);
 					else
-						markerIncident.forEach(plot::addDomainMarker);
+						markerIncident.values().forEach(plot::addDomainMarker);
 				}
 			}
 		}
