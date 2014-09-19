@@ -22,10 +22,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
+import java.awt.event.*;
 import java.awt.geom.Ellipse2D;
 import java.io.*;
 import java.net.URI;
@@ -235,6 +232,30 @@ public class Viewer extends JPanel {
 		// create interventions tree view
 		DefaultMutableTreeNode nodeInterventions = new DefaultMutableTreeNode("Interventions");
 		treeInterventions = new JTree(nodeInterventions);
+		// mouse listener to create context menus on right click
+		ActionListener removeListener = new ListenerRemoveIntervention();
+		treeInterventions.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent e) {
+				if(SwingUtilities.isRightMouseButton(e)) {
+					// highlight relevant item
+					int row = treeInterventions.getClosestRowForLocation(e.getX(), e.getY());
+					treeInterventions.setSelectionRow(row);
+
+					// show pop-up menu
+					JPopupMenu popupMenu = new JPopupMenu();
+					JMenuItem itemEdit = new JMenuItem("Edit");
+					InterventionNode selectedNode = (InterventionNode) treeInterventions.getSelectionPath().getLastPathComponent();
+					itemEdit.addActionListener(new ListenerEditIntervention(selectedNode.getIntervention()));
+					popupMenu.add(itemEdit);
+					JMenuItem itemRemove = new JMenuItem("Remove");
+					itemRemove.addActionListener(removeListener);
+					popupMenu.add(itemRemove);
+
+					popupMenu.show(e.getComponent(), e.getX(), e.getY());
+				}
+			}
+		});
 		//TODO: possibly set alternative icons
 		treeInterventions.setCellRenderer(new DefaultTreeCellRenderer() {
 			@Override
@@ -281,7 +302,7 @@ public class Viewer extends JPanel {
 		buttonAdd.addActionListener(new ListenerAddIntervention());
 		buttonsPanel.add(buttonAdd);
 		JButton buttonRemove = new JButton("Remove");
-		buttonRemove.addActionListener(new ListenerRemoveIntervention());
+		buttonRemove.addActionListener(removeListener);
 		buttonsPanel.add(buttonRemove);
 		JButton buttonClear = new JButton("Clear");
 		buttonClear.addActionListener(new ListenerClearInterventions());
@@ -766,6 +787,80 @@ public class Viewer extends JPanel {
 					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 					plot.removeDomainMarker(marker);
 				}
+			}
+		}
+	}
+
+	private class ListenerEditIntervention implements ActionListener {
+
+		private Intervention intervention;
+
+		public ListenerEditIntervention(Intervention i) {
+			this.intervention = i;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			// create intervention dialog
+			InterventionDialog dialog = new InterventionDialog(intervention, false);
+
+			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Edit intervention", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+			if(option == JOptionPane.OK_OPTION) {
+				// retrieve the old marker
+				ValueMarker marker = null;
+				if(intervention.isIncident())
+					marker = markerIncident.remove(intervention.getDate());
+				else if(intervention.isEvent())
+					marker = markerEvent.remove(intervention.getDate());
+				else if(intervention.isCalibration())
+					marker = markerCalibration.remove(intervention.getDate());
+
+				// update the intervention
+				intervention.setDate(dialog.getDate());
+				if(!dialog.getComment().equals(""))
+					intervention.setComment(dialog.getComment());
+
+				// update the marker
+				if(marker != null) {
+					marker.setValue(intervention.getDate().getTime());
+					if(intervention.isIncident())
+						markerIncident.put(intervention.getDate(), marker);
+					else if(intervention.isEvent())
+						markerEvent.put(intervention.getDate(), marker);
+					else if(intervention.isCalibration())
+						markerCalibration.put(intervention.getDate(), marker);
+				}
+
+				// add to the interventions list and create a marker
+				/*ValueMarker marker = null;
+				boolean toDraw = false;
+				if(intervention.isIncident()) {
+					nodeIncident.add(new InterventionNode(intervention));
+					marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
+					markerIncident.put(intervention.getDate(), marker);
+					toDraw = checkBoxIncident.isSelected();
+				}
+				else if(intervention.isEvent()) {
+					nodeEvent.add(new InterventionNode(intervention));
+					marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
+					markerEvent.put(intervention.getDate(), marker);
+					toDraw = checkBoxEvent.isSelected();
+				}
+				else if(intervention.isCalibration()) {
+					nodeCalibration.add(new InterventionNode(intervention));
+					marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
+					markerCalibration.put(intervention.getDate(), marker);
+					toDraw = checkBoxCalibration.isSelected();
+				}
+
+				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
+				expandInterventionsTree();
+				// draw the interventions on the graph
+				if(toDraw && chartPanel != null) {
+					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+					plot.addDomainMarker(marker);
+				}*/
 			}
 		}
 	}
