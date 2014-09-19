@@ -487,7 +487,7 @@ public class Viewer extends JPanel {
 						String projectLabel = (String)comboBoxProject.getSelectedItem();
 						String valueName = (String)comboBoxValue.getSelectedItem();
 
-						List<Value> values = dbReader.getFromCustomQuery("SELECT val FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" AND val.name = \"" + valueName + "\"", Value.class);
+						List<Value> values = dbReader.getFromCustomQuery("SELECT val FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" AND val.name = \"" + valueName + "\" ORDER BY val.fromRun.sampleDate", Value.class);
 
 						if(values.size() == 0)
 							JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
@@ -495,23 +495,23 @@ public class Viewer extends JPanel {
 							JOptionPane.showMessageDialog(frameParent, "Value <" + valueName + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
 						else {
 							// add data
-							XYSeries meanSeries = new XYSeries("Mean");
+							XYSeries medianSeries = new XYSeries("Median");
 							XYSeries q1Series = new XYSeries("Q1");
 							XYSeries q3Series = new XYSeries("Q3");
 							XYSeries minSeries = new XYSeries("Min");
 							XYSeries maxSeries = new XYSeries("Max");
 							for(Value value : values) {
-								meanSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMean());
+								medianSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMedian());
 								q1Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ1());
 								q3Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ3());
 								minSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMin());
 								maxSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMax());
 							}
 							XYSeriesCollection q1Collection = new XYSeriesCollection();
-							q1Collection.addSeries(meanSeries);
+							q1Collection.addSeries(medianSeries);
 							q1Collection.addSeries(q1Series);
 							XYSeriesCollection q3Collection = new XYSeriesCollection();
-							q3Collection.addSeries(meanSeries);
+							q3Collection.addSeries(medianSeries);
 							q3Collection.addSeries(q3Series);
 							XYSeriesCollection minCollection = new XYSeriesCollection();
 							minCollection.addSeries(q1Series);
@@ -563,7 +563,7 @@ public class Viewer extends JPanel {
 							plot.setRenderer(2, minRenderer);
 							plot.setRenderer(3, maxRenderer);
 							JFreeChart chart = new JFreeChart(valueName, plot);
-							chart.setBackgroundPaint(java.awt.Color.WHITE);
+							chart.setBackgroundPaint(Color.WHITE);
 							chartPanel = new ChartPanel(chart, false, true, false, true, false);
 							chart.removeLegend();
 
