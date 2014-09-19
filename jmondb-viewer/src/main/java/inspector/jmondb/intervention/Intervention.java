@@ -2,7 +2,7 @@ package inspector.jmondb.intervention;
 
 import java.util.Date;
 
-public class Intervention {
+public class Intervention implements Comparable<Intervention> {
 
 	private Date date;
 	private boolean isCalibrationCheck;
@@ -69,5 +69,40 @@ public class Intervention {
 
 	public void setComment(String comment) {
 		this.comment = comment;
+	}
+
+	@Override
+	public int compareTo(Intervention o) {
+		if(getDate().before(o.getDate()))
+			return -1;
+		else if(getDate().after(o.getDate()))
+			return 1;
+		else {
+			int score = 0;
+			if(isCalibrationCheck())
+				score += 1;
+			if(isCalibration())
+				score += 2;
+			if(isEvent())
+				score += 4;
+			if(isIncident())
+				score += 8;
+			int oScore = 0;
+			if(o.isCalibrationCheck())
+				oScore += 1;
+			if(o.isCalibration())
+				oScore += 2;
+			if(o.isEvent())
+				oScore += 4;
+			if(o.isIncident())
+				oScore += 8;
+
+			if(score < oScore)
+				return -1;
+			else if(score > oScore)
+				return 1;
+			else
+				return 0;
+		}
 	}
 }

@@ -31,8 +31,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
 
 public class Viewer extends JPanel {
@@ -130,12 +129,9 @@ public class Viewer extends JPanel {
 		JMenuItem menuItemLoadInterventions = new JMenuItem("Load interventions");
 		menuItemLoadInterventions.addActionListener(new ListenerLoadInterventions());
 		menuFile.add(menuItemLoadInterventions);
-		JMenuItem menuItemAddIntervention = new JMenuItem("Add intervention");
-		menuItemAddIntervention.addActionListener(new ListenerAddIntervention());
-		menuFile.add(menuItemAddIntervention);
-		JMenuItem menuItemRemoveIntervention = new JMenuItem("Remove intervention");
-		menuItemRemoveIntervention.addActionListener(new ListenerRemoveIntervention());
-		menuFile.add(menuItemRemoveIntervention);
+		JMenuItem menuItemSaveInterventions = new JMenuItem("Save interventions");
+		menuItemSaveInterventions.addActionListener(new ListenerSaveInterventions());
+		menuFile.add(menuItemSaveInterventions);
 
 		menuFile.addSeparator();
 
@@ -566,6 +562,98 @@ public class Viewer extends JPanel {
 				expandInterventionsTree();
 				// draw the interventions on the graph
 				drawInterventions();
+			}
+		}
+	}
+
+	private class ListenerSaveInterventions implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+
+			if(markerCalibration.size() + markerEvent.size() + markerIncident.size() < 1) {
+				JOptionPane.showMessageDialog(frameParent, "No interventions available yet.\nPlease load an interventions file or manually create some interventions first.", "Error", JOptionPane.ERROR_MESSAGE);
+			}
+			else {
+
+				JFileChooser fileChooser = new JFileChooser();
+				fileChooser.setFileFilter(new FileFilter() {
+					@Override
+					public boolean accept(File f) {
+						return FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("csv");
+					}
+
+					@Override
+					public String getDescription() {
+						return "Interventions CSV file";
+					}
+				});
+				int returnVal = fileChooser.showSaveDialog(frameParent);
+				if(returnVal == JFileChooser.APPROVE_OPTION) {
+					// save interventions to a new file
+					File file = fileChooser.getSelectedFile();
+					// add extension if missing
+					if(FilenameUtils.getExtension(file.getName()).equals(""))
+						file = new File(file.getAbsolutePath() + ".csv");
+
+					try {
+						FileWriter writer = new FileWriter(file);
+						SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+
+						// header
+						writer.write("Date,Calibration check,Calibration,Event,Incident,Comment\n");
+						// body
+						PriorityQueue<Intervention> interventions = new PriorityQueue<>(markerCalibration.size() + markerEvent.size() + markerIncident.size());
+						Enumeration incidents = nodeIncident.children();
+						while(incidents.hasMoreElements()) {
+							Intervention i = ((InterventionNode) incidents.nextElement()).getIntervention();
+							interventions.add(i);
+						}
+						Enumeration events = nodeEvent.children();
+						while(events.hasMoreElements()) {
+							Intervention i = ((InterventionNode) events.nextElement()).getIntervention();
+							interventions.add(i);
+						}
+						Enumeration calibrations = nodeCalibration.children();
+						while(calibrations.hasMoreElements()) {
+							Intervention i = ((InterventionNode) calibrations.nextElement()).getIntervention();
+							interventions.add(i);
+						}
+						while(!interventions.isEmpty()) {
+							// date
+							Intervention i = interventions.poll();
+							writer.append(sdf.format(i.getDate())).append(",");
+							// calibration check
+							if(i.isCalibrationCheck())
+								writer.append("1,");
+							else
+								writer.append(",");
+							// calibration
+							if(i.isCalibration())
+								writer.append("1,");
+							else
+								writer.append(",");
+							// event
+							if(i.isEvent())
+								writer.append("1,");
+							else
+								writer.append(",");
+							// incident
+							if(i.isIncident())
+								writer.append("1,");
+							else
+								writer.append(",");
+							// comment
+							writer.append(i.getComment()).append("\n");
+						}
+
+						writer.flush();
+						writer.close();
+
+					} catch(IOException e1) {
+						JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+					}
+				}
 			}
 		}
 	}
