@@ -156,16 +156,14 @@ public class Viewer extends JPanel {
 		panelSelection.setBackground(Color.WHITE);
 		panelParent.add(panelSelection, BorderLayout.PAGE_START);
 
-		panelGraph = new JPanel();
+		panelGraph = new JPanel(new BorderLayout());
 		panelGraph.setBackground(Color.WHITE);
-		panelGraph.setPreferredSize(new Dimension(1200, 750));
 		panelParent.add(panelGraph, BorderLayout.CENTER);
 
 		panelDbConnection.setBackground(Color.WHITE);
 		panelParent.add(panelDbConnection, BorderLayout.PAGE_END);
 
 		panelInterventions.setBackground(Color.WHITE);
-		panelInterventions.setPreferredSize(new Dimension(300, 750));
 		panelParent.add(panelInterventions, BorderLayout.LINE_END);
 	}
 
@@ -286,7 +284,6 @@ public class Viewer extends JPanel {
 		});
 
 		JScrollPane scrollPaneInterventions = new JScrollPane(treeInterventions);
-		scrollPaneInterventions.setPreferredSize(new Dimension(250, 750));
 
 		nodeCalibration = new DefaultMutableTreeNode("Calibration");
 		nodeInterventions.add(nodeCalibration);
@@ -317,7 +314,8 @@ public class Viewer extends JPanel {
 
 	public void display() {
 		frameParent.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-		frameParent.setPreferredSize(new Dimension(1500, 900));
+		frameParent.setMinimumSize(new Dimension(1280, 800));
+		frameParent.setPreferredSize(new Dimension(1280, 800));
 		frameParent.pack();
 		frameParent.setVisible(true);
 	}
@@ -534,10 +532,9 @@ public class Viewer extends JPanel {
 					chart.setBackgroundPaint(java.awt.Color.WHITE);
 					chartPanel = new ChartPanel(chart, false, true, false, true, false);
 					chart.removeLegend();
-					chartPanel.setPreferredSize(new Dimension(1200, 740));
 
 					panelGraph.removeAll();
-					panelGraph.add(chartPanel);
+					panelGraph.add(chartPanel, BorderLayout.CENTER);
 					panelGraph.validate();
 
 					drawInterventions();
