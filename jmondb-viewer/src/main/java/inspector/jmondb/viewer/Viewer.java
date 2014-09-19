@@ -277,6 +277,7 @@ public class Viewer extends JPanel {
 
 		JPanel buttonsPanel = new JPanel(new GridLayout(0, 3));
 		JButton buttonAdd = new JButton("Add");
+		buttonAdd.addActionListener(new ListenerAddIntervention());
 		buttonsPanel.add(buttonAdd);
 		JButton buttonRemove = new JButton("Remove");
 		buttonsPanel.add(buttonRemove);
@@ -312,22 +313,37 @@ public class Viewer extends JPanel {
 	}
 
 	private void expandInterventionsTree() {
-		for(int i = 0; i < treeInterventions.getRowCount(); i++) {
+		for(int i = 0; i < treeInterventions.getRowCount(); i++)
 			treeInterventions.expandRow(i);
-		}
 	}
 
 	private void drawInterventions() {
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 
-			markerCalibration.forEach(plot::addDomainMarker);
-			markerEvent.forEach(plot::addDomainMarker);
-			markerIncident.forEach(plot::addDomainMarker);
+			if(checkBoxCalibration.isSelected())
+				markerCalibration.forEach(plot::addDomainMarker);
+			else
+				markerCalibration.forEach(plot::removeDomainMarker);
+			if(checkBoxEvent.isSelected())
+				markerEvent.forEach(plot::addDomainMarker);
+			else
+				markerEvent.forEach(plot::removeDomainMarker);
+			if(checkBoxIncident.isSelected())
+				markerIncident.forEach(plot::addDomainMarker);
+			else
+				markerIncident.forEach(plot::removeDomainMarker);
 		}
 	}
 
-	private void removeInterventions() {
+	private void clearInterventions() {
+		// remove from graph
+		if(chartPanel != null) {
+			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+			markerCalibration.forEach(plot::removeDomainMarker);
+			markerEvent.forEach(plot::removeDomainMarker);
+			markerIncident.forEach(plot::removeDomainMarker);
+		}
 		// remove from interventions panel
 		nodeIncident.removeAllChildren();
 		nodeEvent.removeAllChildren();
@@ -336,9 +352,6 @@ public class Viewer extends JPanel {
 		markerIncident.clear();
 		markerEvent.clear();
 		markerCalibration.clear();
-		// remove from graph
-		if(chartPanel != null)
-			((XYPlot) chartPanel.getChart().getPlot()).getRenderer().removeAnnotations();
 	}
 
 	private class ListenerConnectToDatabase implements ActionListener {
@@ -529,7 +542,7 @@ public class Viewer extends JPanel {
 			int returnVal = fileChooser.showOpenDialog(frameParent);
 			if(returnVal == JFileChooser.APPROVE_OPTION) {
 				// remove previous interventions
-				removeInterventions();
+				clearInterventions();
 
 				// read new interventions
 				File file = fileChooser.getSelectedFile();
@@ -573,8 +586,6 @@ public class Viewer extends JPanel {
 
 				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
 				expandInterventionsTree();
-				// draw the interventions on the graph
-				drawInterventions();
 			}
 		}
 	}
@@ -675,7 +686,49 @@ public class Viewer extends JPanel {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
+			// create intervention dialog
+			InterventionDialog dialog = new InterventionDialog();
 
+			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Add an intervention", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+			if(option == JOptionPane.OK_OPTION) {
+				// create new intervention
+				Intervention intervention;
+				if(dialog.getComment().equals(""))
+					intervention = new Intervention(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident());
+				else
+					intervention = new Intervention(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident(), dialog.getComment());
+
+				// add to the interventions list and create a marker
+				ValueMarker marker = null;
+				boolean toDraw = false;
+				if(intervention.isIncident()) {
+					nodeIncident.add(new InterventionNode(intervention));
+					marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
+					markerIncident.add(marker);
+					toDraw = checkBoxIncident.isSelected();
+				}
+				else if(intervention.isEvent()) {
+					nodeEvent.add(new InterventionNode(intervention));
+					marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
+					markerEvent.add(marker);
+					toDraw = checkBoxEvent.isSelected();
+				}
+				else if(intervention.isCalibration()) {
+					nodeCalibration.add(new InterventionNode(intervention));
+					marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
+					markerCalibration.add(marker);
+					toDraw = checkBoxCalibration.isSelected();
+				}
+
+				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
+				expandInterventionsTree();
+				// draw the interventions on the graph
+				if(toDraw && chartPanel != null) {
+					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+					plot.addDomainMarker(marker);
+				}
+			}
 		}
 	}
 
