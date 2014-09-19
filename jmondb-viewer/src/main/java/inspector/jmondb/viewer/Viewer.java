@@ -21,6 +21,7 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.MutableTreeNode;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Ellipse2D;
@@ -380,6 +381,15 @@ public class Viewer extends JPanel {
 		markerCalibration.clear();
 	}
 
+	private void sortInterventions(DefaultMutableTreeNode parent) {
+		List<InterventionNode> children = new ArrayList<>(parent.getChildCount());
+		for(int i = 0; i< parent.getChildCount(); i++)
+			children.add((InterventionNode) parent.getChildAt(i));
+		Collections.sort(children);
+		parent.removeAllChildren();
+		children.forEach(parent::add);
+	}
+
 	private ValueMarker removeMarker(Intervention intervention) {
 		if(intervention.isIncident())
 			return markerIncident.remove(intervention.getDate());
@@ -643,6 +653,11 @@ public class Viewer extends JPanel {
 								}
 							}
 
+							// sort interventions
+							sortInterventions(nodeIncident);
+							sortInterventions(nodeEvent);
+							sortInterventions(nodeCalibration);
+
 						} catch(ParseException | IOException e1) {
 							JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 						}
@@ -778,22 +793,30 @@ public class Viewer extends JPanel {
 				boolean toDraw = false;
 				if(intervention.isIncident()) {
 					nodeIncident.add(new InterventionNode(intervention));
+					sortInterventions(nodeIncident);
+
 					marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
 					markerIncident.put(intervention.getDate(), marker);
 					toDraw = checkBoxIncident.isSelected();
 				}
 				else if(intervention.isEvent()) {
 					nodeEvent.add(new InterventionNode(intervention));
+					sortInterventions(nodeEvent);
+
 					marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
 					markerEvent.put(intervention.getDate(), marker);
 					toDraw = checkBoxEvent.isSelected();
 				}
 				else if(intervention.isCalibration()) {
 					nodeCalibration.add(new InterventionNode(intervention));
+					sortInterventions(nodeCalibration);
+
 					marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
 					markerCalibration.put(intervention.getDate(), marker);
 					toDraw = checkBoxCalibration.isSelected();
 				}
+				DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
+				treeModel.reload();
 
 				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
 				expandInterventionsTree();
@@ -855,6 +878,17 @@ public class Viewer extends JPanel {
 				intervention.setDate(dialog.getDate());
 				if(!dialog.getComment().equals(""))
 					intervention.setComment(dialog.getComment());
+
+				// sort the interventions tree
+				if(intervention.isIncident())
+					sortInterventions(nodeIncident);
+				else if(intervention.isEvent())
+					sortInterventions(nodeEvent);
+				else if(intervention.isCalibration())
+					sortInterventions(nodeCalibration);
+				DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
+				treeModel.reload();
+				expandInterventionsTree();
 
 				// update the marker
 				if(marker != null) {

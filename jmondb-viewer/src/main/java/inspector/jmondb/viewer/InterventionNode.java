@@ -6,7 +6,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
-public class InterventionNode extends DefaultMutableTreeNode {
+public class InterventionNode extends DefaultMutableTreeNode implements Comparable<InterventionNode> {
 
 	private Intervention intervention;
 
@@ -27,5 +27,10 @@ public class InterventionNode extends DefaultMutableTreeNode {
 	public String toString() {
 		DateFormat df = new SimpleDateFormat("dd/MM/yyyy");
 		return df.format(intervention.getDate());
+	}
+
+	@Override
+	public int compareTo(InterventionNode o) {
+		return getIntervention().compareTo(o.getIntervention());
 	}
 }
