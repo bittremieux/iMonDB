@@ -11,6 +11,7 @@ public class InterventionNode extends DefaultMutableTreeNode {
 	private Intervention intervention;
 
 	public InterventionNode(Intervention i) {
+		super();
 		setIntervention(i);
 	}
 

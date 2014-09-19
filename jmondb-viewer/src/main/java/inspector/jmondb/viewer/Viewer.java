@@ -9,8 +9,6 @@ import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.annotations.XYLineAnnotation;
 import org.jfree.chart.axis.DateAxis;
-import org.jfree.chart.axis.DateTickUnit;
-import org.jfree.chart.axis.DateTickUnitType;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYDifferenceRenderer;
@@ -22,7 +20,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.MutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -34,7 +32,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
 
 public class Viewer extends JPanel {
@@ -56,7 +53,6 @@ public class Viewer extends JPanel {
 	private static ImageIcon iconConnected = new ImageIcon(Viewer.class.getResource("/images/ok.png"), "connected");
 
 	// interventions information
-	private DefaultMutableTreeNode nodeInterventions;
 	private DefaultMutableTreeNode nodeCalibration;
 	private DefaultMutableTreeNode nodeEvent;
 	private DefaultMutableTreeNode nodeIncident;
@@ -65,9 +61,6 @@ public class Viewer extends JPanel {
 	// connection to the iMonDB
 	private EntityManagerFactory emf;
 	private IMonDBReader dbReader;
-
-	// list of interventions
-	private HashMap<Date, Intervention> interventions;
 
 	public static void main(String[] args) throws Exception {
 
@@ -103,8 +96,6 @@ public class Viewer extends JPanel {
 
 		// interventions panel
 		createInterventionsPanel(panelInterventions);
-
-		interventions = new HashMap<>();
 	}
 
 	private JMenuBar createMenuBar() {
@@ -208,11 +199,39 @@ public class Viewer extends JPanel {
 	}
 
 	private void createInterventionsPanel(JPanel interventionsPanel) {
-		nodeInterventions = new DefaultMutableTreeNode("Interventions");
+		DefaultMutableTreeNode nodeInterventions = new DefaultMutableTreeNode("Interventions");
+
 		treeInterventions = new JTree(nodeInterventions);
+		treeInterventions.setCellRenderer(new DefaultTreeCellRenderer() {
+			@Override
+			public Component getTreeCellRendererComponent(JTree tree,
+														  Object value, boolean selected, boolean expanded,
+														  boolean isLeaf, int row, boolean focused) {
+				String s = value.toString();
+				switch(s) {
+					case "Calibration":
+						setTextNonSelectionColor(Color.GREEN);
+						setTextSelectionColor(Color.GREEN);
+						break;
+					case "Event":
+						setTextNonSelectionColor(Color.BLUE);
+						setTextSelectionColor(Color.BLUE);
+						break;
+					case "Incident":
+						setTextNonSelectionColor(Color.RED);
+						setTextSelectionColor(Color.RED);
+						break;
+					default:
+						setTextNonSelectionColor(Color.BLACK);
+						setTextSelectionColor(Color.WHITE);
+						break;
+				}
+				return super.getTreeCellRendererComponent(tree, value, selected, expanded, isLeaf, row, focused);
+			}
+		});
+
 		JScrollPane scrollPaneInterventions = new JScrollPane(treeInterventions);
 		scrollPaneInterventions.setPreferredSize(new Dimension(250, 750));
-
 		interventionsPanel.add(scrollPaneInterventions);
 
 		nodeCalibration = new DefaultMutableTreeNode("Calibration");
@@ -262,7 +281,7 @@ public class Viewer extends JPanel {
 				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
 						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.RED);
 				annotation.setToolTipText(i.getComment());
-				plot.getRenderer().addAnnotation(annotation, Layer.BACKGROUND);
+				plot.getRenderer().addAnnotation(annotation, Layer.FOREGROUND);
 			}
 
 			Enumeration events = nodeEvent.children();
@@ -271,14 +290,14 @@ public class Viewer extends JPanel {
 				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
 						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.BLUE);
 				annotation.setToolTipText(i.getComment());
-				plot.getRenderer().addAnnotation(annotation, Layer.BACKGROUND);
+				plot.getRenderer().addAnnotation(annotation, Layer.FOREGROUND);
 			}
 
 			Enumeration calibrations = nodeCalibration.children();
 			while(calibrations.hasMoreElements()) {
 				Intervention i = ((InterventionNode)calibrations.nextElement()).getIntervention();
 				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
-						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.RED);
+						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.GREEN);
 				annotation.setToolTipText(i.getComment());
 				plot.getRenderer().addAnnotation(annotation, Layer.FOREGROUND);
 			}
