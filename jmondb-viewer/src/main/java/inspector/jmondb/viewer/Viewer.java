@@ -265,7 +265,6 @@ public class Viewer extends JPanel {
 
 		JScrollPane scrollPaneInterventions = new JScrollPane(treeInterventions);
 		scrollPaneInterventions.setPreferredSize(new Dimension(250, 750));
-		interventionsPanel.add(scrollPaneInterventions, BorderLayout.CENTER);
 
 		nodeCalibration = new DefaultMutableTreeNode("Calibration");
 		nodeInterventions.add(nodeCalibration);
@@ -275,6 +274,20 @@ public class Viewer extends JPanel {
 		nodeInterventions.add(nodeIncident);
 
 		expandInterventionsTree();
+
+		JPanel buttonsPanel = new JPanel(new GridLayout(0, 3));
+		JButton buttonAdd = new JButton("Add");
+		buttonsPanel.add(buttonAdd);
+		JButton buttonRemove = new JButton("Remove");
+		buttonsPanel.add(buttonRemove);
+		JButton buttonClear = new JButton("Clear");
+		buttonsPanel.add(buttonClear);
+
+		JPanel treePanel = new JPanel(new BorderLayout());
+		treePanel.add(scrollPaneInterventions, BorderLayout.CENTER);
+		treePanel.add(buttonsPanel, BorderLayout.PAGE_END);
+
+		interventionsPanel.add(treePanel, BorderLayout.CENTER);
 	}
 
 	public void display() {
