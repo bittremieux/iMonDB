@@ -7,14 +7,13 @@ import inspector.jmondb.model.Value;
 import org.apache.commons.io.FilenameUtils;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.annotations.XYLineAnnotation;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYDifferenceRenderer;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-import org.jfree.ui.Layer;
 
 import javax.persistence.EntityManagerFactory;
 import javax.swing.*;
@@ -24,14 +23,16 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.geom.Ellipse2D;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.List;
 
 public class Viewer extends JPanel {
@@ -54,9 +55,17 @@ public class Viewer extends JPanel {
 
 	// interventions information
 	private DefaultMutableTreeNode nodeCalibration;
+	private ArrayList<ValueMarker> markerCalibration;
 	private DefaultMutableTreeNode nodeEvent;
+	private ArrayList<ValueMarker> markerEvent;
 	private DefaultMutableTreeNode nodeIncident;
+	private ArrayList<ValueMarker> markerIncident;
+
 	private JTree treeInterventions;
+
+	private JCheckBox checkBoxCalibration;
+	private JCheckBox checkBoxEvent;
+	private JCheckBox checkBoxIncident;
 
 	// connection to the iMonDB
 	private EntityManagerFactory emf;
@@ -95,6 +104,9 @@ public class Viewer extends JPanel {
 		createDbConnectionPanel(panelDbConnection);
 
 		// interventions panel
+		markerCalibration = new ArrayList<>();
+		markerEvent = new ArrayList<>();
+		markerIncident = new ArrayList<>();
 		createInterventionsPanel(panelInterventions);
 	}
 
@@ -199,9 +211,34 @@ public class Viewer extends JPanel {
 	}
 
 	private void createInterventionsPanel(JPanel interventionsPanel) {
-		DefaultMutableTreeNode nodeInterventions = new DefaultMutableTreeNode("Interventions");
+		BorderLayout interventionsLayout = new BorderLayout();
+		interventionsLayout.setVgap(25);
+		interventionsPanel.setLayout(interventionsLayout);
 
+		// create checkboxes
+		JPanel panelCheckBoxes = new JPanel(new GridLayout(0, 1));
+		panelCheckBoxes.add(new JLabel("Show interventions:"));
+		checkBoxCalibration = new JCheckBox("Calibration");
+		checkBoxCalibration.setSelected(true);
+		panelCheckBoxes.add(checkBoxCalibration);
+		checkBoxEvent = new JCheckBox("Event");
+		checkBoxEvent.setSelected(true);
+		panelCheckBoxes.add(checkBoxEvent);
+		checkBoxIncident = new JCheckBox("Incident");
+		checkBoxIncident.setSelected(true);
+		panelCheckBoxes.add(checkBoxIncident);
+
+		ItemListener checkBoxListener = new ListenerCheckBox();
+		checkBoxCalibration.addItemListener(checkBoxListener);
+		checkBoxEvent.addItemListener(checkBoxListener);
+		checkBoxIncident.addItemListener(checkBoxListener);
+
+		interventionsPanel.add(panelCheckBoxes, BorderLayout.PAGE_START);
+
+		// create interventions tree view
+		DefaultMutableTreeNode nodeInterventions = new DefaultMutableTreeNode("Interventions");
 		treeInterventions = new JTree(nodeInterventions);
+		//TODO: possibly set alternative icons
 		treeInterventions.setCellRenderer(new DefaultTreeCellRenderer() {
 			@Override
 			public Component getTreeCellRendererComponent(JTree tree,
@@ -232,7 +269,7 @@ public class Viewer extends JPanel {
 
 		JScrollPane scrollPaneInterventions = new JScrollPane(treeInterventions);
 		scrollPaneInterventions.setPreferredSize(new Dimension(250, 750));
-		interventionsPanel.add(scrollPaneInterventions);
+		interventionsPanel.add(scrollPaneInterventions, BorderLayout.CENTER);
 
 		nodeCalibration = new DefaultMutableTreeNode("Calibration");
 		nodeInterventions.add(nodeCalibration);
@@ -275,32 +312,9 @@ public class Viewer extends JPanel {
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 
-			Enumeration incidents = nodeIncident.children();
-			while(incidents.hasMoreElements()) {
-				Intervention i = ((InterventionNode)incidents.nextElement()).getIntervention();
-				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
-						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.RED);
-				annotation.setToolTipText(i.getComment());
-				plot.getRenderer().addAnnotation(annotation, Layer.FOREGROUND);
-			}
-
-			Enumeration events = nodeEvent.children();
-			while(events.hasMoreElements()) {
-				Intervention i = ((InterventionNode)events.nextElement()).getIntervention();
-				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
-						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.BLUE);
-				annotation.setToolTipText(i.getComment());
-				plot.getRenderer().addAnnotation(annotation, Layer.FOREGROUND);
-			}
-
-			Enumeration calibrations = nodeCalibration.children();
-			while(calibrations.hasMoreElements()) {
-				Intervention i = ((InterventionNode)calibrations.nextElement()).getIntervention();
-				XYLineAnnotation annotation = new XYLineAnnotation(i.getDate().getTime(), plot.getRangeAxis().getLowerBound(),
-						i.getDate().getTime(), plot.getRangeAxis().getUpperBound(), new BasicStroke(1), Color.GREEN);
-				annotation.setToolTipText(i.getComment());
-				plot.getRenderer().addAnnotation(annotation, Layer.FOREGROUND);
-			}
+			markerCalibration.forEach(plot::addDomainMarker);
+			markerEvent.forEach(plot::addDomainMarker);
+			markerIncident.forEach(plot::addDomainMarker);
 		}
 	}
 
@@ -309,6 +323,10 @@ public class Viewer extends JPanel {
 		nodeIncident.removeAllChildren();
 		nodeEvent.removeAllChildren();
 		nodeCalibration.removeAllChildren();
+		// remove markers
+		markerIncident.clear();
+		markerEvent.clear();
+		markerCalibration.clear();
 		// remove from graph
 		if(chartPanel != null)
 			((XYPlot) chartPanel.getChart().getPlot()).getRenderer().removeAnnotations();
@@ -523,12 +541,21 @@ public class Viewer extends JPanel {
 						InterventionNode node = new InterventionNode(intervention);
 
 						// add to the correct intervention type
-						if(intervention.isIncident())
+						if(intervention.isIncident()) {
 							nodeIncident.add(node);
-						else if(intervention.isEvent())
+							ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
+							markerIncident.add(marker);
+						}
+						else if(intervention.isEvent()) {
 							nodeEvent.add(node);
-						else if(intervention.isCalibration())
+							ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
+							markerEvent.add(marker);
+						}
+						else if(intervention.isCalibration()) {
 							nodeCalibration.add(node);
+							ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
+							markerCalibration.add(marker);
+						}
 					}
 
 				} catch(ParseException | IOException e1) {
@@ -556,6 +583,37 @@ public class Viewer extends JPanel {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
+		}
+	}
+
+	private class ListenerCheckBox implements ItemListener {
+
+		@Override
+		public void itemStateChanged(ItemEvent e) {
+			if(chartPanel != null) {
+				XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+
+				Object source = e.getItemSelectable();
+				// show or hide the specific interventions
+				if(source == checkBoxCalibration) {
+					if(e.getStateChange() == ItemEvent.DESELECTED)
+						markerCalibration.forEach(plot::removeDomainMarker);
+					else
+						markerCalibration.forEach(plot::addDomainMarker);
+				}
+				if(source == checkBoxEvent) {
+					if(e.getStateChange() == ItemEvent.DESELECTED)
+						markerEvent.forEach(plot::removeDomainMarker);
+					else
+						markerEvent.forEach(plot::addDomainMarker);
+				}
+				if(source == checkBoxIncident) {
+					if(e.getStateChange() == ItemEvent.DESELECTED)
+						markerIncident.forEach(plot::removeDomainMarker);
+					else
+						markerIncident.forEach(plot::addDomainMarker);
+				}
+			}
 		}
 	}
 
