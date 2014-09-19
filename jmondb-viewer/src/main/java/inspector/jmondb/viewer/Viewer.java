@@ -68,10 +68,20 @@ public class Viewer extends JPanel {
 	private EntityManagerFactory emf;
 	private IMonDBReader dbReader;
 
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) {
 
-		Viewer viewer = new Viewer();
-		viewer.display();
+		SwingUtilities.invokeLater(() -> {
+			Viewer viewer = new Viewer();
+			viewer.display();
+		});
+	}
+
+	public void display() {
+		frameParent.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		frameParent.setMinimumSize(new Dimension(1280, 800));
+		frameParent.setPreferredSize(new Dimension(1280, 800));
+		frameParent.pack();
+		frameParent.setVisible(true);
 	}
 
 	public Viewer() {
@@ -312,14 +322,6 @@ public class Viewer extends JPanel {
 		interventionsPanel.add(treePanel, BorderLayout.CENTER);
 	}
 
-	public void display() {
-		frameParent.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-		frameParent.setMinimumSize(new Dimension(1280, 800));
-		frameParent.setPreferredSize(new Dimension(1280, 800));
-		frameParent.pack();
-		frameParent.setVisible(true);
-	}
-
 	private void closeDbConnection() {
 		// close emf
 		if(emf != null && emf.isOpen())
@@ -400,22 +402,31 @@ public class Viewer extends JPanel {
 
 			if(option == JOptionPane.OK_OPTION) {
 				try {
-					// first close an existing connection
-					closeDbConnection();
+					Thread dbConnector = new Thread() {
+						public void run() {
+							frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
-					// create the new connection
-					String password = !connectionDialog.getPassword().equals("") ? connectionDialog.getPassword() : null;
-					emf = IMonDBManagerFactory.createMySQLFactory(connectionDialog.getHost(), connectionDialog.getPort(),
-							connectionDialog.getUserName(), password, connectionDialog.getDatabase());
-					dbReader = new IMonDBReader(emf);
+							// first close an existing connection
+							closeDbConnection();
 
-					// show the connection information
-					labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
-					labelDbIcon.setIcon(iconConnected);
+							// create the new connection
+							String password = !connectionDialog.getPassword().equals("") ? connectionDialog.getPassword() : null;
+							emf = IMonDBManagerFactory.createMySQLFactory(connectionDialog.getHost(), connectionDialog.getPort(),
+									connectionDialog.getUserName(), password, connectionDialog.getDatabase());
+							dbReader = new IMonDBReader(emf);
 
-					// fill in possible projects in the combo box
-					List<String> projectLabels = dbReader.getFromCustomQuery("SELECT project.label FROM Project project ORDER BY project.label", String.class);
-					projectLabels.forEach(comboBoxProject::addItem);
+							// show the connection information
+							labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
+							labelDbIcon.setIcon(iconConnected);
+
+							// fill in possible projects in the combo box
+							List<String> projectLabels = dbReader.getFromCustomQuery("SELECT project.label FROM Project project ORDER BY project.label", String.class);
+							projectLabels.forEach(comboBoxProject::addItem);
+
+							frameParent.setCursor(Cursor.getDefaultCursor());
+						}
+					};
+					dbConnector.start();
 				}
 				catch(Exception e1) {
 					closeDbConnection();
@@ -436,13 +447,18 @@ public class Viewer extends JPanel {
 
 		public void actionPerformed(ActionEvent e) {
 
-			if(dbReader != null) {
-				comboBoxValue.removeAllItems();
+			Thread projectFiller = new Thread() {
+				public void run() {
+					if(dbReader != null) {
+						comboBoxValue.removeAllItems();
 
-				String projectLabel = (String)comboBoxProject.getSelectedItem();
-				List<String> values = dbReader.getFromCustomQuery("SELECT DISTINCT val.name FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" ORDER BY val.name", String.class);
-				values.forEach(comboBoxValue::addItem);
-			}
+						String projectLabel = (String) comboBoxProject.getSelectedItem();
+						List<String> values = dbReader.getFromCustomQuery("SELECT DISTINCT val.name FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" ORDER BY val.name", String.class);
+						values.forEach(comboBoxValue::addItem);
+					}
+				}
+			};
+			projectFiller.start();
 		}
 	}
 
@@ -451,94 +467,104 @@ public class Viewer extends JPanel {
 		public void actionPerformed(ActionEvent e) {
 
 			if(dbReader != null) {
-				String projectLabel = (String)comboBoxProject.getSelectedItem();
-				String valueName = (String)comboBoxValue.getSelectedItem();
+				Thread graphThread = new Thread() {
+					public void run() {
+						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
-				List<Value> values = dbReader.getFromCustomQuery("SELECT val FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" AND val.name = \"" + valueName + "\"", Value.class);
+						String projectLabel = (String)comboBoxProject.getSelectedItem();
+						String valueName = (String)comboBoxValue.getSelectedItem();
 
-				if(values.size() == 0)
-					JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
-				if(values.size() > 0 && !values.get(0).getNumeric())
-					JOptionPane.showMessageDialog(frameParent, "Value <" + valueName + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
-				else {
-					// add data
-					XYSeries meanSeries = new XYSeries("Mean");
-					XYSeries q1Series = new XYSeries("Q1");
-					XYSeries q3Series = new XYSeries("Q3");
-					XYSeries minSeries = new XYSeries("Min");
-					XYSeries maxSeries = new XYSeries("Max");
-					for(Value value : values) {
-						meanSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMean());
-						q1Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ1());
-						q3Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ3());
-						minSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMin());
-						maxSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMax());
+						List<Value> values = dbReader.getFromCustomQuery("SELECT val FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" AND val.name = \"" + valueName + "\"", Value.class);
+
+						if(values.size() == 0)
+							JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
+						if(values.size() > 0 && !values.get(0).getNumeric())
+							JOptionPane.showMessageDialog(frameParent, "Value <" + valueName + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
+						else {
+							// add data
+							XYSeries meanSeries = new XYSeries("Mean");
+							XYSeries q1Series = new XYSeries("Q1");
+							XYSeries q3Series = new XYSeries("Q3");
+							XYSeries minSeries = new XYSeries("Min");
+							XYSeries maxSeries = new XYSeries("Max");
+							for(Value value : values) {
+								meanSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMean());
+								q1Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ1());
+								q3Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ3());
+								minSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMin());
+								maxSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMax());
+							}
+							XYSeriesCollection q1Collection = new XYSeriesCollection();
+							q1Collection.addSeries(meanSeries);
+							q1Collection.addSeries(q1Series);
+							XYSeriesCollection q3Collection = new XYSeriesCollection();
+							q3Collection.addSeries(meanSeries);
+							q3Collection.addSeries(q3Series);
+							XYSeriesCollection minCollection = new XYSeriesCollection();
+							minCollection.addSeries(q1Series);
+							minCollection.addSeries(minSeries);
+							XYSeriesCollection maxCollection = new XYSeriesCollection();
+							maxCollection.addSeries(q3Series);
+							maxCollection.addSeries(maxSeries);
+
+							// renderer
+							XYDifferenceRenderer q1Renderer = new XYDifferenceRenderer(Color.GRAY, Color.GRAY, true);
+							q1Renderer.setSeriesPaint(0, Color.BLACK);
+							q1Renderer.setSeriesPaint(1, Color.GRAY);
+							q1Renderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
+							q1Renderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
+							XYDifferenceRenderer q3Renderer = new XYDifferenceRenderer(Color.GRAY, Color.GRAY, true);
+							q3Renderer.setSeriesPaint(0, Color.BLACK);
+							q3Renderer.setSeriesPaint(1, Color.GRAY);
+							q3Renderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
+							q3Renderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
+							XYDifferenceRenderer minRenderer = new XYDifferenceRenderer(Color.LIGHT_GRAY, Color.LIGHT_GRAY, true);
+							minRenderer.setSeriesPaint(0, Color.GRAY);
+							minRenderer.setSeriesPaint(1, Color.LIGHT_GRAY);
+							minRenderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
+							minRenderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
+							XYDifferenceRenderer maxRenderer = new XYDifferenceRenderer(Color.LIGHT_GRAY, Color.LIGHT_GRAY, true);
+							maxRenderer.setSeriesPaint(0, Color.GRAY);
+							maxRenderer.setSeriesPaint(1, Color.LIGHT_GRAY);
+							maxRenderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
+							maxRenderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
+
+							// create axis
+							DateAxis dateAxis = new DateAxis("Date");
+							dateAxis.setDateFormatOverride(new SimpleDateFormat("dd/MM/yyyy"));
+							dateAxis.setVerticalTickLabels(true);
+
+							NumberAxis valueAxis = new NumberAxis("Value");
+							valueAxis.setAutoRangeIncludesZero(false);
+
+							// create plot and draw graph
+							XYPlot plot = new XYPlot();
+							plot.setDomainAxis(dateAxis);
+							plot.setRangeAxis(valueAxis);
+							plot.setDataset(0, q1Collection);
+							plot.setDataset(1, q3Collection);
+							plot.setDataset(2, minCollection);
+							plot.setDataset(3, maxCollection);
+							plot.setRenderer(0, q1Renderer);
+							plot.setRenderer(1, q3Renderer);
+							plot.setRenderer(2, minRenderer);
+							plot.setRenderer(3, maxRenderer);
+							JFreeChart chart = new JFreeChart(valueName, plot);
+							chart.setBackgroundPaint(java.awt.Color.WHITE);
+							chartPanel = new ChartPanel(chart, false, true, false, true, false);
+							chart.removeLegend();
+
+							panelGraph.removeAll();
+							panelGraph.add(chartPanel, BorderLayout.CENTER);
+							panelGraph.validate();
+
+							drawInterventions();
+						}
+
+						frameParent.setCursor(Cursor.getDefaultCursor());
 					}
-					XYSeriesCollection q1Collection = new XYSeriesCollection();
-					q1Collection.addSeries(meanSeries);
-					q1Collection.addSeries(q1Series);
-					XYSeriesCollection q3Collection = new XYSeriesCollection();
-					q3Collection.addSeries(meanSeries);
-					q3Collection.addSeries(q3Series);
-					XYSeriesCollection minCollection = new XYSeriesCollection();
-					minCollection.addSeries(q1Series);
-					minCollection.addSeries(minSeries);
-					XYSeriesCollection maxCollection = new XYSeriesCollection();
-					maxCollection.addSeries(q3Series);
-					maxCollection.addSeries(maxSeries);
-
-					// renderer
-					XYDifferenceRenderer q1Renderer = new XYDifferenceRenderer(Color.GRAY, Color.GRAY, true);
-					q1Renderer.setSeriesPaint(0, Color.BLACK);
-					q1Renderer.setSeriesPaint(1, Color.GRAY);
-					q1Renderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
-					q1Renderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
-					XYDifferenceRenderer q3Renderer = new XYDifferenceRenderer(Color.GRAY, Color.GRAY, true);
-					q3Renderer.setSeriesPaint(0, Color.BLACK);
-					q3Renderer.setSeriesPaint(1, Color.GRAY);
-					q3Renderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
-					q3Renderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
-					XYDifferenceRenderer minRenderer = new XYDifferenceRenderer(Color.LIGHT_GRAY, Color.LIGHT_GRAY, true);
-					minRenderer.setSeriesPaint(0, Color.GRAY);
-					minRenderer.setSeriesPaint(1, Color.LIGHT_GRAY);
-					minRenderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
-					minRenderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
-					XYDifferenceRenderer maxRenderer = new XYDifferenceRenderer(Color.LIGHT_GRAY, Color.LIGHT_GRAY, true);
-					maxRenderer.setSeriesPaint(0, Color.GRAY);
-					maxRenderer.setSeriesPaint(1, Color.LIGHT_GRAY);
-					maxRenderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
-					maxRenderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
-
-					// create axis
-					DateAxis dateAxis = new DateAxis("Date");
-					dateAxis.setDateFormatOverride(new SimpleDateFormat("dd/MM/yyyy"));
-
-					NumberAxis valueAxis = new NumberAxis("Value");
-					valueAxis.setAutoRangeIncludesZero(false);
-
-					// create plot and draw graph
-					XYPlot plot = new XYPlot();
-					plot.setDomainAxis(dateAxis);
-					plot.setRangeAxis(valueAxis);
-					plot.setDataset(0, q1Collection);
-					plot.setDataset(1, q3Collection);
-					plot.setDataset(2, minCollection);
-					plot.setDataset(3, maxCollection);
-					plot.setRenderer(0, q1Renderer);
-					plot.setRenderer(1, q3Renderer);
-					plot.setRenderer(2, minRenderer);
-					plot.setRenderer(3, maxRenderer);
-					JFreeChart chart = new JFreeChart(valueName, plot);
-					chart.setBackgroundPaint(java.awt.Color.WHITE);
-					chartPanel = new ChartPanel(chart, false, true, false, true, false);
-					chart.removeLegend();
-
-					panelGraph.removeAll();
-					panelGraph.add(chartPanel, BorderLayout.CENTER);
-					panelGraph.validate();
-
-					drawInterventions();
-				}
+				};
+				graphThread.start();
 			}
 		}
 	}
@@ -575,53 +601,59 @@ public class Viewer extends JPanel {
 			});
 			int returnVal = fileChooser.showOpenDialog(frameParent);
 			if(returnVal == JFileChooser.APPROVE_OPTION) {
-				// remove previous interventions
-				clearInterventions();
 
-				// read new interventions
-				File file = fileChooser.getSelectedFile();
-				try {
-					BufferedReader fileReader = new BufferedReader(new FileReader(file));
-					SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-					String line = fileReader.readLine();	// skip header line
-					while((line = fileReader.readLine()) != null) {
-						String[] lineSplit = line.split(",", -1);
-						Date date = sdf.parse(lineSplit[0]);
-						boolean isCalibrationCheck = lineSplit[1].equals("1");
-						boolean isCalibration = lineSplit[2].equals("1");
-						boolean isEvent = lineSplit[3].equals("1");
-						boolean isIncident = lineSplit[4].equals("1");
-						String comment = lineSplit[5];
+				Thread interventionsLoader = new Thread() {
+					public void run() {
+						// remove previous interventions
+						clearInterventions();
 
-						Intervention intervention = new Intervention(date, isCalibrationCheck, isCalibration, isEvent, isIncident, comment);
-						InterventionNode node = new InterventionNode(intervention);
+						// read new interventions
+						File file = fileChooser.getSelectedFile();
+						try {
+							BufferedReader fileReader = new BufferedReader(new FileReader(file));
+							SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+							String line = fileReader.readLine();	// skip header line
+							while((line = fileReader.readLine()) != null) {
+								String[] lineSplit = line.split(",", -1);
+								Date date = sdf.parse(lineSplit[0]);
+								boolean isCalibrationCheck = lineSplit[1].equals("1");
+								boolean isCalibration = lineSplit[2].equals("1");
+								boolean isEvent = lineSplit[3].equals("1");
+								boolean isIncident = lineSplit[4].equals("1");
+								String comment = lineSplit[5];
 
-						// add to the correct intervention type
-						if(intervention.isIncident()) {
-							nodeIncident.add(node);
-							ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
-							markerIncident.put(intervention.getDate(), marker);
+								Intervention intervention = new Intervention(date, isCalibrationCheck, isCalibration, isEvent, isIncident, comment);
+								InterventionNode node = new InterventionNode(intervention);
+
+								// add to the correct intervention type
+								if(intervention.isIncident()) {
+									nodeIncident.add(node);
+									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
+									markerIncident.put(intervention.getDate(), marker);
+								}
+								else if(intervention.isEvent()) {
+									nodeEvent.add(node);
+									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
+									markerEvent.put(intervention.getDate(), marker);
+								}
+								else if(intervention.isCalibration()) {
+									nodeCalibration.add(node);
+									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
+									markerCalibration.put(intervention.getDate(), marker);
+								}
+							}
+
+						} catch(ParseException | IOException e1) {
+							JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 						}
-						else if(intervention.isEvent()) {
-							nodeEvent.add(node);
-							ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-							markerEvent.put(intervention.getDate(), marker);
-						}
-						else if(intervention.isCalibration()) {
-							nodeCalibration.add(node);
-							ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
-							markerCalibration.put(intervention.getDate(), marker);
-						}
+
+						// show all interventions in the interventions panel (TODO: might be reconsidered later on)
+						expandInterventionsTree();
+						// show the interventions on the graph
+						drawInterventions();
 					}
-
-				} catch(ParseException | IOException e1) {
-					JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-				}
-
-				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
-				expandInterventionsTree();
-				// show the interventions on the graph
-				drawInterventions();
+				};
+				interventionsLoader.start();
 			}
 		}
 	}
@@ -650,69 +682,75 @@ public class Viewer extends JPanel {
 				});
 				int returnVal = fileChooser.showSaveDialog(frameParent);
 				if(returnVal == JFileChooser.APPROVE_OPTION) {
-					// save interventions to a new file
-					File file = fileChooser.getSelectedFile();
-					// add extension if missing
-					if(FilenameUtils.getExtension(file.getName()).equals(""))
-						file = new File(file.getAbsolutePath() + ".csv");
 
-					try {
-						FileWriter writer = new FileWriter(file);
-						SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+					Thread interventionsSaver = new Thread() {
+						public void run() {
+							// save interventions to a new file
+							File file = fileChooser.getSelectedFile();
+							// add extension if missing
+							if(FilenameUtils.getExtension(file.getName()).equals(""))
+								file = new File(file.getAbsolutePath() + ".csv");
 
-						// header
-						writer.write("Date,Calibration check,Calibration,Event,Incident,Comment\n");
-						// body
-						PriorityQueue<Intervention> interventions = new PriorityQueue<>(markerCalibration.size() + markerEvent.size() + markerIncident.size());
-						Enumeration incidents = nodeIncident.children();
-						while(incidents.hasMoreElements()) {
-							Intervention i = ((InterventionNode) incidents.nextElement()).getIntervention();
-							interventions.add(i);
-						}
-						Enumeration events = nodeEvent.children();
-						while(events.hasMoreElements()) {
-							Intervention i = ((InterventionNode) events.nextElement()).getIntervention();
-							interventions.add(i);
-						}
-						Enumeration calibrations = nodeCalibration.children();
-						while(calibrations.hasMoreElements()) {
-							Intervention i = ((InterventionNode) calibrations.nextElement()).getIntervention();
-							interventions.add(i);
-						}
-						while(!interventions.isEmpty()) {
-							// date
-							Intervention i = interventions.poll();
-							writer.append(sdf.format(i.getDate())).append(",");
-							// calibration check
-							if(i.isCalibrationCheck())
-								writer.append("1,");
-							else
-								writer.append(",");
-							// calibration
-							if(i.isCalibration())
-								writer.append("1,");
-							else
-								writer.append(",");
-							// event
-							if(i.isEvent())
-								writer.append("1,");
-							else
-								writer.append(",");
-							// incident
-							if(i.isIncident())
-								writer.append("1,");
-							else
-								writer.append(",");
-							// comment
-							writer.append(i.getComment()).append("\n");
-						}
+							try {
+								FileWriter writer = new FileWriter(file);
+								SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 
-						writer.flush();
-						writer.close();
+								// header
+								writer.write("Date,Calibration check,Calibration,Event,Incident,Comment\n");
+								// body
+								PriorityQueue<Intervention> interventions = new PriorityQueue<>(markerCalibration.size() + markerEvent.size() + markerIncident.size());
+								Enumeration incidents = nodeIncident.children();
+								while(incidents.hasMoreElements()) {
+									Intervention i = ((InterventionNode) incidents.nextElement()).getIntervention();
+									interventions.add(i);
+								}
+								Enumeration events = nodeEvent.children();
+								while(events.hasMoreElements()) {
+									Intervention i = ((InterventionNode) events.nextElement()).getIntervention();
+									interventions.add(i);
+								}
+								Enumeration calibrations = nodeCalibration.children();
+								while(calibrations.hasMoreElements()) {
+									Intervention i = ((InterventionNode) calibrations.nextElement()).getIntervention();
+									interventions.add(i);
+								}
+								while(!interventions.isEmpty()) {
+									// date
+									Intervention i = interventions.poll();
+									writer.append(sdf.format(i.getDate())).append(",");
+									// calibration check
+									if(i.isCalibrationCheck())
+										writer.append("1,");
+									else
+										writer.append(",");
+									// calibration
+									if(i.isCalibration())
+										writer.append("1,");
+									else
+										writer.append(",");
+									// event
+									if(i.isEvent())
+										writer.append("1,");
+									else
+										writer.append(",");
+									// incident
+									if(i.isIncident())
+										writer.append("1,");
+									else
+										writer.append(",");
+									// comment
+									writer.append(i.getComment()).append("\n");
+								}
 
-					} catch(IOException e1) {
-						JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-					}
+								writer.flush();
+								writer.close();
+
+							} catch(IOException e1) {
+								JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+							}
+						}
+					};
+					interventionsSaver.start();
 				}
 			}
 		}
@@ -828,36 +866,6 @@ public class Viewer extends JPanel {
 					else if(intervention.isCalibration())
 						markerCalibration.put(intervention.getDate(), marker);
 				}
-
-				// add to the interventions list and create a marker
-				/*ValueMarker marker = null;
-				boolean toDraw = false;
-				if(intervention.isIncident()) {
-					nodeIncident.add(new InterventionNode(intervention));
-					marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
-					markerIncident.put(intervention.getDate(), marker);
-					toDraw = checkBoxIncident.isSelected();
-				}
-				else if(intervention.isEvent()) {
-					nodeEvent.add(new InterventionNode(intervention));
-					marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-					markerEvent.put(intervention.getDate(), marker);
-					toDraw = checkBoxEvent.isSelected();
-				}
-				else if(intervention.isCalibration()) {
-					nodeCalibration.add(new InterventionNode(intervention));
-					marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
-					markerCalibration.put(intervention.getDate(), marker);
-					toDraw = checkBoxCalibration.isSelected();
-				}
-
-				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
-				expandInterventionsTree();
-				// draw the interventions on the graph
-				if(toDraw && chartPanel != null) {
-					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
-					plot.addDomainMarker(marker);
-				}*/
 			}
 		}
 	}
