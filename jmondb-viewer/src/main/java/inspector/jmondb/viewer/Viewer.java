@@ -21,7 +21,6 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.MutableTreeNode;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Ellipse2D;
@@ -411,11 +410,11 @@ public class Viewer extends JPanel {
 			int option = JOptionPane.showConfirmDialog(frameParent, connectionDialog, "Connect to the database", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
 			if(option == JOptionPane.OK_OPTION) {
-				try {
-					Thread dbConnector = new Thread() {
-						public void run() {
-							frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+				Thread dbConnector = new Thread() {
+					public void run() {
+						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
+						try {
 							// first close an existing connection
 							closeDbConnection();
 
@@ -425,23 +424,23 @@ public class Viewer extends JPanel {
 									connectionDialog.getUserName(), password, connectionDialog.getDatabase());
 							dbReader = new IMonDBReader(emf);
 
-							// show the connection information
-							labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
-							labelDbIcon.setIcon(iconConnected);
-
 							// fill in possible projects in the combo box
 							List<String> projectLabels = dbReader.getFromCustomQuery("SELECT project.label FROM Project project ORDER BY project.label", String.class);
 							projectLabels.forEach(comboBoxProject::addItem);
 
-							frameParent.setCursor(Cursor.getDefaultCursor());
+							// show the connection information
+							labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
+							labelDbIcon.setIcon(iconConnected);
 						}
-					};
-					dbConnector.start();
-				}
-				catch(Exception e1) {
-					closeDbConnection();
-					JOptionPane.showMessageDialog(frameParent, "<html><b>Could not connect to the database</b></html>\n" + e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-				}
+						catch(Exception e1) {
+							closeDbConnection();
+							JOptionPane.showMessageDialog(frameParent, "<html><b>Could not connect to the database</b></html>\n" + e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+						}
+
+						frameParent.setCursor(Cursor.getDefaultCursor());
+					}
+				};
+				dbConnector.start();
 			}
 		}
 	}
@@ -460,11 +459,15 @@ public class Viewer extends JPanel {
 			Thread projectFiller = new Thread() {
 				public void run() {
 					if(dbReader != null) {
+						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
 						comboBoxValue.removeAllItems();
 
 						String projectLabel = (String) comboBoxProject.getSelectedItem();
 						List<String> values = dbReader.getFromCustomQuery("SELECT DISTINCT val.name FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" ORDER BY val.name", String.class);
 						values.forEach(comboBoxValue::addItem);
+
+						frameParent.setCursor(Cursor.getDefaultCursor());
 					}
 				}
 			};
@@ -614,6 +617,8 @@ public class Viewer extends JPanel {
 
 				Thread interventionsLoader = new Thread() {
 					public void run() {
+						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
 						// remove previous interventions
 						clearInterventions();
 
@@ -666,6 +671,8 @@ public class Viewer extends JPanel {
 						expandInterventionsTree();
 						// show the interventions on the graph
 						drawInterventions();
+
+						frameParent.setCursor(Cursor.getDefaultCursor());
 					}
 				};
 				interventionsLoader.start();
@@ -700,6 +707,8 @@ public class Viewer extends JPanel {
 
 					Thread interventionsSaver = new Thread() {
 						public void run() {
+							frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
 							// save interventions to a new file
 							File file = fileChooser.getSelectedFile();
 							// add extension if missing
@@ -763,6 +772,8 @@ public class Viewer extends JPanel {
 							} catch(IOException e1) {
 								JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 							}
+
+							frameParent.setCursor(Cursor.getDefaultCursor());
 						}
 					};
 					interventionsSaver.start();
