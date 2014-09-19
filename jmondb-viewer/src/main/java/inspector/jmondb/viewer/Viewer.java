@@ -20,6 +20,7 @@ import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -280,8 +281,10 @@ public class Viewer extends JPanel {
 		buttonAdd.addActionListener(new ListenerAddIntervention());
 		buttonsPanel.add(buttonAdd);
 		JButton buttonRemove = new JButton("Remove");
+		buttonRemove.addActionListener(new ListenerRemoveIntervention());
 		buttonsPanel.add(buttonRemove);
 		JButton buttonClear = new JButton("Clear");
+		buttonClear.addActionListener(new ListenerClearInterventions());
 		buttonsPanel.add(buttonClear);
 
 		JPanel treePanel = new JPanel(new BorderLayout());
@@ -348,6 +351,8 @@ public class Viewer extends JPanel {
 		nodeIncident.removeAllChildren();
 		nodeEvent.removeAllChildren();
 		nodeCalibration.removeAllChildren();
+		DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
+		treeModel.reload();
 		// remove markers
 		markerIncident.clear();
 		markerEvent.clear();
@@ -737,6 +742,18 @@ public class Viewer extends JPanel {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
+		}
+	}
+
+	private class ListenerClearInterventions implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+
+			int option = JOptionPane.showConfirmDialog(frameParent, "Attention: this will remove all interventions.\nAny unsaved interventions will be lost!", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+
+			if(option == JOptionPane.OK_OPTION)
+				clearInterventions();
 		}
 	}
 
