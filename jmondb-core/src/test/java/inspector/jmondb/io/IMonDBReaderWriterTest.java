@@ -231,12 +231,12 @@ public class IMonDBReaderWriterTest {
 	}
 
 	@Test
-	public void writeReadOrbitrapVelos() {
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapVelos.raw").getFile()).getAbsolutePath());
+	public void writeReadLtqOrbitrap() {
+		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/LtqOrbitrap.raw").getFile()).getAbsolutePath());
 
 		writer.writeRun(run, "Wout");
 
-		Run runDb = reader.getRun("OrbitrapVelos", "Wout");
+		Run runDb = reader.getRun("LtqOrbitrap", "Wout");
 
 		// compare all elements
 		assertEquals(run, runDb);
@@ -255,6 +255,42 @@ public class IMonDBReaderWriterTest {
 	}
 
 	@Test
+	public void writeReadLtqVelos() {
+		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/LtqVelos.raw").getFile()).getAbsolutePath());
+
+		writer.writeRun(run, "Wout");
+
+		Run runDb = reader.getRun("LtqVelos", "Wout");
+
+		// compare all elements
+		assertEquals(run, runDb);
+	}
+
+	@Test
+	public void writeReadTsqVantage() {
+		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/TsqVantage.raw").getFile()).getAbsolutePath());
+
+		writer.writeRun(run, "Wout");
+
+		Run runDb = reader.getRun("TsqVantage", "Wout");
+
+		// compare all elements
+		assertEquals(run, runDb);
+	}
+
+	@Test
+	public void writeReadOrbitrapVelos() {
+		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapVelos.raw").getFile()).getAbsolutePath());
+
+		writer.writeRun(run, "Wout");
+
+		Run runDb = reader.getRun("OrbitrapVelos", "Wout");
+
+		// compare all elements
+		assertEquals(run, runDb);
+	}
+
+	@Test
 	public void writeReadQExactive() {
 		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/QExactive.raw").getFile()).getAbsolutePath());
 
@@ -267,12 +303,12 @@ public class IMonDBReaderWriterTest {
 	}
 
 	@Test
-	public void writeReadQQQ() {
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/QQQ.raw").getFile()).getAbsolutePath());
+	public void writeReadOrbitrapFusion() {
+		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapFusion.raw").getFile()).getAbsolutePath());
 
 		writer.writeRun(run, "Wout");
 
-		Run runDb = reader.getRun("QQQ", "Wout");
+		Run runDb = reader.getRun("OrbitrapFusion", "Wout");
 
 		// compare all elements
 		assertEquals(run, runDb);
