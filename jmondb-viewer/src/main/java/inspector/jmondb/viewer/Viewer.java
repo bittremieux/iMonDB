@@ -247,6 +247,7 @@ public class Viewer extends JPanel {
 		treeInterventions.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
+				InterventionNode selectedNode = (InterventionNode) treeInterventions.getSelectionPath().getLastPathComponent();
 				if(SwingUtilities.isRightMouseButton(e)) {
 					// highlight relevant item
 					int row = treeInterventions.getClosestRowForLocation(e.getX(), e.getY());
@@ -255,7 +256,6 @@ public class Viewer extends JPanel {
 					// show pop-up menu
 					JPopupMenu popupMenu = new JPopupMenu();
 					JMenuItem itemEdit = new JMenuItem("Edit");
-					InterventionNode selectedNode = (InterventionNode) treeInterventions.getSelectionPath().getLastPathComponent();
 					itemEdit.addActionListener(new ListenerEditIntervention(selectedNode.getIntervention()));
 					popupMenu.add(itemEdit);
 					JMenuItem itemRemove = new JMenuItem("Remove");
@@ -263,6 +263,9 @@ public class Viewer extends JPanel {
 					popupMenu.add(itemRemove);
 
 					popupMenu.show(e.getComponent(), e.getX(), e.getY());
+				}
+				else if(e.getClickCount() == 2) {
+					new ListenerEditIntervention(selectedNode.getIntervention()).actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, null));
 				}
 			}
 		});
