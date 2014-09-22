@@ -24,6 +24,8 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -35,6 +37,9 @@ import java.util.jar.JarFile;
 public class ThermoRawFileExtractor {
 
 	protected static final Logger logger = LogManager.getLogger(ThermoRawFileExtractor.class);
+
+	/** static lock to make sure that the Thermo external resources are only accessed by a single instance */
+	private static final Lock FILE_COPY_LOCK = new ReentrantLock();
 
 	/** Properties containing a list of value names that have to be excluded */
 	private PropertiesConfiguration exclusionProperties;
@@ -53,10 +58,15 @@ public class ThermoRawFileExtractor {
 		exclusionProperties = initializeExclusionProperties();
 
 		// make sure the extractor exe's are available outside the jar
-		if(!new File("./Thermo/ThermoStatusLog.exe").exists() || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
-			// copy the resources outside the jar
-			logger.info("Copying the Thermo extractor CLI's to a new folder in the base directory");
-			copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
+		FILE_COPY_LOCK.lock();
+		try {
+			if(!new File("./Thermo/ThermoStatusLog.exe").exists() || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
+				// copy the resources outside the jar
+				logger.info("Copying the Thermo extractor CLI's to a new folder in the base directory");
+				copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
+			}
+		} finally {
+			FILE_COPY_LOCK.unlock();
 		}
 	}
 
