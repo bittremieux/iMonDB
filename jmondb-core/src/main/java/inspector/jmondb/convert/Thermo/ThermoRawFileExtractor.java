@@ -3,7 +3,7 @@ package inspector.jmondb.convert.Thermo;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import inspector.jmondb.convert.InstrumentModel;
-import inspector.jmondb.convert.RawFileDateAndValues;
+import inspector.jmondb.convert.RawFileMetaData;
 import inspector.jmondb.model.CV;
 import inspector.jmondb.model.Run;
 import inspector.jmondb.model.Value;
@@ -60,7 +60,9 @@ public class ThermoRawFileExtractor {
 		// make sure the extractor exe's are available outside the jar
 		FILE_COPY_LOCK.lock();
 		try {
-			if(!new File("./Thermo/ThermoStatusLog.exe").exists() || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
+			if(!new File("./Thermo/ThermoMetaData.exe").exists() ||
+					!new File("./Thermo/ThermoStatusLog.exe").exists() ||
+					!new File("./Thermo/ThermoTuneMethod.exe").exists()) {
 				// copy the resources outside the jar
 				logger.info("Copying the Thermo extractor CLI's to a new folder in the base directory");
 				copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
@@ -177,16 +179,21 @@ public class ThermoRawFileExtractor {
 			// test if the file name is valid
 			File rawFile = getFile(fileName);
 
+			// extract raw file meta data
+			RawFileMetaData metaData = getMetaData(rawFile);
+			Timestamp date = metaData.getDate();
+			InstrumentModel model = metaData.getModel();
+
 			// extract the data from the row file
-			RawFileDateAndValues statusLogValues = getValues(rawFile, true);
-			RawFileDateAndValues tuneMethodValues = getValues(rawFile, false);
+			ArrayList<Value> statusLogValues = getValues(rawFile, model, true);
+			ArrayList<Value> tuneMethodValues = getValues(rawFile, model, false);
 
 			// create a run containing all the instrument data values
 			String runName = FilenameUtils.getBaseName(rawFile.getName());
-			Run run = new Run(runName, rawFile.getCanonicalPath(), statusLogValues.getDate());
+			Run run = new Run(runName, rawFile.getCanonicalPath(), date);
 			// add the values to the run
-			statusLogValues.getValues().forEach(run::addValue);
-			tuneMethodValues.getValues().forEach(run::addValue);
+			statusLogValues.forEach(run::addValue);
+			tuneMethodValues.forEach(run::addValue);
 
 			return run;
 
@@ -225,13 +232,50 @@ public class ThermoRawFileExtractor {
 	}
 
 	/**
+	 * Extracts experiment meta data from the raw file, such as the sample date and the instrument model.
+	 *
+	 * @param rawFile  The raw file from which the instrument data will be read
+	 * @return A {@link RawFileMetaData} containing the sample date and the instrument model
+	 */
+	private RawFileMetaData getMetaData(File rawFile) {
+		// execute the CLI process
+		Process process = executeProcess("./Thermo/ThermoMetaData.exe", rawFile);
+
+		try {
+			// read the CLI output data
+			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+			// the first line contains the experiment date
+			Timestamp date = readDate(reader);
+
+			// the second line contains information about the instrument model
+			InstrumentModel model = readInstrumentModel(reader);
+
+			// make sure the process has finished
+			process.waitFor();
+			// close resources
+			reader.close();
+
+			return new RawFileMetaData(date, model);
+
+		} catch(IOException e) {
+			logger.error("Could not read the raw file extractor output: {}", e.getMessage());
+			throw new IllegalStateException("Could not read the raw file extractor output: " + e.getMessage());
+		} catch(InterruptedException e) {
+			logger.error("Error while extracting the raw file: {}", e);
+			throw new IllegalStateException("Error while extracting the raw file: " + e);
+		}
+	}
+
+	/**
 	 * Extracts instrument data from the raw file and computes (summary) statistics for the desired values.
 	 *
 	 * @param rawFile  The raw file from which the instrument data will be read
+	 * @param model  The mass spectrometer {@link InstrumentModel}
 	 * @param isStatusLog  True if the status log values have to be generated, false if the tune method values have to be generated
-	 * @return A {@link RawFileDateAndValues} containing the sample date and the computed instrument data {@link Value}s
+	 * @return A list of the computed instrument data {@link Value}s
 	 */
-	private RawFileDateAndValues getValues(File rawFile, boolean isStatusLog) {
+	private ArrayList<Value> getValues(File rawFile, InstrumentModel model, boolean isStatusLog) {
 		String cliPath;
 		String valueType;
 		if(isStatusLog) {
@@ -246,16 +290,11 @@ public class ThermoRawFileExtractor {
 		// execute the CLI process
 		Process process = executeProcess(cliPath, rawFile);
 
-		// read the CLI output data
-		BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 		try {
-			// the first line contains information about the instrument model
-			InstrumentModel model = readInstrumentModel(reader);
+			// read the CLI output data
+			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
-			// the second line contains the experiment date
-			Timestamp date = readDate(reader);
-
-			// the following lines contain the rawValues
+			// read all the raw values
 			Table<String, String, ArrayList<String>> rawValues = readRawValues(reader, model);
 
 			// make sure the process has finished
@@ -263,13 +302,11 @@ public class ThermoRawFileExtractor {
 			// close resources
 			reader.close();
 
-			// filter out unwanted rawValues
+			// filter out unwanted values
 			filter(rawValues, valueType);
 
 			// compute the summary statistics
-			ArrayList<Value> values = computeStatistics(rawValues, valueType);
-
-			return new RawFileDateAndValues(date, values);
+			return computeStatistics(rawValues, valueType);
 
 		} catch(IOException e) {
 			logger.error("Could not read the raw file extractor output: {}", e.getMessage());
