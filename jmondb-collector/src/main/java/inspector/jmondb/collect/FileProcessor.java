@@ -1,5 +1,6 @@
 package inspector.jmondb.collect;
 
+import com.google.common.collect.ImmutableMap;
 import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
@@ -10,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.sql.Timestamp;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class FileProcessor implements Callable<Timestamp> {
@@ -18,6 +20,7 @@ public class FileProcessor implements Callable<Timestamp> {
 
 	private IMonDBReader dbReader;
 	private IMonDBWriter dbWriter;
+	private ThermoRawFileExtractor extractor;
 	private String renameMask;
 	private String projectLabel;
 	private File file;
@@ -31,9 +34,10 @@ public class FileProcessor implements Callable<Timestamp> {
 	 * @param projectLabel  The label of the project to which the run belongs
 	 * @param file  The raw file that will be processed
 	 */
-	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, String renameMask, String projectLabel, File file) {
+	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, String renameMask, String projectLabel, File file) {
 		this.dbReader = dbReader;
 		this.dbWriter = dbWriter;
+		this.extractor = extractor;
 		this.renameMask = renameMask;
 		this.projectLabel = projectLabel;
 		this.file = file;
@@ -48,12 +52,12 @@ public class FileProcessor implements Callable<Timestamp> {
 				replace("%fn", FilenameUtils.getBaseName(file.getName()));
 
 		// check if this run already exists in the database for the given project
-		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = \"" + runName + "\" AND run.fromProject.label = \"" + projectLabel + "\"";
-		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class).get(0).equals(1L);
+		Map<String, String> parameters = ImmutableMap.of("runName", runName, "projectLabel", projectLabel);
+		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = :runName AND run.fromProject.label = :projectLabel";
+		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class, parameters).get(0).equals(1L);
 
 		if(!exists) {
-			ThermoRawFileExtractor extractor = new ThermoRawFileExtractor(file.getAbsolutePath());
-			Run run = extractor.extractInstrumentData();
+			Run run = extractor.extractInstrumentData(file.getAbsolutePath());
 
 			// rename run based on the mask
 			run.setName(runName);
@@ -61,13 +65,12 @@ public class FileProcessor implements Callable<Timestamp> {
 			// write the run to the database
 			dbWriter.writeRun(run, projectLabel);
 
-			// return the run's execution time
+			// return the run's sample date
 			return run.getSampleDate();
 		}
 		else {
 			logger.info("Run <{}> already found in the database; skipping...", runName);
+			return null;
 		}
-
-		return null;
 	}
 }

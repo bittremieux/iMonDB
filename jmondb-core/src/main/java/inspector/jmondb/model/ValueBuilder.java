@@ -14,13 +14,13 @@ public class ValueBuilder {
 	private Integer n;
 	private Integer nDiffValues;
 	private Integer nNotMissingValues;
-	private Float min;
-	private Float max;
-	private Float mean;
-	private Float median;
-	private Float sd;
-	private Float q1;
-	private Float q3;
+	private Double min;
+	private Double max;
+	private Double mean;
+	private Double median;
+	private Double sd;
+	private Double q1;
+	private Double q3;
 
 	public ValueBuilder setName(String name) {
 		this.name = name;
@@ -67,37 +67,37 @@ public class ValueBuilder {
 		return this;
 	}
 
-	public ValueBuilder setMin(Float min) {
+	public ValueBuilder setMin(Double min) {
 		this.min = min;
 		return this;
 	}
 
-	public ValueBuilder setMax(Float max) {
+	public ValueBuilder setMax(Double max) {
 		this.max = max;
 		return this;
 	}
 
-	public ValueBuilder setMean(Float mean) {
+	public ValueBuilder setMean(Double mean) {
 		this.mean = mean;
 		return this;
 	}
 
-	public ValueBuilder setMedian(Float median) {
+	public ValueBuilder setMedian(Double median) {
 		this.median = median;
 		return this;
 	}
 
-	public ValueBuilder setSd(Float sd) {
+	public ValueBuilder setSd(Double sd) {
 		this.sd = sd;
 		return this;
 	}
 
-	public ValueBuilder setQ1(Float q1) {
+	public ValueBuilder setQ1(Double q1) {
 		this.q1 = q1;
 		return this;
 	}
 
-	public ValueBuilder setQ3(Float q3) {
+	public ValueBuilder setQ3(Double q3) {
 		this.q3 = q3;
 		return this;
 	}

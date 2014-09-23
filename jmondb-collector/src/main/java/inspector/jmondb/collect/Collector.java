@@ -1,5 +1,6 @@
 package inspector.jmondb.collect;
 
+import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
@@ -21,26 +22,46 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.*;
 
+/**
+ * A collector that will collect the instrument data for all raw files and store it in the iMonDB.
+ *
+ * Specific settings are read from the associated config file.
+ */
 public class Collector {
 
 	protected static final Logger logger = LogManager.getLogger(Collector.class);
 
+	/** Config file containing all the settings to collect the raw files and store the instrument data */
+	private Ini config;
+
 	/** Date formatter to convert to and from date strings */
 	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
+	/**
+	 * Creates a collector that will collect the instrument data for all raw files and store it in the iMonDB.
+	 *
+	 * Specific settings are read from the associated config file.
+	 */
 	public Collector() {
+		config = initializeConfig();
+	}
 
+	/**
+	 * Collects the instrument data for all the raw files based on the settings in the config file.
+	 */
+	public void collect() {
 		logger.info("Executing the Collector");
 
 		EntityManagerFactory emf = null;
-
-		Ini config = initializeConfig();
 
 		try {
 			// create database connection
 			emf = getEntityManagerFactory(config);
 			IMonDBReader dbReader = new IMonDBReader(emf);
 			IMonDBWriter dbWriter = new IMonDBWriter(emf);
+
+			// raw file extractor
+			ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
 
 			// read project folders
 			Map<String, String> projects = config.get("projects");
@@ -75,7 +96,7 @@ public class Collector {
 
 					// process all found files
 					for(File file : files) {
-						pool.submit(new FileProcessor(dbReader, dbWriter, renameMask, projectLabel, file));
+						pool.submit(new FileProcessor(dbReader, dbWriter, extractor, renameMask, projectLabel, file));
 						threadsSubmitted++;
 					}
 
@@ -89,7 +110,7 @@ public class Collector {
 			for(int i = 0; i < threadsSubmitted; i++) {
 				try {
 					Timestamp runTimestamp = pool.take().get();
-					newestTimestamp = newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
+					newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
 				} catch(Exception e) {	// catch all possible exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
 					logger.error("Error while executing a thread: {}", e.getMessage());
 				}
@@ -216,6 +237,12 @@ public class Collector {
 		return renameMask;
 	}
 
+	/**
+	 * Retrieves the number of worker threads from the given config file.
+	 *
+	 * @param config  An {@link Ini} config file
+	 * @return The number of worker threads specified in the config file, or 1 if not available
+	 */
 	private int getNumberOfThreads(Ini config) {
 		String nrStr = config.get("general", "num_threads");
 		if(nrStr == null || nrStr.equals(""))

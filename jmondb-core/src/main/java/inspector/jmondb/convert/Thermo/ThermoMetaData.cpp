@@ -1,7 +1,3 @@
-// Original author: Matt Chambers <matt.chambers .@. vanderbilt.edu>
-// Edited by: Pieter Kelchtermans <pieter.kelchtermans .@. ugent.be>
-// Edited by: Wout Bittremieux <wout.bittremieux .@. uantwerpen.be>
-
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -18,8 +14,8 @@ int main(int argc, const char* argv[])
 {
     if(argc != 2)
     {
-        std::cerr << "ThermoTuneMethod extracts the tune method information from Thermo raw files." << std::endl;
-        std::cerr << "Usage: ThermoTuneMethod <raw file>" << std::endl;
+        std::cerr << "ThermoMetaData extracts specific meta data from Thermo raw files." << std::endl;
+        std::cerr << "Usage: ThermoMetaData <raw file>" << std::endl;
         return -1;
     }
 	else if(!boost::filesystem::exists(argv[1]))
@@ -35,23 +31,11 @@ int main(int argc, const char* argv[])
 
     try
     {
-        // read raw file
         thermo::RawFilePtr rawFile = thermo::RawFile::create(argv[1]);
-        // read all segments
-        for(long segment = 0; /* end loop in catch */; ++segment)
-        {
-            try
-            {
-                std::auto_ptr<thermo::LabelValueArray> tuneData = rawFile->getTuneData(segment);
-                
-                for(int i = 0; i < tuneData->size(); ++i)
-                    std::cout << tuneData->label(i) << '\t' << tuneData->value(i) << std::endl;
-            }
-            catch(thermo::RawEgg&)
-            {
-                break;
-            }
-        }        
+		
+		std::cout << "Sample date\t" << rawFile->getCreationDate() << std::endl;
+		std::cout << "Instrument model CV-term\tMS:" << detail::translateAsInstrumentModel(rawFile->getInstrumentModel()) << std::endl;
+		std::cout << "SeqRowComment\t" << rawFile->value(thermo::SeqRowComment) << std::endl << std::endl;
     }
     catch(std::exception& e)
     {

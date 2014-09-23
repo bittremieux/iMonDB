@@ -4,6 +4,12 @@ project jMonDB
         <library>../pwiz/analysis/spectrum_processing//pwiz_analysis_spectrum_processing
     ;
   
+  exe ThermoMetaData
+    : ThermoMetaData.cpp
+      ../pwiz/data/misc
+      ../pwiz_aux/msrc/utility/vendor_api/thermo//pwiz_vendor_api_thermo
+    ;
+  
   exe ThermoStatusLog
     : ThermoStatusLog.cpp
       ../pwiz/data/misc

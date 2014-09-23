@@ -36,11 +36,7 @@ int main(int argc, const char* argv[])
     try
     {
         // read raw file
-        thermo::RawFilePtr rawFile = thermo::RawFile::create(argv[1]);
-		
-		std::cout << "Instrument model CV-term\tMS:" << detail::translateAsInstrumentModel(rawFile->getInstrumentModel()) << std::endl;
-		std::cout << "Sample date\t" << rawFile->getCreationDate() << std::endl << std::endl;
-        
+        thermo::RawFilePtr rawFile = thermo::RawFile::create(argv[1]);        
         // read all scans
         for(long scan = 1; /* end loop in catch */; ++scan)
         {

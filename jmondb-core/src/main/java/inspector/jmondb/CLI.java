@@ -31,6 +31,9 @@ public class CLI {
 			if(cmd.hasOption("?"))
 				new HelpFormatter().printHelp("jMonDB-core", options);
 			else {
+				boolean error = false;
+
+				// database information
 				String host = null;
 				String port = null;
 				String database = null;
@@ -43,43 +46,49 @@ public class CLI {
 				if(cmd.hasOption("db"))
 					database = cmd.getOptionValue("db");
 				else {
+					error = true;
 					logger.error("No database provided");
 					System.err.println("No database provided");
-					new HelpFormatter().printHelp("jMonDB-core", options);
 				}
 				if(cmd.hasOption("u"))
 					user = cmd.getOptionValue("u");
 				else {
+					error = true;
 					logger.error("No user name provided");
 					System.err.println("No user name provided");
-					new HelpFormatter().printHelp("jMonDB-core", options);
 				}
 				if(cmd.hasOption("pw"))
 					pass = cmd.getOptionValue("pw");
 
-				// create database connection
-				emf = IMonDBManagerFactory.createMySQLFactory(host, port, database, user, pass);
-				IMonDBWriter writer = new IMonDBWriter(emf);
-
-				// store raw file in the database
+				// raw file information
 				String rawFile = null;
 				String projectLabel = null;
 				if(cmd.hasOption("f"))
 					rawFile = cmd.getOptionValue("f");
 				else {
+					error = true;
 					logger.error("No raw file provided");
 					System.err.println("No raw file provided");
-					new HelpFormatter().printHelp("jMonDB-core", options);
 				}
 				if(cmd.hasOption("pr"))
 					projectLabel = cmd.getOptionValue("pr");
 				else {
+					error = true;
 					logger.error("No project label provided");
 					System.err.println("No project label provided");
-					new HelpFormatter().printHelp("jMonDB-core", options);
 				}
-				Run run = new ThermoRawFileExtractor(rawFile).extractInstrumentData();
-				writer.writeRun(run, projectLabel);
+
+				if(!error) {
+					// create database connection
+					emf = IMonDBManagerFactory.createMySQLFactory(host, port, database, user, pass);
+					IMonDBWriter writer = new IMonDBWriter(emf);
+
+					// store raw file in the database
+					Run run = new ThermoRawFileExtractor().extractInstrumentData(rawFile);
+					writer.writeRun(run, projectLabel);
+				}
+				else
+					new HelpFormatter().printHelp("jMonDB-core", options);
 			}
 
 		} catch (ParseException e) {
