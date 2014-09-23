@@ -1,5 +1,6 @@
 package inspector.jmondb.io;
 
+import com.google.common.collect.ImmutableMap;
 import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.model.CV;
 import inspector.jmondb.model.Project;
@@ -14,6 +15,7 @@ import javax.persistence.EntityManagerFactory;
 import java.io.*;
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
@@ -94,12 +96,23 @@ public class IMonDBReaderWriterTest {
 
 	@Test
 	public void getFromCustomQuery_nullQuery() {
-		assertNull(reader.getFromCustomQuery(null, Project.class));
+		assertNull(reader.getFromCustomQuery(null, Project.class, null));
 	}
 
 	@Test
 	public void getFromCustomQuery_nullClass() {
-		assertNull(reader.getFromCustomQuery("SELECT proj FROM PROJECT proj WHERE proj.label = \"Wout\"", null));
+		assertNull(reader.getFromCustomQuery("SELECT proj FROM Project proj WHERE proj.label = \"Wout\"", null, null));
+	}
+
+	@Test
+	public void getFromCustomQuery_nullParameters() {
+		assertNotNull(reader.getFromCustomQuery("SELECT proj FROM Project proj WHERE proj.label = \"Wout\"", Project.class, null));
+	}
+
+	@Test
+	public void getFromCustomQuery() {
+		Map<String, String> parameters = ImmutableMap.of("project", "Wout");
+		assertNotNull(reader.getFromCustomQuery("SELECT proj FROM Project proj WHERE proj.label = :project", Project.class, parameters));
 	}
 
 	@Test(expected = NullPointerException.class)
@@ -205,27 +218,29 @@ public class IMonDBReaderWriterTest {
 
 	@Test
 	public void writeCv_valid() {
-		assertEquals(0, reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = \"test\"", CV.class).size());
+		Map<String, String> parameters = ImmutableMap.of("label", "test");
+		assertEquals(0, reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = :label", CV.class, parameters).size());
 
 		CV cv = new CV("test", "Test CV", "uri/to/test/cv", "1");
 		writer.writeCv(cv);
 
-		assertEquals(1, reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = \"test\"", CV.class).size());
+		assertEquals(1, reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = :label", CV.class, parameters).size());
 	}
 
 	@Test
 	public void writeCv_duplicate() {
-		assertEquals(0, reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = \"test\"", CV.class).size());
+		Map<String, String> parameters = ImmutableMap.of("label", "test");
+		assertEquals(0, reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = :label", CV.class, parameters).size());
 
 		CV cv = new CV("test", "Test CV", "uri/to/test/cv", "1");
 		writer.writeCv(cv);
 
-		assertEquals(1, reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = \"test\"", CV.class).size());
+		assertEquals(1, reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = :label", CV.class, parameters).size());
 
 		CV newCv = new CV("test", "New CV", "uri/to/new/cv", "1");
 		writer.writeCv(newCv);
 
-		CV dbCv = reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = \"test\"", CV.class).get(0);
+		CV dbCv = reader.getFromCustomQuery("SELECT cv FROM CV cv WHERE cv.label = :label", CV.class, parameters).get(0);
 		assertNotNull(dbCv);
 		assertEquals("New CV", dbCv.getName());
 	}

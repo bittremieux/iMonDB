@@ -1,5 +1,6 @@
 package inspector.jmondb.collect;
 
+import com.google.common.collect.ImmutableMap;
 import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
@@ -10,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.sql.Timestamp;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 public class FileProcessor implements Callable<Timestamp> {
@@ -50,8 +52,9 @@ public class FileProcessor implements Callable<Timestamp> {
 				replace("%fn", FilenameUtils.getBaseName(file.getName()));
 
 		// check if this run already exists in the database for the given project
-		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = \"" + runName + "\" AND run.fromProject.label = \"" + projectLabel + "\"";
-		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class).get(0).equals(1L);
+		Map<String, String> parameters = ImmutableMap.of("runName", runName, "projectLabel", projectLabel);
+		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = :runName AND run.fromProject.label = :projectLabel";
+		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class, parameters).get(0).equals(1L);
 
 		if(!exists) {
 			Run run = extractor.extractInstrumentData(file.getAbsolutePath());

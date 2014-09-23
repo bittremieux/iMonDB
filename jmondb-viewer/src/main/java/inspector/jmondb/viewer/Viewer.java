@@ -1,5 +1,6 @@
 package inspector.jmondb.viewer;
 
+import com.google.common.collect.ImmutableMap;
 import inspector.jmondb.intervention.Intervention;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
@@ -469,7 +470,8 @@ public class Viewer extends JPanel {
 						comboBoxValue.removeAllItems();
 
 						String projectLabel = (String) comboBoxProject.getSelectedItem();
-						List<String> values = dbReader.getFromCustomQuery("SELECT DISTINCT val.name FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" ORDER BY val.name", String.class);
+						Map<String, String> parameters = ImmutableMap.of("projectLabel", projectLabel);
+						List<String> values = dbReader.getFromCustomQuery("SELECT DISTINCT val.name FROM Value val WHERE val.fromRun.fromProject.label = :projectLabel ORDER BY val.name", String.class, parameters);
 						values.forEach(comboBoxValue::addItem);
 
 						frameParent.setCursor(Cursor.getDefaultCursor());
@@ -492,7 +494,8 @@ public class Viewer extends JPanel {
 						String projectLabel = (String)comboBoxProject.getSelectedItem();
 						String valueName = (String)comboBoxValue.getSelectedItem();
 
-						List<Value> values = dbReader.getFromCustomQuery("SELECT val FROM Value val WHERE val.fromRun.fromProject.label = \"" + projectLabel + "\" AND val.name = \"" + valueName + "\" ORDER BY val.fromRun.sampleDate", Value.class);
+						Map<String, String> parameters = ImmutableMap.of("projectLabel", projectLabel, "valueName", valueName);
+						List<Value> values = dbReader.getFromCustomQuery("SELECT val FROM Value val WHERE val.fromRun.fromProject.label = :projectLabel AND val.name = :valueName ORDER BY val.fromRun.sampleDate", Value.class, parameters);
 
 						if(values.size() == 0)
 							JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
