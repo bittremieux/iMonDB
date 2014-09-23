@@ -12,7 +12,7 @@
 	<groupId>inspector.jmondb.jmondb-collector</groupId>
 	<artifactId>jmondb-collector</artifactId>
 	<packaging>jar</packaging>
-    <version>1.0.0-alpha1</version>
+    <version>1.0.0-alpha2</version>
 
     <name>jMonDB Collector</name>
     <url>https://bitbucket.org/proteinspector/jmondb</url>
@@ -34,7 +34,7 @@
         <dependency>
             <groupId>inspector.jmondb.jmondb-core</groupId>
             <artifactId>jmondb-core</artifactId>
-            <version>1.0.0-alpha1</version>
+            <version>1.0.0-alpha2</version>
         </dependency>
 
         <dependency>
