@@ -3,7 +3,6 @@ package inspector.jmondb.io;
 import com.google.common.collect.ImmutableMap;
 import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.model.CV;
-import inspector.jmondb.model.Project;
 import inspector.jmondb.model.Run;
 import org.junit.After;
 import org.junit.Before;
@@ -13,11 +12,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 
 import java.io.*;
-import java.sql.Timestamp;
-import java.util.Calendar;
 import java.util.Map;
 
-import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
@@ -70,33 +66,18 @@ public class IMonDBReaderWriterTest {
 	}
 
 	@Test
-	public void getProject_null() {
-		assertNull(reader.getProject(null));
-	}
-
-	@Test
-	public void getProject_valid() {
-		assertNotNull(reader.getProject("Wout"));
-	}
-
-	@Test
-	public void getRun_nullProject() {
-		assertNull(reader.getRun("test", null));
-	}
-
-	@Test
 	public void getRun_nullRun() {
-		assertNull(reader.getRun(null, "Wout"));
+		assertNull(reader.getRun(null));
 	}
 
 	@Test
 	public void getRun_valid() {
-		assertNotNull(reader.getRun("OrbitrapVelos-example", "Wout"));
+		assertNotNull(reader.getRun("OrbitrapVelos-example"));
 	}
 
 	@Test
 	public void getFromCustomQuery_nullQuery() {
-		assertNull(reader.getFromCustomQuery(null, Project.class, null));
+		assertNull(reader.getFromCustomQuery(null, Run.class, null));
 	}
 
 	@Test
@@ -106,109 +87,18 @@ public class IMonDBReaderWriterTest {
 
 	@Test
 	public void getFromCustomQuery_nullParameters() {
-		assertNotNull(reader.getFromCustomQuery("SELECT proj FROM Project proj WHERE proj.label = \"Wout\"", Project.class, null));
+		assertNotNull(reader.getFromCustomQuery("SELECT run FROM Run run WHERE run.name = \"Wout\"", Run.class, null));
 	}
 
 	@Test
 	public void getFromCustomQuery() {
-		Map<String, String> parameters = ImmutableMap.of("project", "Wout");
-		assertNotNull(reader.getFromCustomQuery("SELECT proj FROM Project proj WHERE proj.label = :project", Project.class, parameters));
-	}
-
-	@Test(expected = NullPointerException.class)
-	public void writeProject_null() {
-		writer.writeProject(null);
-	}
-
-	@Test
-	public void writeProject_duplicate() {
-		assertThat(reader.getProject("Wout").getNumberOfRuns(), greaterThan(0));
-
-		Project project = new Project("Wout", "Different project", "Hello, this is a description");
-		writer.writeProject(project);
-
-		assertEquals(0, reader.getProject("Wout").getNumberOfRuns());
-	}
-
-	@Test
-	public void writeProject_valid() {
-		assertNull(reader.getProject("test"));
-
-		Project project = new Project("test", "Test project", "Hello, this is a description");
-		writer.writeProject(project);
-
-		assertNotNull(reader.getProject("test"));
-	}
-
-	@Test
-	public void writeRun_duplicate() {
-		assertNull(reader.getProject("test"));
-
-		Project project = new Project("test", "Test project", "Hello, this is a description");
-		writer.writeProject(project);
-
-		assertNotNull(reader.getProject("test"));
-
-		Project newProject = new Project("test", "New test project", "This is another description");
-		writer.writeProject(newProject);
-
-		Project dbProject = reader.getProject("test");
-		assertNotNull(dbProject);
-		assertEquals("test", dbProject.getLabel());
+		Map<String, String> parameters = ImmutableMap.of("run", "Wout");
+		assertNotNull(reader.getFromCustomQuery("SELECT run FROM Run run WHERE run.name = :run", Run.class, parameters));
 	}
 
 	@Test(expected = NullPointerException.class)
 	public void writeRun_nullRun() {
-		writer.writeRun(null, "Test project");
-	}
-
-	@Test(expected = NullPointerException.class)
-	public void writeRun_nullProjectLabel() {
-		Run run = new Run("test", "path/to/run/", new Timestamp(Calendar.getInstance().getTime().getTime()));
-
-		writer.writeRun(run, null);
-	}
-
-	@Test
-	public void writeRun_existingProjectNewRun() {
-		Run run = new Run("test", "path/to/run/", new Timestamp(Calendar.getInstance().getTime().getTime()));
-
-		assertNull(reader.getRun(run.getName(), "Wout"));
-
-		writer.writeRun(run, "Wout");
-
-		assertNotNull(reader.getRun(run.getName(), "Wout"));
-	}
-
-	@Test
-	public void writeRun_existingProjectDuplicateRun() {
-		Run run = new Run("test", "path/to/run/", new Timestamp(Calendar.getInstance().getTime().getTime()));
-
-		assertNull(reader.getRun(run.getName(), "Wout"));
-
-		writer.writeRun(run, "Wout");
-
-		assertNotNull(reader.getRun(run.getName(), "Wout"));
-
-		Run newRun = new Run("test", "other/path/", new Timestamp(Calendar.getInstance().getTime().getTime()));
-
-		writer.writeRun(newRun, "Wout");
-
-		assertNotNull(reader.getRun(run.getName(), "Wout"));
-		assertEquals("other/path/", reader.getRun(run.getName(), "Wout").getStorageName());
-	}
-
-	@Test
-	public void writeRun_nonExistingProject() {
-		Run run = new Run("test", "path/to/run/", new Timestamp(Calendar.getInstance().getTime().getTime()));
-
-		assertNull(reader.getProject("test"));
-		assertNull(reader.getRun(run.getName(), "test"));
-
-		writer.writeRun(run, "test");
-
-		assertNotNull(reader.getProject("test"));
-		assertNotNull(reader.getRun(run.getName(), "test"));
+		writer.writeRun(null);
 	}
 
 	@Test(expected = NullPointerException.class)
@@ -249,9 +139,9 @@ public class IMonDBReaderWriterTest {
 	public void writeReadLtqOrbitrap() {
 		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/LtqOrbitrap.raw").getFile()).getAbsolutePath());
 
-		writer.writeRun(run, "Wout");
+		writer.writeRun(run);
 
-		Run runDb = reader.getRun("LtqOrbitrap", "Wout");
+		Run runDb = reader.getRun("LtqOrbitrap");
 
 		// compare all elements
 		assertEquals(run, runDb);
@@ -261,9 +151,9 @@ public class IMonDBReaderWriterTest {
 	public void writeReadOrbitrapXL() {
 		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapXL.raw").getFile()).getAbsolutePath());
 
-		writer.writeRun(run, "Wout");
+		writer.writeRun(run);
 
-		Run runDb = reader.getRun("OrbitrapXL", "Wout");
+		Run runDb = reader.getRun("OrbitrapXL");
 
 		// compare all elements
 		assertEquals(run, runDb);
@@ -273,9 +163,9 @@ public class IMonDBReaderWriterTest {
 	public void writeReadLtqVelos() {
 		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/LtqVelos.raw").getFile()).getAbsolutePath());
 
-		writer.writeRun(run, "Wout");
+		writer.writeRun(run);
 
-		Run runDb = reader.getRun("LtqVelos", "Wout");
+		Run runDb = reader.getRun("LtqVelos");
 
 		// compare all elements
 		assertEquals(run, runDb);
@@ -285,9 +175,9 @@ public class IMonDBReaderWriterTest {
 	public void writeReadTsqVantage() {
 		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/TsqVantage.raw").getFile()).getAbsolutePath());
 
-		writer.writeRun(run, "Wout");
+		writer.writeRun(run);
 
-		Run runDb = reader.getRun("TsqVantage", "Wout");
+		Run runDb = reader.getRun("TsqVantage");
 
 		// compare all elements
 		assertEquals(run, runDb);
@@ -297,9 +187,9 @@ public class IMonDBReaderWriterTest {
 	public void writeReadOrbitrapVelos() {
 		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapVelos.raw").getFile()).getAbsolutePath());
 
-		writer.writeRun(run, "Wout");
+		writer.writeRun(run);
 
-		Run runDb = reader.getRun("OrbitrapVelos", "Wout");
+		Run runDb = reader.getRun("OrbitrapVelos");
 
 		// compare all elements
 		assertEquals(run, runDb);
@@ -309,9 +199,9 @@ public class IMonDBReaderWriterTest {
 	public void writeReadQExactive() {
 		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/QExactive.raw").getFile()).getAbsolutePath());
 
-		writer.writeRun(run, "Wout");
+		writer.writeRun(run);
 
-		Run runDb = reader.getRun("QExactive", "Wout");
+		Run runDb = reader.getRun("QExactive");
 
 		// compare all elements
 		assertEquals(run, runDb);
@@ -321,9 +211,9 @@ public class IMonDBReaderWriterTest {
 	public void writeReadOrbitrapFusion() {
 		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapFusion.raw").getFile()).getAbsolutePath());
 
-		writer.writeRun(run, "Wout");
+		writer.writeRun(run);
 
-		Run runDb = reader.getRun("OrbitrapFusion", "Wout");
+		Run runDb = reader.getRun("OrbitrapFusion");
 
 		// compare all elements
 		assertEquals(run, runDb);

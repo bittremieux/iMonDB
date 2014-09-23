@@ -1,6 +1,5 @@
 package inspector.jmondb.io;
 
-import inspector.jmondb.model.Project;
 import inspector.jmondb.model.Run;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,46 +46,19 @@ public class IMonDBReader {
 	}
 
 	/**
-	 * Returns the {@link Project} specified by the given label.
-	 *
-	 * @param label  The label of the project
-	 * @return The project specified by the given label if found, else {@code null}
-	 */
-	public Project getProject(String label) {
-		logger.info("Retrieve project <{}>", label);
-
-		EntityManager entityManager = createEntityManager();
-
-		try {
-			TypedQuery<Project> query = entityManager.createQuery("SELECT project FROM Project project WHERE project.label = :label", Project.class);
-			query.setParameter("label", label);
-
-			return query.getSingleResult();
-		}
-		catch(NoResultException e) {
-			return null;
-		}
-		finally {
-			entityManager.close();
-		}
-	}
-
-	/**
 	 * Returns the {@link Run} specified by the given name.
 	 *
 	 * @param name  The name of the run
-	 * @param projectLabel  The label identifying the Project to which the Run belongs
 	 * @return The run specified by the given name if found, else {@code null}
 	 */
-	public Run getRun(String name, String projectLabel) {
-		logger.info("Retrieve run <{}> from project <{}>", name, projectLabel);
+	public Run getRun(String name) {
+		logger.info("Retrieve run <{}>", name);
 
 		EntityManager entityManager = createEntityManager();
 
 		try {
-			TypedQuery<Run> query = entityManager.createQuery("SELECT run FROM Run run WHERE run.name = :name AND run.fromProject.label = :label", Run.class);
+			TypedQuery<Run> query = entityManager.createQuery("SELECT run FROM Run run WHERE run.name = :name", Run.class);
 			query.setParameter("name", name);
-			query.setParameter("label", projectLabel);
 
 			return query.getSingleResult();
 		}

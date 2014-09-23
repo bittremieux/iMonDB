@@ -32,11 +32,6 @@ public class Run {
 	@Column(name="sampledate", nullable=false)
 	private Timestamp sampleDate;
 
-	/** inverse part of the bi-directional relationship with {@link Project} */
-	@ManyToOne(fetch=FetchType.LAZY)
-	@JoinColumn(name="l_project_id", referencedColumnName="id")
-	private Project fromProject;
-
 	/** list of {@link Value}s for the run */
 	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy="fromRun")
 	@MapKey(name="accession")
@@ -113,10 +108,6 @@ public class Run {
 			logger.error("The run's sample date is not allowed to be <null>");
 			throw new NullPointerException("The run's sample date is not allowed to be <null>");
 		}
-	}
-
-	public void setFromProject(Project project) {
-		this.fromProject = project;
 	}
 
 	/**

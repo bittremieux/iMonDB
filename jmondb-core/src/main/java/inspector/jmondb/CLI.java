@@ -62,20 +62,12 @@ public class CLI {
 
 				// raw file information
 				String rawFile = null;
-				String projectLabel = null;
 				if(cmd.hasOption("f"))
 					rawFile = cmd.getOptionValue("f");
 				else {
 					error = true;
 					logger.error("No raw file provided");
 					System.err.println("No raw file provided");
-				}
-				if(cmd.hasOption("pr"))
-					projectLabel = cmd.getOptionValue("pr");
-				else {
-					error = true;
-					logger.error("No project label provided");
-					System.err.println("No project label provided");
 				}
 
 				if(!error) {
@@ -85,7 +77,7 @@ public class CLI {
 
 					// store raw file in the database
 					Run run = new ThermoRawFileExtractor().extractInstrumentData(rawFile);
-					writer.writeRun(run, projectLabel);
+					writer.writeRun(run);
 				}
 				else
 					new HelpFormatter().printHelp("jMonDB-core", options);
@@ -114,7 +106,6 @@ public class CLI {
 		options.addOption(new Option("pw", "password", true, "the iMonDB MySQL password"));
 		// raw file options
 		options.addOption(new Option("f", "file", true, "the raw file to store in the iMonDB"));
-		options.addOption(new Option("pr", "project", true, "the project label to which the raw file belongs"));
 
 		return options;
 	}

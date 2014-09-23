@@ -12,7 +12,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -23,7 +23,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("127.0.0.1", "3306", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -34,7 +34,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory(null, "3306", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -45,7 +45,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", null, "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -56,7 +56,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", null, "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -67,7 +67,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "iMonDBtest", null, null);
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -78,7 +78,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("nonlocalhost", "3306", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -89,7 +89,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "123456", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -100,7 +100,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "noDb", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -111,7 +111,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "iMonDBtest", "noUser", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
@@ -122,7 +122,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "iMonDBtest", "iMonDB", "wrongPass");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getRun("Wout");
 		// close emf
 		emf.close();
 	}
