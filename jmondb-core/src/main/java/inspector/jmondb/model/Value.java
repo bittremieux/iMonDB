@@ -44,9 +44,6 @@ public class Value {
 	/** the number of different observations */
 	@Column(name="n_diffvalues")
 	private Integer nDiffValues;
-	/** the number of observations present */
-	@Column(name="n_notmissingvalues")
-	private Integer nNotMissingValues;
 	/** the minimum observation */
 	@Column(name="min")
 	private Double min;
@@ -97,7 +94,6 @@ public class Value {
 	 * @param firstValue  The first observation
 	 * @param n  The number of observations used to calculate the summary value
 	 * @param nDiffValues  The number of different observations
-	 * @param nNotMissingValues  The number of observations present
 	 * @param min  The minimum observation
 	 * @param max  The maximum observation
 	 * @param mean  The mean observation
@@ -106,7 +102,7 @@ public class Value {
 	 * @param q1  The first quartile
 	 * @param q3  The third quartile
 	 */
-	public Value(String name, String type, String accession, CV cv, Boolean isNumeric, String firstValue, Integer n, Integer nDiffValues, Integer nNotMissingValues, Double min, Double max, Double mean, Double median, Double sd, Double q1, Double q3) {
+	public Value(String name, String type, String accession, CV cv, Boolean isNumeric, String firstValue, Integer n, Integer nDiffValues, Double min, Double max, Double mean, Double median, Double sd, Double q1, Double q3) {
 		this();
 
 		setName(name);
@@ -117,7 +113,6 @@ public class Value {
 		setFirstValue(firstValue);
 		setN(n);
 		setNDiffValues(nDiffValues);
-		setNNotMissingValues(nNotMissingValues);
 		setMin(min);
 		setMax(max);
 		setMean(mean);
@@ -225,14 +220,6 @@ public class Value {
 		this.nDiffValues = nDiffValues;
 	}
 
-	public Integer getNNotMissingValues() {
-		return nNotMissingValues;
-	}
-
-	public void setNNotMissingValues(Integer nNotMissingValues) {
-		this.nNotMissingValues = nNotMissingValues;
-	}
-
 	public Double getMin() {
 		return min;
 	}
@@ -316,8 +303,6 @@ public class Value {
 		if(min != null ? !min.equals(that.min) : that.min != null) return false;
 		if(n != null ? !n.equals(that.n) : that.n != null) return false;
 		if(nDiffValues != null ? !nDiffValues.equals(that.nDiffValues) : that.nDiffValues != null) return false;
-		if(nNotMissingValues != null ? !nNotMissingValues.equals(that.nNotMissingValues) : that.nNotMissingValues != null)
-			return false;
 		if(q1 != null ? !q1.equals(that.q1) : that.q1 != null) return false;
 		if(q3 != null ? !q3.equals(that.q3) : that.q3 != null) return false;
 		if(sd != null ? !sd.equals(that.sd) : that.sd != null) return false;

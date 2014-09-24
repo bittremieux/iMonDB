@@ -13,7 +13,6 @@ public class ValueBuilder {
 	private String firstValue;
 	private Integer n;
 	private Integer nDiffValues;
-	private Integer nNotMissingValues;
 	private Double min;
 	private Double max;
 	private Double mean;
@@ -62,11 +61,6 @@ public class ValueBuilder {
 		return this;
 	}
 
-	public ValueBuilder setNNotMissingValues(Integer nNotMissingValues) {
-		this.nNotMissingValues = nNotMissingValues;
-		return this;
-	}
-
 	public ValueBuilder setMin(Double min) {
 		this.min = min;
 		return this;
@@ -103,6 +97,6 @@ public class ValueBuilder {
 	}
 
 	public Value createValue() {
-		return new Value(name, type, accession, cv, isNumeric, firstValue, n, nDiffValues, nNotMissingValues, min, max, mean, median, sd, q1, q3);
+		return new Value(name, type, accession, cv, isNumeric, firstValue, n, nDiffValues, min, max, mean, median, sd, q1, q3);
 	}
 }

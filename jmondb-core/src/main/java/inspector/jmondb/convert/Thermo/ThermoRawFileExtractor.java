@@ -572,7 +572,6 @@ public class ThermoRawFileExtractor {
 			String firstValue = cell.getValue().get(0);
 			Integer n;
 			Integer nDiff;
-			Integer nNotMissing = 0;
 			Double min = null;
 			Double max = null;
 			Double mean = null;
@@ -586,7 +585,6 @@ public class ThermoRawFileExtractor {
 			for(int i = 0; i < cell.getValue().size(); i++) {
 				String s = cell.getValue().get(i);
 				if(s != null && !s.equals("")) {
-					nNotMissing++;
 					freq.addValue(s);
 					try {
 						stats.addValue(Double.parseDouble(s));
@@ -610,7 +608,7 @@ public class ThermoRawFileExtractor {
 			//TODO: correctly set the accession number once we have a valid cv
 			String name = cell.getRowKey() + " - " + cell.getColumnKey();
 			String accession = name;
-			Value value = new Value(name, valueType, accession, cv, isNumeric, firstValue, n, nDiff, nNotMissing, min, max, mean, median, sd, q1, q3);
+			Value value = new Value(name, valueType, accession, cv, isNumeric, firstValue, n, nDiff, min, max, mean, median, sd, q1, q3);
 
 			values.add(value);
 		}
