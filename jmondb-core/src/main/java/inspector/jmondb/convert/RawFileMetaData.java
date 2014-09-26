@@ -1,5 +1,7 @@
 package inspector.jmondb.convert;
 
+import inspector.jmondb.model.InstrumentModel;
+
 import java.sql.Timestamp;
 
 /**

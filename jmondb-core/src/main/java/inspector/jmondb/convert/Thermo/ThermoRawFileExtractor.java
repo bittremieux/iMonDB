@@ -2,12 +2,9 @@ package inspector.jmondb.convert.Thermo;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import inspector.jmondb.convert.InstrumentModel;
+import inspector.jmondb.model.InstrumentModel;
 import inspector.jmondb.convert.RawFileMetaData;
-import inspector.jmondb.model.CV;
-import inspector.jmondb.model.Property;
-import inspector.jmondb.model.Run;
-import inspector.jmondb.model.Value;
+import inspector.jmondb.model.*;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
@@ -51,6 +48,7 @@ public class ThermoRawFileExtractor {
 	//TODO 2: this is a global variable to fix a duplicate key error when inserting multiple CV objects with the same label that didn't exist in the database before
 	//TODO 2: fix this by having a global CV list or something
 	private CV cv = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
+	private CV cvMS = new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
 
 	/**
 	 * Creates an extractor to retrieve instrument data from Thermo raw files.
@@ -187,10 +185,13 @@ public class ThermoRawFileExtractor {
 			Timestamp date = metaData.getDate();
 			InstrumentModel model = metaData.getModel();
 
+			// create the instrument on which the run was performed
+			//TODO: get instrument name (from where?)
+			Instrument instrument = new Instrument("my instrument name", model, cvMS);
 			// create a run to store all the instrument data values
 			if(runName == null)
 				runName = FilenameUtils.getBaseName(rawFile.getName());
-			Run run = new Run(runName, rawFile.getCanonicalPath(), date);
+			Run run = new Run(runName, rawFile.getCanonicalPath(), date, instrument);
 
 			// extract the data from the raw file and add the values to the run
 			extractAndAddValues(rawFile, model, true, run);

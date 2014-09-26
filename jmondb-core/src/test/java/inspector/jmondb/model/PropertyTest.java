@@ -16,6 +16,7 @@ public class PropertyTest {
 	private Property property;
 
 	private final CV cv = new CV("testCv", "Dummy CV to run the unit tests", "https://bitbucket.org/proteinspector/jmondb/", "1");
+	private final Instrument instrument = new Instrument("name", InstrumentModel.UNKNOWN_MODEL, cv);
 
 	private ArrayList<Run> runs;
 
@@ -27,7 +28,7 @@ public class PropertyTest {
 		property = new Property("property", "test", "accession", cv, true);
 
 		for(int i = 0; i < NR_OF_VALUES; i++) {
-			Run run = new Run("run_" + i, "path/to/run/" + i, new Timestamp(Calendar.getInstance().getTime().getTime()));
+			Run run = new Run("run_" + i, "path/to/run/" + i, new Timestamp(Calendar.getInstance().getTime().getTime()), instrument);
 			runs.add(run);
 			new ValueBuilder().setFirstValue(Double.toString(Math.random() * 1000)).setDefiningProperty(property).setOriginatingRun(run).createValue();
 		}
@@ -40,7 +41,7 @@ public class PropertyTest {
 
 	@Test
 	public void getValue_nonExisting() {
-		Run run = new Run("run_new", "path/to/run/new/", new Timestamp(Calendar.getInstance().getTime().getTime()));
+		Run run = new Run("run_new", "path/to/run/new/", new Timestamp(Calendar.getInstance().getTime().getTime()), instrument);
 		assertNull(property.getValue(run));
 	}
 
@@ -68,7 +69,7 @@ public class PropertyTest {
 
 	@Test
 	public void assignValue_new() {
-		Run run = new Run("run_new", "path/to/run/new/", new Timestamp(Calendar.getInstance().getTime().getTime()));
+		Run run = new Run("run_new", "path/to/run/new/", new Timestamp(Calendar.getInstance().getTime().getTime()), instrument);
 		assertNull(property.getValue(run));
 
 		new ValueBuilder().setFirstValue(Double.toString(Math.random()*1000)).setDefiningProperty(property).setOriginatingRun(run).createValue();

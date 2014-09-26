@@ -39,6 +39,11 @@ public class Run {
 	@MapKey
 	private Map<Property, Value> runValues;
 
+	/** inverse part of the bi-directional relationship with {@link Instrument} */
+	@ManyToOne(cascade={CascadeType.PERSIST, CascadeType.MERGE}, fetch=FetchType.LAZY)
+	@JoinColumn(name="l_imon_instrument_id", nullable=false, referencedColumnName="id")
+	private Instrument instrument;
+
 	/**
 	 * Default constructor required by JPA.
 	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
@@ -53,13 +58,15 @@ public class Run {
 	 * @param name  the name identifying the run, not {@code null}
 	 * @param storageName  the location of the raw data belonging to the run, not {@code null}
 	 * @param sampleDate  the date on which the run was performed, not {@code null}
+	 * @param instrument  the {@link Instrument} on which the run was executed, not {@code null}
 	 */
-	public Run(String name, String storageName, Timestamp sampleDate) {
+	public Run(String name, String storageName, Timestamp sampleDate, Instrument instrument) {
 		this();
 
 		setName(name);
 		setStorageName(storageName);
 		setSampleDate(sampleDate);
+		setInstrument(instrument);
 	}
 
 	public Long getId() {
@@ -102,6 +109,21 @@ public class Run {
 		else {
 			logger.error("The run's sample date is not allowed to be <null>");
 			throw new NullPointerException("The run's sample date is not allowed to be <null>");
+		}
+	}
+
+	public Instrument getInstrument() {
+		return instrument;
+	}
+
+	private void setInstrument(Instrument instrument) {
+		if(instrument != null) {
+			this.instrument = instrument;
+			instrument.addRun(this);
+		}
+		else {
+			logger.error("The run's instrument is not allowed to be <null>");
+			throw new NullPointerException("The run's instrument is not allowed to be <null>");
 		}
 	}
 

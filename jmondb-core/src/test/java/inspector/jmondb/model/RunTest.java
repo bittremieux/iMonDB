@@ -23,7 +23,8 @@ public class RunTest {
 		final int NR_OF_VALUES = 12;
 
 		properties = new ArrayList<>(NR_OF_VALUES);
-		run = new Run("run", "path/to/run/", new Timestamp(Calendar.getInstance().getTime().getTime()));
+		Instrument instrument = new Instrument("name", InstrumentModel.UNKNOWN_MODEL, cv);
+		run = new Run("run", "path/to/run/", new Timestamp(Calendar.getInstance().getTime().getTime()), instrument);
 
 		for(int i = 0; i < NR_OF_VALUES; i++) {
 			Property prop = new Property("property_" + i, "test", "accession_" + i, cv, true);

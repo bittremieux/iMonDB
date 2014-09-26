@@ -1,10 +1,7 @@
 package inspector.jmondb.io;
 
 import com.google.common.collect.Maps;
-import inspector.jmondb.model.CV;
-import inspector.jmondb.model.Property;
-import inspector.jmondb.model.Run;
-import inspector.jmondb.model.Value;
+import inspector.jmondb.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -84,6 +81,8 @@ public class IMonDBWriter {
 					entityManager.getTransaction().commit();
 				}
 
+				// make sure the pre-existing instruments are retained
+				assignDuplicateInstrumentId(run.getInstrument(), entityManager);
 				// make sure the pre-existing properties and cv's are retained
 				ArrayList<Property> properties = new ArrayList<>();
 				for(Iterator<Value> it = run.getValueIterator(); it.hasNext(); )
@@ -118,6 +117,17 @@ public class IMonDBWriter {
 			logger.error("Unable to write <null> run element to the database");
 			throw new NullPointerException("Unable to write <null> run element to the database");
 		}
+	}
+
+	private void assignDuplicateInstrumentId(Instrument instrument, EntityManager entityManager) {
+		TypedQuery<Long> instrumentQuery = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name AND inst.type = :type", Long.class);
+		instrumentQuery.setParameter("name", instrument.getName());
+		instrumentQuery.setParameter("type", instrument.getType());
+		instrumentQuery.setMaxResults(1);	// restrict to a single result
+
+		List<Long> result = instrumentQuery.getResultList();
+		if(result.size() > 0)
+			instrument.setId(result.get(0));
 	}
 
 	/**
