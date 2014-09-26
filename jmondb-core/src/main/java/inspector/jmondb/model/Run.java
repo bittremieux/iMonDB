@@ -5,11 +5,13 @@ import org.apache.logging.log4j.Logger;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
+/**
+ * A {code Run} represents a single experimental run (signified by a single raw file), and can contain several {@link Value}s.
+ */
 @Entity
+@Access(AccessType.FIELD)
 @Table(name="imon_run")
 public class Run {
 
@@ -23,7 +25,7 @@ public class Run {
 	private Long id;
 
 	/** the name identifying the run */
-	@Column(name="name", nullable=false, length=100)
+	@Column(name="name", nullable=false, unique=true, length=100)
 	private String name;
 	/** the location of the raw data belonging to the run */
 	@Column(name="storage_name", nullable=false, length=255)
@@ -32,27 +34,25 @@ public class Run {
 	@Column(name="sampledate", nullable=false)
 	private Timestamp sampleDate;
 
-	/** list of {@link Value}s for the run */
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy="fromRun")
-	@MapKey(name="accession")
-	private Map<String, Value> hasValues;
+	/** all {@link Value}s for the run */
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy= "originatingRun")
+	@MapKey
+	private Map<Property, Value> runValues;
 
 	/**
 	 * Default constructor required by JPA.
 	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
 	 */
 	protected Run() {
-		hasValues = new HashMap<>();
+		runValues = new HashMap<>(250);
 	}
 
 	/**
-	 * Creates a Run with the specified name, storage name and sample date.
+	 * Creates a {@code Run} representing a specific experiment.
 	 *
-	 * The id is automatically determined by the database as primary key.
-	 *
-	 * @param name  The name identifying the run
-	 * @param storageName  The location of the raw data belonging to the run
-	 * @param sampleDate  The date on which the run was performed
+	 * @param name  the name identifying the run, not {@code null}
+	 * @param storageName  the location of the raw data belonging to the run, not {@code null}
+	 * @param sampleDate  the date on which the run was performed, not {@code null}
 	 */
 	public Run(String name, String storageName, Timestamp sampleDate) {
 		this();
@@ -66,16 +66,11 @@ public class Run {
 		return id;
 	}
 
-	/* package private: read-only key to be set by the JPA implementation */
-	void setId(Long id) {
-		this.id = id;
-	}
-
 	public String getName() {
 		return name;
 	}
 
-	public void setName(String name) {
+	private void setName(String name) {
 		if(name != null)
 			this.name = name;
 		else {
@@ -88,7 +83,7 @@ public class Run {
 		return storageName;
 	}
 
-	public void setStorageName(String storageName) {
+	private void setStorageName(String storageName) {
 		if(storageName != null)
 			this.storageName = storageName;
 		else {
@@ -101,7 +96,7 @@ public class Run {
 		return sampleDate;
 	}
 
-	public void setSampleDate(Timestamp sampleDate) {
+	private void setSampleDate(Timestamp sampleDate) {
 		if(sampleDate != null)
 			this.sampleDate = sampleDate;
 		else {
@@ -111,114 +106,69 @@ public class Run {
 	}
 
 	/**
-	 * Returns the number of {@link Value}s for the run.
+	 * Returns the {@link Value} that originates from this {@code Run} and that is defined by the given {@link Property}.
 	 *
-	 * @return The number of Values for the run
+	 * @param property  the {@code Property} that defines the requested {@code Value}, {@code null} returns {@code null}
+	 * @return the {@code Value} that originates from this {@code Run} and that is defined by the given {@link Property} if it exists, {@code null} otherwise
 	 */
-	public int getNumberOfValues() {
-		return hasValues.size();
-	}
-
-	/**
-	 * Returns the {@link Value} with the specified accession for the run.
-	 *
-	 * @param accession  The accession of the requested Value
-	 * @return The Value with the specified accession for the run
-	 */
-	public Value getValue(String accession) {
-		if(accession != null)
-			return hasValues.get(accession);
+	public Value getValue(Property property) {
+		if(property != null)
+			return runValues.get(property);
 		else
 			return null;
 	}
 
 	/**
-	 * Returns an {@link Iterator} over all {@link Value}s for the run.
+	 * Returns an {@link Iterator} over all {@link Value}s that originate from this {@code Property}.
 	 *
-	 * @return An Iterator over all Values for the run
+	 * @return an {@code Iterator} over all {@code Value}s that originate from this {@code Property}
 	 */
 	public Iterator<Value> getValueIterator() {
-		return hasValues.values().iterator();
+		return runValues.values().iterator();
 	}
 
 	/**
-	 * Adds the given {@link Value} to the run.
+	 * Adds the given {@link Value} to this {@code Run}.
 	 *
-	 * If a Value with the same accession was already present, the previous Value is replaced by the given Value.
+	 * If the {@code Run} previously contained a {@code Value} associated with the same {@link Property}, the old {@code Value} is replaced.
 	 *
-	 * @param value  The Value that will be added to the run
+	 * A {@code Value} is automatically added to its {@code Run} upon its instantiation.
+	 *
+	 * @param value  the {@code Value} that is added to this {@code Run}, not {@code null}
 	 */
-	public void addValue(Value value) {
-		if(value != null) {
-			value.setFromRun(this);	// add the bi-directional relationship
-			hasValues.put(value.getAccession(), value);
-		}
+	void addValue(Value value) {
+		if(value != null)
+			runValues.put(value.getDefiningProperty(), value);
 		else {
-			logger.error("Can't add <null> Value to a Run");
-			throw new NullPointerException("Can't add <null> Value");
+			logger.error("Can't add a <null> value to the run");
+			throw new NullPointerException("Can't add a <null> value to the run");
 		}
 	}
 
-	/**
-	 * Removes the {@link Value} specified by the given accession from the run.
-	 *
-	 * @param accession  The accession of the Value that will be removed
-	 */
-	public void removeValue(String accession) {
-		if(accession != null) {
-			Value value = hasValues.get(accession);
-			if(value != null)	// remove the bi-directional relationship
-				value.setFromRun(null);
-			hasValues.remove(accession);
-		}
-	}
-
-	/**
-	 * Removes all {@link Value}s from the run.
-	 */
-	public void removeAllValues() {
-		Iterator<Value> it = getValueIterator();
-		while(it.hasNext()) {
-			Value value = it.next();
-			// first remove the bi-directional relationship
-			value.setFromRun(null);
-			// remove the value
-			it.remove();
-		}
-	}
-
-	/**
-	 * Indicates whether some other object is "equal to" this one.
-	 *
-	 * Two Runs are considered equal if their direct metadata is equal <em>and</em> all their underlying {@link Value}s are equal.
-	 *
-	 * @param o  The reference object with which to compare
-	 * @return <code>true</code> if this object is the same as the o argument; <code>false</code> otherwise
-	 */
 	@Override
 	public boolean equals(Object o) {
 		if(this == o) return true;
 		if(o == null || getClass() != o.getClass()) return false;
 
-		Run that = (Run) o;
+		Run run = (Run) o;
 
-		if(name != null ? !name.equals(that.name) : that.name != null) return false;
-		if(sampleDate != null ? !sampleDate.equals(that.sampleDate) : that.sampleDate != null) return false;
-		if(storageName != null ? !storageName.equals(that.storageName) : that.storageName != null) return false;
-		if(getNumberOfValues() != that.getNumberOfValues()) return false;
-
-		for(Iterator<Value> valIt = getValueIterator(); valIt.hasNext(); ) {
-			Value valThis = valIt.next();
-			Value valThat = that.getValue(valThis.getAccession());
-
-			if(valThat != null && !valThis.equals(valThat)) return false;
-		}
+		if(!name.equals(run.name)) return false;
+		if(!storageName.equals(run.storageName)) return false;
+		if(!sampleDate.equals(run.sampleDate)) return false;
 
 		return true;
 	}
 
 	@Override
+	public int hashCode() {
+		int result = name.hashCode();
+		result = 31 * result + storageName.hashCode();
+		result = 31 * result + sampleDate.hashCode();
+		return result;
+	}
+
+	@Override
 	public String toString() {
-		return "Run {id=" + id + ", name=" + name + ", #values=" + getNumberOfValues() + "}";
+		return "Run {id=" + id + ", name=" + name + ", #values=" + runValues.size() + "}";
 	}
 }

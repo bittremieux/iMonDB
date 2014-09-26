@@ -34,12 +34,12 @@ public class IMonDBManagerFactory {
 	/**
 	 * Creates an {@link EntityManagerFactory} for a MySQL database.
 	 *
-	 * @param host     the MySQL host. If {@code null}, localhost is used as default.
-	 * @param port     the MySQL port. If {@code null}, 3306 is used as default.
-	 * @param db       the MySQL database schema
-	 * @param user     the MySQL user name
-	 * @param password the MySQL password. If <code>null</code>, no password is used.
-	 * @return an EntityManagerFactory to be used to connect to the specified database
+	 * @param host     the MySQL host, {@code localhost} if {@code null}
+	 * @param port     the MySQL port, {@code 3306} if {@code null}
+	 * @param db       the MySQL database schema, not {@code null}
+	 * @param user     the MySQL user name, not {@code null}
+	 * @param password the MySQL password, no password if {@code null}
+	 * @return an {@code EntityManagerFactory} to be used to connect to the specified database
 	 */
 	public static EntityManagerFactory createMySQLFactory(String host, String port, String db, String user, String password) {
 		if(db == null) {

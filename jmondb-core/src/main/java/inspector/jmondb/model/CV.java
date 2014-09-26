@@ -5,7 +5,11 @@ import org.apache.logging.log4j.Logger;
 
 import javax.persistence.*;
 
+/**
+ * A {code CV} represents a controlled vocabulary which contains a formal definition for some {@link Property}s.
+ */
 @Entity
+@Access(AccessType.FIELD)
 @Table(name="imon_cv")
 public class CV {
 
@@ -33,21 +37,19 @@ public class CV {
 
 	/**
 	 * Default constructor required by JPA.
-	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
+	 * Protected access modification enforces class immutability.
 	 */
 	protected CV() {
 
 	}
 
 	/**
-	 * Creates a CV with the specified accession number, cvProperty, label, name and ontology reference.
+	 * Creates a {@code CV} representing a controlled vocabulary.
 	 *
-	 * The id is automatically determined by the database as primary key.
-	 *
-	 * @param label  The label identifying the controlled vocabulary
-	 * @param name  The full name of the controlled vocabulary
-	 * @param uri  The uri specifying the location of the controlled vocabulary
-	 * @param version  The version number of the controlled vocabulary
+	 * @param label  the label identifying the controlled vocabulary, not {@code null}
+	 * @param name  the full name of the controlled vocabulary, not {@code null}
+	 * @param uri  the uri specifying the location of the controlled vocabulary, not {@code null}
+	 * @param version  the version number of the controlled vocabulary
 	 */
 	public CV(String label, String name, String uri, String version) {
 		this();
@@ -62,7 +64,7 @@ public class CV {
 		return id;
 	}
 
-	public void setId(long id) {
+	public void setId(Long id) {
 		this.id = id;
 	}
 
@@ -70,7 +72,7 @@ public class CV {
 		return label;
 	}
 
-	public void setLabel(String label) {
+	private void setLabel(String label) {
 		if(label != null)
 			this.label = label;
 		else {
@@ -83,7 +85,7 @@ public class CV {
 		return name;
 	}
 
-	public void setName(String name) {
+	private void setName(String name) {
 		if(name != null)
 			this.name = name;
 		else {
@@ -96,7 +98,7 @@ public class CV {
 		return uri;
 	}
 
-	public void setUri(String uri) {
+	private void setUri(String uri) {
 		if(uri != null)
 			this.uri = uri;
 		else {
@@ -109,7 +111,7 @@ public class CV {
 		return version;
 	}
 
-	public void setVersion(String version) {
+	private void setVersion(String version) {
 		this.version = version;
 	}
 
@@ -118,14 +120,23 @@ public class CV {
 		if(this == o) return true;
 		if(o == null || getClass() != o.getClass()) return false;
 
-		CV that = (CV) o;
+		CV cv = (CV) o;
 
-		if(label != null ? !label.equals(that.label) : that.label != null) return false;
-		if(name != null ? !name.equals(that.name) : that.name != null) return false;
-		if(uri != null ? !uri.equals(that.uri) : that.uri != null) return false;
-		if(version != null ? !version.equals(that.version) : that.version != null) return false;
+		if(!label.equals(cv.label)) return false;
+		if(!name.equals(cv.name)) return false;
+		if(!uri.equals(cv.uri)) return false;
+		if(version != null ? !version.equals(cv.version) : cv.version != null) return false;
 
 		return true;
+	}
+
+	@Override
+	public int hashCode() {
+		int result = label.hashCode();
+		result = 31 * result + name.hashCode();
+		result = 31 * result + uri.hashCode();
+		result = 31 * result + (version != null ? version.hashCode() : 0);
+		return result;
 	}
 
 	@Override

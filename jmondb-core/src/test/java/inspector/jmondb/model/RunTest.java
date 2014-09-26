@@ -4,6 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Calendar;
 
 import static org.junit.Assert.*;
@@ -13,14 +14,21 @@ public class RunTest {
 
 	private Run run;
 
-	private CV cv = new CV("testCv", "Dummy CV to run the unit tests", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
+	private final CV cv = new CV("testCv", "Dummy CV to run the unit tests", "https://bitbucket.org/proteinspector/jmondb/", "1");
+
+	private ArrayList<Property> properties;
 
 	@Before
 	public void setUp() {
+		final int NR_OF_VALUES = 12;
+
+		properties = new ArrayList<>(NR_OF_VALUES);
 		run = new Run("run", "path/to/run/", new Timestamp(Calendar.getInstance().getTime().getTime()));
 
-		for(int i = 0; i < 12; i++) {
-			run.addValue(new ValueBuilder().setName("value_" + i).setCv(cv).setAccession("value_" + i).setType("test").isNumeric(true).setFirstValue(Double.toString(Math.random() * 100)).createValue());
+		for(int i = 0; i < NR_OF_VALUES; i++) {
+			Property prop = new Property("property_" + i, "test", "accession_" + i, cv, true);
+			properties.add(prop);
+			new ValueBuilder().setFirstValue(Double.toString(Math.random() * 1000)).setDefiningProperty(prop).setOriginatingRun(run).createValue();
 		}
 	}
 
@@ -31,12 +39,14 @@ public class RunTest {
 
 	@Test
 	public void getValue_nonExisting() {
-		assertNull(run.getValue("non-existing"));
+		Property prop = new Property("property_new", "test", "accession_new", cv, true);
+		assertNull(run.getValue(prop));
 	}
 
 	@Test
-	public void getValue_existing() {
-		assertNotNull(run.getValue("value_5"));
+	public void getValue_valid() {
+		for(Property prop : properties)
+			assertNotNull(run.getValue(prop));
 	}
 
 	@Test(expected=NullPointerException.class)
@@ -46,40 +56,22 @@ public class RunTest {
 
 	@Test
 	public void addValue_duplicate() {
-		int nrOfValues = run.getNumberOfValues();
-		run.addValue(new ValueBuilder().setName("value_7").setCv(cv).setAccession("value_7").setType("test").isNumeric(true).setFirstValue("new value").createValue());
-		assertEquals(nrOfValues, run.getNumberOfValues());
-		Value v = run.getValue("value_7");
-		assertEquals("new value", run.getValue("value_7").getFirstValue());
+		Property property = properties.get((int)(Math.random() * properties.size()));
+		Value oldValue = run.getValue(property);
+		assertNotNull(oldValue);
+
+		Value newValue = new ValueBuilder().setFirstValue(Double.toString(Math.random()*1000)).setDefiningProperty(property).setOriginatingRun(run).createValue();
+
+		assertNotEquals(oldValue, run.getValue(property));
 	}
 
 	@Test
 	public void addValue_new() {
-		int nrOfValues = run.getNumberOfValues();
-		run.addValue(new ValueBuilder().setName("new value").setCv(cv).setAccession("new value").setType("test").isNumeric(true).setFirstValue(Double.toString(Math.random() * 100)).createValue());
-		assertEquals(nrOfValues + 1, run.getNumberOfValues());
-	}
+		Property property = new Property("property_new", "test", "accession_new", cv, true);
+		assertNull(run.getValue(property));
 
-	@Test
-	public void removeValue_null() {
-		int nrOfValues = run.getNumberOfValues();
-		run.removeValue(null);
-		assertEquals(nrOfValues, run.getNumberOfValues());
-	}
+		new ValueBuilder().setFirstValue(Double.toString(Math.random()*1000)).setDefiningProperty(property).setOriginatingRun(run).createValue();
 
-	@Test
-	public void removeValue_nonExisting() {
-		int nrOfValues = run.getNumberOfValues();
-		run.removeValue("non-existing value");
-		assertEquals(nrOfValues, run.getNumberOfValues());
+		assertNotNull(run.getValue(property));
 	}
-
-	@Test
-	public void removeValue_valid() {
-		int nrOfValues = run.getNumberOfValues();
-		run.removeValue("value_3");
-		assertEquals(nrOfValues - 1, run.getNumberOfValues());
-		assertNull(run.getValue("value_3"));
-	}
-
 }

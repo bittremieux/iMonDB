@@ -499,7 +499,7 @@ public class Viewer extends JPanel {
 
 						if(values.size() == 0)
 							JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
-						if(values.size() > 0 && !values.get(0).getNumeric())
+						if(values.size() > 0 && !values.get(0).getDefiningProperty().getNumeric())
 							JOptionPane.showMessageDialog(frameParent, "Value <" + valueName + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
 						else {
 							// add data
@@ -509,11 +509,11 @@ public class Viewer extends JPanel {
 							XYSeries minSeries = new XYSeries("Min");
 							XYSeries maxSeries = new XYSeries("Max");
 							for(Value value : values) {
-								medianSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMedian());
-								q1Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ1());
-								q3Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ3());
-								minSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMin());
-								maxSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMax());
+								medianSeries.add(value.getOriginatingRun().getSampleDate().getTime(), value.getMedian());
+								q1Series.add(value.getOriginatingRun().getSampleDate().getTime(), value.getQ1());
+								q3Series.add(value.getOriginatingRun().getSampleDate().getTime(), value.getQ3());
+								minSeries.add(value.getOriginatingRun().getSampleDate().getTime(), value.getMin());
+								maxSeries.add(value.getOriginatingRun().getSampleDate().getTime(), value.getMax());
 							}
 
 							XYSeriesCollection medianCollection = new XYSeriesCollection(medianSeries);

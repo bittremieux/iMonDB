@@ -5,6 +5,7 @@ import com.google.common.collect.Table;
 import inspector.jmondb.convert.InstrumentModel;
 import inspector.jmondb.convert.RawFileMetaData;
 import inspector.jmondb.model.CV;
+import inspector.jmondb.model.Property;
 import inspector.jmondb.model.Run;
 import inspector.jmondb.model.Value;
 import org.apache.commons.configuration.ConfigurationException;
@@ -33,6 +34,7 @@ import java.util.jar.JarFile;
  * An extractor to retrieve instrument data (either status log or tune method data) from Thermo raw files.
  *
  * Attention: instrument data extraction is only possible on a Microsoft Windows platform!
+ * For more information on the required operating system and available libraries, please check the official website.
  */
 public class ThermoRawFileExtractor {
 
@@ -41,7 +43,7 @@ public class ThermoRawFileExtractor {
 	/** static lock to make sure that the Thermo external resources are only accessed by a single instance */
 	private static final Lock FILE_COPY_LOCK = new ReentrantLock();
 
-	/** Properties containing a list of value names that have to be excluded */
+	/** properties containing a list of value names that have to be excluded */
 	private PropertiesConfiguration exclusionProperties;
 
 	//TODO 1: correctly specify the used cv
@@ -78,7 +80,7 @@ public class ThermoRawFileExtractor {
 	 * A file with exclusion properties can be provided as command-line argument "-Dexclusion.properties=file-name".
 	 * Otherwise, the default exclusion properties are used.
 	 *
-	 * @return A {@link PropertiesConfiguration} for the exclusion properties
+	 * @return a {@link PropertiesConfiguration} for the exclusion properties
 	 */
 	private PropertiesConfiguration initializeExclusionProperties() {
 		try {
@@ -105,8 +107,8 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Copies resources to a new destination.
 	 *
-	 * @param originUrl  The URL where the resources originate
-	 * @param destinationDir  The destination directory to which the resources are copied
+	 * @param originUrl  the {@link URL} where the resources originate, not {@code null}
+	 * @param destinationDir  the destination directory to which the resources are copied, not {@code null}
 	 */
 	private void copyResources(URL originUrl, File destinationDir) {
 		try {
@@ -131,8 +133,8 @@ public class ThermoRawFileExtractor {
 	 *
 	 * This is necessary because the CLI exe's can't be run from inside a packaged jar.
 	 *
-	 * @param jarConnection  The connection to the resources in the jar file
-	 * @param destinationDir  The destination directory to which the resources are copied
+	 * @param jarConnection  the connection to the resources in the jar file, not {@code null}
+	 * @param destinationDir  the destination directory to which the resources are copied, not {@code null}
 	 */
 	private void copyJarResources(JarURLConnection jarConnection, File destinationDir) {
 		try {
@@ -171,10 +173,11 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Creates a {@link Run} containing as {@link Value}s the status log and tune method data.
 	 *
-	 * @param fileName  The name of the raw file from which the instrument data will be extracted
-	 * @return A Run containing the instrument data as Values
+	 * @param fileName  the name of the raw file from which the instrument data will be extracted, not {@code null}
+	 * @param runName  the name of the created {@code Run}, if {@code null} the base file name is used
+	 * @return a {@code Run} containing the instrument data as {@code Value}s
 	 */
-	public Run extractInstrumentData(String fileName) {
+	public Run extractInstrumentData(String fileName, String runName) {
 		try {
 			// test if the file name is valid
 			File rawFile = getFile(fileName);
@@ -184,16 +187,14 @@ public class ThermoRawFileExtractor {
 			Timestamp date = metaData.getDate();
 			InstrumentModel model = metaData.getModel();
 
-			// extract the data from the row file
-			ArrayList<Value> statusLogValues = getValues(rawFile, model, true);
-			ArrayList<Value> tuneMethodValues = getValues(rawFile, model, false);
-
-			// create a run containing all the instrument data values
-			String runName = FilenameUtils.getBaseName(rawFile.getName());
+			// create a run to store all the instrument data values
+			if(runName == null)
+				runName = FilenameUtils.getBaseName(rawFile.getName());
 			Run run = new Run(runName, rawFile.getCanonicalPath(), date);
-			// add the values to the run
-			statusLogValues.forEach(run::addValue);
-			tuneMethodValues.forEach(run::addValue);
+
+			// extract the data from the raw file and add the values to the run
+			extractAndAddValues(rawFile, model, true, run);
+			extractAndAddValues(rawFile, model, false, run);
 
 			return run;
 
@@ -206,8 +207,8 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Checks whether the given file name is valid and returns a file reference.
 	 *
-	 * @param fileName  The given file name
-	 * @return A reference to the given file
+	 * @param fileName  the given file name, not {@code null}
+	 * @return a reference to the given {@link File}
 	 */
 	private File getFile(String fileName) {
 		// check whether the file name is valid
@@ -234,8 +235,8 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Extracts experiment meta data from the raw file, such as the sample date and the instrument model.
 	 *
-	 * @param rawFile  The raw file from which the instrument data will be read
-	 * @return A {@link RawFileMetaData} containing the sample date and the instrument model
+	 * @param rawFile  the raw file from which the instrument data will be read, not {@code null}
+	 * @return {@link RawFileMetaData} information containing the sample date and the instrument model
 	 */
 	private RawFileMetaData getMetaData(File rawFile) {
 		// execute the CLI process
@@ -270,12 +271,12 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Extracts instrument data from the raw file and computes (summary) statistics for the desired values.
 	 *
-	 * @param rawFile  The raw file from which the instrument data will be read
-	 * @param model  The mass spectrometer {@link InstrumentModel}
-	 * @param isStatusLog  True if the status log values have to be generated, false if the tune method values have to be generated
-	 * @return A list of the computed instrument data {@link Value}s
+	 * @param rawFile  the raw file from which the instrument data will be read, not {@code null}
+	 * @param model  the mass spectrometer {@link InstrumentModel}, not {@code null}
+	 * @param isStatusLog  {@code true} if the status log values have to be generated, {@code false} if the tune method values have to be generated
+	 * @param run  the {@link Run} to which the {@code Value}s will be added, not {@code null}
 	 */
-	private ArrayList<Value> getValues(File rawFile, InstrumentModel model, boolean isStatusLog) {
+	private void extractAndAddValues(File rawFile, InstrumentModel model, boolean isStatusLog, Run run) {
 		String cliPath;
 		String valueType;
 		if(isStatusLog) {
@@ -305,8 +306,8 @@ public class ThermoRawFileExtractor {
 			// filter out unwanted values
 			filter(rawValues, valueType);
 
-			// compute the summary statistics
-			return computeStatistics(rawValues, valueType);
+			// compute the summary statistics and store the values in the given run
+			addStatisticsToRun(rawValues, valueType, run);
 
 		} catch(IOException e) {
 			logger.error("Could not read the raw file extractor output: {}", e.getMessage());
@@ -320,9 +321,9 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Starts a process to execute the given C++ exe.
 	 *
-	 * @param cliPath  The path to the C++ exe that will be executed
-	 * @param rawFile  The raw file that will be processed by the C++ exe
-	 * @return  A {@link Process} to execute the given C++ exe
+	 * @param cliPath  the path to the C++ exe that will be executed, not {@code null}
+	 * @param rawFile  the raw file that will be processed by the C++ exe, not {@code null}
+	 * @return  a {@link Process} to execute the given C++ exe
 	 */
 	private Process executeProcess(String cliPath, File rawFile) {
 		try {
@@ -335,10 +336,10 @@ public class ThermoRawFileExtractor {
 	}
 
 	/**
-	 * Converts an MS CV-term to an instrument model.
+	 * Converts an MS CV-term to an {@link InstrumentModel}.
 	 *
-	 * @param reader  A reader that reads as next line the instrument model description
-	 * @return The {@link InstrumentModel}
+	 * @param reader  a {@link BufferedReader} that reads as next line the instrument model description, not {@code null}
+	 * @return the {@code InstrumentModel}
 	 * @throws IOException
 	 */
 	private InstrumentModel readInstrumentModel(BufferedReader reader) throws IOException {
@@ -383,8 +384,8 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Converts the sample date description to a {@link Timestamp}.
 	 *
-	 * @param reader  A reader that reads as next line the sample date description
-	 * @return The sample date
+	 * @param reader  a {@link BufferedReader} that reads as next line the sample date description, not {@code null}
+	 * @return the sample date
 	 * @throws IOException
 	 */
 	private Timestamp readDate(BufferedReader reader) throws IOException {
@@ -406,9 +407,9 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Reads the instrument data from the given reader.
 	 *
-	 * @param reader  A reader to read the instrument data
-	 * @param model  The mass spectrometer {@link InstrumentModel}
-	 * @return A {@link Table} with as key a possible header and the property name, and a list of values for each property
+	 * @param reader  a {@link BufferedReader} to read the instrument data, not {@code null}
+	 * @param model  the mass spectrometer {@link InstrumentModel}, not {@code null}
+	 * @return a {@link Table} with as key a possible header and the property name, and a list of values for each property
 	 */
 	private Table<String, String, ArrayList<String>> readRawValues(BufferedReader reader, InstrumentModel model) {
 		try {
@@ -530,10 +531,10 @@ public class ThermoRawFileExtractor {
 	}
 
 	/**
-	 * Filters values that are set in the exclusion properties.
+	 * Filters data that is indicated in the exclusion properties.
 	 *
-	 * @param data  The data from which values will be removed
-	 * @param valueType  The type of values for which the exclusion properties has to be filtered
+	 * @param data  the data from which indicated values will be removed, not {@code null}
+	 * @param valueType  the type of values for which the exclusion properties will be applied, not {@code null}
 	 */
 	private void filter(Table<String, String, ArrayList<String>> data, String valueType) {
 		String[] filterLong = exclusionProperties.getStringArray(valueType + "-long");
@@ -558,13 +559,12 @@ public class ThermoRawFileExtractor {
 	}
 
 	/**
-	 * Calculates properties for each instrument value, including summary statistics if multiple values for the same parameter are present.
+	 * Computes summary statistics for each instrument value.
 	 *
-	 * @param data  A Table with as key a possible header and the property name, and a list of values for each property
-	 * @return A list of {@link Value}s
+	 * @param data  a {@link Table} with as key a possible header and the property name, and a list of values for each property, not {@code null}
+	 * @param run  the {@link Run} to which the computed {@code Value}s will be added, not {@code null}
 	 */
-	private ArrayList<Value> computeStatistics(Table<String, String, ArrayList<String>> data, String valueType) {
-		ArrayList<Value> values = new ArrayList<>(data.size());
+	private void addStatisticsToRun(Table<String, String, ArrayList<String>> data, String valueType, Run run) {
 
 		for(Table.Cell<String, String, ArrayList<String>> cell : data.cellSet()) {
 			// calculate the summary value
@@ -608,11 +608,9 @@ public class ThermoRawFileExtractor {
 			//TODO: correctly set the accession number once we have a valid cv
 			String name = cell.getRowKey() + " - " + cell.getColumnKey();
 			String accession = name;
-			Value value = new Value(name, valueType, accession, cv, isNumeric, firstValue, n, nDiff, min, max, mean, median, sd, q1, q3);
-
-			values.add(value);
+			Property property = new Property(name, valueType, accession, cv, isNumeric);
+			// values are automatically added to the run and the property
+			new Value(firstValue, n, nDiff, min, max, mean, median, sd, q1, q3, property, run);
 		}
-
-		return values;
 	}
 }

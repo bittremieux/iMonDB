@@ -57,13 +57,10 @@ public class FileProcessor implements Callable<Timestamp> {
 		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class, parameters).get(0).equals(1L);
 
 		if(!exists) {
-			Run run = extractor.extractInstrumentData(file.getAbsolutePath());
-
-			// rename run based on the mask
-			run.setName(runName);
+			Run run = extractor.extractInstrumentData(file.getAbsolutePath(), runName);
 
 			// write the run to the database
-			dbWriter.writeRun(run, projectLabel);
+			dbWriter.writeRun(run);
 
 			// return the run's sample date
 			return run.getSampleDate();

@@ -2,15 +2,14 @@ package inspector.jmondb.io;
 
 import com.google.common.collect.Maps;
 import inspector.jmondb.model.CV;
+import inspector.jmondb.model.Property;
 import inspector.jmondb.model.Run;
 import inspector.jmondb.model.Value;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.persistence.*;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * An iMonDB output writer to write to an RDBMS.
@@ -19,22 +18,27 @@ public class IMonDBWriter {
 
 	private static final Logger logger = LogManager.getLogger(IMonDBWriter.class);
 
-	/** EntityManagerFactory used to set up connections to the database */
+	/** {@link EntityManagerFactory} used to set up connections to the database */
 	private EntityManagerFactory emf;
 
 	/**
-	 * Creates an IMonDBWriter specified by the given {@link EntityManagerFactory}.
+	 * Creates an {@code IMonDBWriter} specified by the given {@link EntityManagerFactory}.
 	 *
-	 * @param emf  the EntityManagerFactory used to set up the connection to the database
+	 * @param emf  the {@code EntityManagerFactory} used to set up the connection to the database, not {@code null}
 	 */
 	public IMonDBWriter(EntityManagerFactory emf) {
-		this.emf = emf;
+		if(emf != null)
+			this.emf = emf;
+		else {
+			logger.error("The EntityManagerFactory is not allowed to be <null>");
+			throw new NullPointerException("The EntityManagerFactory is not allowed to be <null>");
+		}
 	}
 
 	/**
 	 * Creates an {@link EntityManager} to set up a connection to the database.
 	 *
-	 * @return An EntityManager to connect to the database
+	 * @return an {@code EntityManager} to connect to the database
 	 */
 	private EntityManager createEntityManager() {
 		try {
@@ -47,11 +51,14 @@ public class IMonDBWriter {
 	}
 
 	/**
-	 * Persist the given {@link Run} to the database.
+	 * Write the given {@link Run} to the database.
 	 *
-	 * If a Run with the same name was already present, the previous Run is replaced by the given Run.
+	 * If a {@code Run} with the same name was already present, the previous {@code Run} is replaced by the given {@code Run}.
 	 *
-	 * @param run  The Run that will be persisted to the database
+	 * All child {@link Value}s and their associated {@link Property}s and {@link CV}'s will be written to the database as well.
+	 * If some of these {@code Property}s or {@code CV}'s were already present in the database, they will be updated.
+	 *
+	 * @param run  the {@code Run} that will be written to the database, not {@code null}
 	 */
 	public synchronized void writeRun(Run run) {
 		if(run != null) {
@@ -61,15 +68,15 @@ public class IMonDBWriter {
 
 			// persist the run in a transaction
 			try {
-				// check if the run is already in the database and if so, delete the old information
-				// (the delete will cascade to the child Values)
+				// check if the run is already in the database and if so, delete the old run
+				// (the delete will cascade to the child values)
 				TypedQuery<Long> runQuery = entityManager.createQuery("SELECT run.id FROM Run run WHERE run.name = :name", Long.class);
 				runQuery.setParameter("name", run.getName());
-				runQuery.setMaxResults(1);	// restrict to a single result (label is unique anyway)
+				runQuery.setMaxResults(1);	// restrict to a single result (name is unique anyway)
 
 				List<Long> result = runQuery.getResultList();
 				if(result.size() > 0) {
-					// delete the old run
+					// delete the old run (delete will be cascaded to the values)
 					logger.info("Duplicate run <name={}>: delete old run <id={}>", run.getName(), result.get(0));
 					Run oldRun = entityManager.find(Run.class, result.get(0));
 					entityManager.getTransaction().begin();
@@ -77,8 +84,11 @@ public class IMonDBWriter {
 					entityManager.getTransaction().commit();
 				}
 
-				// make sure the existing cv's are retained
-				replaceDuplicateCV(run, entityManager);
+				// make sure the pre-existing properties and cv's are retained
+				ArrayList<Property> properties = new ArrayList<>();
+				for(Iterator<Value> it = run.getValueIterator(); it.hasNext(); )
+					properties.add(it.next().getDefiningProperty());
+				assignDuplicatePropertyCvId(properties, entityManager);
 
 				// store the new run
 				entityManager.getTransaction().begin();
@@ -93,8 +103,8 @@ public class IMonDBWriter {
 					logger.error("Unable to rollback the transaction for run <{}> to the database: {}", run.getName(), p);
 				}
 
-				logger.error("Unable to persist run <{}> to the database: {}", run.getName(), e);
-				throw new IllegalArgumentException("Unable to persist run <" + run.getName() + "> to the database");
+				logger.error("Unable to write run <{}> to the database: {}", run.getName(), e);
+				throw new IllegalArgumentException("Unable to write run <" + run.getName() + "> to the database");
 			}
 			catch(RollbackException e) {
 				logger.error("Unable to commit the transaction for run <{}> to the database: {}", run.getName(), e);
@@ -111,20 +121,37 @@ public class IMonDBWriter {
 	}
 
 	/**
-	 * Make sure duplicate cv's aren't persisted multiple times to the database.
+	 * Make sure duplicate {@link Property}s and {@link CV}'s are not persisted multiple times to the database.
 	 *
-	 * If a cv is already present in the database, set its id to the new cv, so the same cv will be retained (but updated information will be overwritten).
+	 * If an item is already present in the database, assign its id to the new item, so the original item (and its relationships) will be retained (but updated information will be overwritten).
 	 *
-	 * @param run  The run for which cv's linked to all values will be checked
-	 * @param entityManager  The connection to the database
+	 * @param properties  the {@code List} with {@code Property}s that will be checked, not {@code null}
+	 * @param entityManager  the connection to the database, not {@code null}
 	 */
-	private void replaceDuplicateCV(Run run, EntityManager entityManager) {
-		// get all cv's existing in the database
-		TypedQuery<CV> cvQuery = entityManager.createQuery("SELECT cv FROM CV cv", CV.class);
+	private void assignDuplicatePropertyCvId(List<Property> properties, EntityManager entityManager) {
+		// get all pre-existing properties and cv's from the database
+		ArrayList<String> propAccessions = new ArrayList<>();
+		ArrayList<String> cvLabels = new ArrayList<>();
+		for(Property prop : properties) {
+			propAccessions.add(prop.getAccession());
+			cvLabels.add(prop.getCv().getLabel());
+		}
+
+		TypedQuery<Property> propQuery = entityManager.createQuery("SELECT prop FROM Property prop WHERE prop.accession in :propAccessions", Property.class);
+		propQuery.setParameter("propAccessions", propAccessions);
+		Map<String, Property> propAccessionMap = Maps.uniqueIndex(propQuery.getResultList(), Property::getAccession);
+
+		TypedQuery<CV> cvQuery = entityManager.createQuery("SELECT cv FROM CV cv WHERE cv.label in :cvLabels", CV.class);
+		cvQuery.setParameter("cvLabels", cvLabels);
 		Map<String, CV> cvLabelMap = Maps.uniqueIndex(cvQuery.getResultList(), CV::getLabel);
-		// check which cv's are duplicate
-		for(Iterator<Value> valIt = run.getValueIterator(); valIt.hasNext(); ) {
-			CV cv = valIt.next().getCv();
+
+		// assign id's from pre-existing items to new items
+		for(Property prop : properties) {
+			if(prop.getId() == null && propAccessionMap.containsKey(prop.getAccession())) {
+				prop.setId(propAccessionMap.get(prop.getAccession()).getId());
+				logger.info("Duplicate Property <accession={}>: assign id <{}>", prop.getAccession(), prop.getId());
+			}
+			CV cv = prop.getCv();
 			if(cv.getId() == null && cvLabelMap.containsKey(cv.getLabel())) {
 				cv.setId(cvLabelMap.get(cv.getLabel()).getId());
 				logger.info("Duplicate CV <label={}>: assign id <{}>", cv.getLabel(), cv.getId());
@@ -133,11 +160,73 @@ public class IMonDBWriter {
 	}
 
 	/**
-	 * Persist the given {@link CV} to the database.
+	 * Write the given {@link Property} to the database.
 	 *
-	 * If a CV with the same label was already present in the database, its data will be updated to the given CV.
+	 * If a {@code Property} with the same {@link CV} and accession combination was already present in the database, it will be updated to the given {@code Property}.
 	 *
-	 * @param cv  The cv that will be persisted to the database
+	 * The child {@link Value}s that are defined by the given {@code Property} will <em>not</em> be written to the database.
+	 * The referenced {@code CV} on the other hand will be written to the database or updated if it was already present.
+	 *
+	 * @param property  the {@code Property} that will be written to the database, not {@code null}
+	 */
+	public synchronized void writeProperty(Property property) {
+		if(property != null) {
+			logger.info("Store property <{}>", property.getAccession());
+
+			EntityManager entityManager = createEntityManager();
+
+			// persist the Property in a transaction
+			try {
+				// check if the Property is already in the database and retrieve its primary key
+				TypedQuery<Long> query = entityManager.createQuery("SELECT prop.id FROM Property prop WHERE prop.accession = :accession AND prop.cv = :cv", Long.class);
+				query.setParameter("accession", property.getAccession()).setMaxResults(1);
+				query.setParameter("cv", property.getCv()).setMaxResults(1);
+				List<Long> result = query.getResultList();
+				if(result.size() > 0) {
+					logger.info("Duplicate property <cv={}#{}>: assign id <{}>", property.getCv().getLabel(), property.getAccession(), result.get(0));
+					property.setId(result.get(0));
+				}
+
+				// make sure the pre-existing cv's are retained
+				assignDuplicatePropertyCvId(Arrays.asList(property), entityManager);
+
+				// store this Property
+				entityManager.getTransaction().begin();
+				entityManager.merge(property);
+				entityManager.getTransaction().commit();
+			}
+			catch(EntityExistsException e) {
+				try {
+					entityManager.getTransaction().rollback();
+				}
+				catch(PersistenceException p) {
+					logger.error("Unable to rollback the transaction for property <{}> to the database: {}", property.getAccession(), p);
+				}
+
+				logger.error("Unable to persist property <{}> to the database: {}", property.getAccession(), e);
+				throw new IllegalArgumentException("Unable to persist property <" + property.getAccession() + "> to the database");
+			}
+			catch(RollbackException e) {
+				logger.error("Unable to commit the transaction for property <{}> to the database: {}", property.getAccession(), e);
+				throw new IllegalArgumentException("Unable to commit the transaction for property <" + property.getAccession() + "> to the database");
+			}
+			finally {
+				entityManager.close();
+			}
+		}
+
+		else {
+			logger.error("Unable to write <null> property to the database");
+			throw new NullPointerException("Unable to write <null> property to the database");
+		}
+	}
+
+	/**
+	 * Write the given {@link CV} to the database.
+	 *
+	 * If a {@code CV} with the same label was already present in the database, it will be updated to the given {@code CV}.
+	 *
+	 * @param cv  the {@code CV} that will be written to the database, not {@code null}
 	 */
 	public synchronized void writeCv(CV cv) {
 		if(cv != null) {
@@ -156,7 +245,7 @@ public class IMonDBWriter {
 					cv.setId(result.get(0));
 				}
 
-				// store this Property
+				// store this CV
 				entityManager.getTransaction().begin();
 				entityManager.merge(cv);
 				entityManager.getTransaction().commit();
