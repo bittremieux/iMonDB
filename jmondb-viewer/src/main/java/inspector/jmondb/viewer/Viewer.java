@@ -427,7 +427,7 @@ public class Viewer extends JPanel {
 							// create the new connection
 							String password = !connectionDialog.getPassword().equals("") ? connectionDialog.getPassword() : null;
 							emf = IMonDBManagerFactory.createMySQLFactory(connectionDialog.getHost(), connectionDialog.getPort(),
-									connectionDialog.getUserName(), password, connectionDialog.getDatabase());
+									connectionDialog.getDatabase(), connectionDialog.getUserName(), password);
 							dbReader = new IMonDBReader(emf);
 
 							// fill in possible projects in the combo box
