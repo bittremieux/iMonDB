@@ -42,7 +42,7 @@ public class Property {
 	private Boolean isNumeric;
 
 	/** all {@link Value}s that are represented by this property */
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="definingProperty")
+	@OneToMany(cascade=CascadeType.REMOVE, fetch=FetchType.LAZY, mappedBy="definingProperty")
 	@MapKey
 	private Map<Run, Value> propertyValues;
 
