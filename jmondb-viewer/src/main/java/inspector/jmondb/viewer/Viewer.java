@@ -1,10 +1,10 @@
 package inspector.jmondb.viewer;
 
 import com.google.common.collect.ImmutableMap;
-import inspector.jmondb.intervention.Intervention;
+import inspector.jmondb.model.*;
+import inspector.jmondb.model.Event;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
-import inspector.jmondb.model.Value;
 import org.apache.commons.io.FilenameUtils;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -395,7 +395,7 @@ public class Viewer extends JPanel {
 		children.forEach(parent::add);
 	}
 
-	private ValueMarker removeMarker(Intervention intervention) {
+	private ValueMarker removeMarker(Event intervention) {
 		if(intervention.isIncident())
 			return markerIncident.remove(intervention.getDate());
 		else if(intervention.isEvent())
@@ -632,7 +632,7 @@ public class Viewer extends JPanel {
 								boolean isIncident = lineSplit[4].equals("1");
 								String comment = lineSplit[5];
 
-								Intervention intervention = new Intervention(date, isCalibrationCheck, isCalibration, isEvent, isIncident, comment);
+								Event intervention = new Event(date, isCalibrationCheck, isCalibration, isEvent, isIncident, comment);
 								InterventionNode node = new InterventionNode(intervention);
 
 								// add to the correct intervention type
@@ -717,25 +717,25 @@ public class Viewer extends JPanel {
 								// header
 								writer.write("Date,Calibration check,Calibration,Event,Incident,Comment\n");
 								// body
-								PriorityQueue<Intervention> interventions = new PriorityQueue<>(markerCalibration.size() + markerEvent.size() + markerIncident.size());
+								PriorityQueue<Event> interventions = new PriorityQueue<>(markerCalibration.size() + markerEvent.size() + markerIncident.size());
 								Enumeration incidents = nodeIncident.children();
 								while(incidents.hasMoreElements()) {
-									Intervention i = ((InterventionNode) incidents.nextElement()).getIntervention();
+									Event i = ((InterventionNode) incidents.nextElement()).getIntervention();
 									interventions.add(i);
 								}
 								Enumeration events = nodeEvent.children();
 								while(events.hasMoreElements()) {
-									Intervention i = ((InterventionNode) events.nextElement()).getIntervention();
+									Event i = ((InterventionNode) events.nextElement()).getIntervention();
 									interventions.add(i);
 								}
 								Enumeration calibrations = nodeCalibration.children();
 								while(calibrations.hasMoreElements()) {
-									Intervention i = ((InterventionNode) calibrations.nextElement()).getIntervention();
+									Event i = ((InterventionNode) calibrations.nextElement()).getIntervention();
 									interventions.add(i);
 								}
 								while(!interventions.isEmpty()) {
 									// date
-									Intervention i = interventions.poll();
+									Event i = interventions.poll();
 									writer.append(sdf.format(i.getDate())).append(",");
 									// calibration check
 									if(i.isCalibrationCheck())
@@ -758,7 +758,7 @@ public class Viewer extends JPanel {
 									else
 										writer.append(",");
 									// comment
-									writer.append(i.getComment()).append("\n");
+									writer.append(i.getDescription()).append("\n");
 								}
 
 								writer.flush();
@@ -788,11 +788,11 @@ public class Viewer extends JPanel {
 
 			if(option == JOptionPane.OK_OPTION) {
 				// create new intervention
-				Intervention intervention;
+				Event intervention;
 				if(dialog.getComment().equals(""))
-					intervention = new Intervention(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident());
+					intervention = new Event(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident());
 				else
-					intervention = new Intervention(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident(), dialog.getComment());
+					intervention = new Event(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident(), dialog.getComment());
 
 				// add to the interventions list and create a marker
 				ValueMarker marker = null;
@@ -857,9 +857,9 @@ public class Viewer extends JPanel {
 
 	private class ListenerEditIntervention implements ActionListener {
 
-		private Intervention intervention;
+		private Event intervention;
 
-		public ListenerEditIntervention(Intervention i) {
+		public ListenerEditIntervention(inspector.jmondb.model.Event i) {
 			this.intervention = i;
 		}
 
@@ -883,7 +883,7 @@ public class Viewer extends JPanel {
 				// update the intervention
 				intervention.setDate(dialog.getDate());
 				if(!dialog.getComment().equals(""))
-					intervention.setComment(dialog.getComment());
+					intervention.setDescription(dialog.getComment());
 
 				// sort the interventions tree
 				if(intervention.isIncident())

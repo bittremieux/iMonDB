@@ -1,6 +1,6 @@
 package inspector.jmondb.viewer;
 
-import inspector.jmondb.intervention.Intervention;
+import inspector.jmondb.model.Event;
 import net.sourceforge.jdatepicker.impl.JDatePanelImpl;
 import net.sourceforge.jdatepicker.impl.JDatePickerImpl;
 import net.sourceforge.jdatepicker.impl.UtilDateModel;
@@ -75,7 +75,7 @@ public class InterventionDialog extends JPanel {
 		add(panelComment, BorderLayout.PAGE_END);
 	}
 
-	public InterventionDialog(Intervention intervention) {
+	public InterventionDialog(Event intervention) {
 		this();
 
 		model.setValue(intervention.getDate());
@@ -83,10 +83,10 @@ public class InterventionDialog extends JPanel {
 		checkBoxCalibration.setSelected(intervention.isCalibration());
 		checkBoxEvent.setSelected(intervention.isEvent());
 		checkBoxIncident.setSelected(intervention.isIncident());
-		textFieldComment.setText(intervention.getComment());
+		textFieldComment.setText(intervention.getDescription());
 	}
 
-	public InterventionDialog(Intervention intervention, boolean showType) {
+	public InterventionDialog(inspector.jmondb.model.Event intervention, boolean showType) {
 		this(intervention);
 
 		checkBoxCalibrationCheck.setEnabled(false);

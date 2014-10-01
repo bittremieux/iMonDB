@@ -6,6 +6,8 @@
 
         <class>inspector.jmondb.model.Instrument</class>
         <class>inspector.jmondb.jpa.InstrumentModelConverter</class>
+        <class>inspector.jmondb.model.Event</class>
+        <class>inspector.jmondb.jpa.EventTypeConverter</class>
         <class>inspector.jmondb.model.Run</class>
         <class>inspector.jmondb.model.Property</class>
         <class>inspector.jmondb.model.Value</class>

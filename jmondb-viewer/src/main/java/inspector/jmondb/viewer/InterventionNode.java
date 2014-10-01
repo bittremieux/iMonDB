@@ -1,6 +1,6 @@
 package inspector.jmondb.viewer;
 
-import inspector.jmondb.intervention.Intervention;
+import inspector.jmondb.model.Event;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.text.DateFormat;
@@ -8,18 +8,18 @@ import java.text.SimpleDateFormat;
 
 public class InterventionNode extends DefaultMutableTreeNode implements Comparable<InterventionNode> {
 
-	private Intervention intervention;
+	private Event intervention;
 
-	public InterventionNode(Intervention i) {
+	public InterventionNode(Event i) {
 		super();
 		setIntervention(i);
 	}
 
-	public Intervention getIntervention() {
+	public Event getIntervention() {
 		return intervention;
 	}
 
-	public void setIntervention(Intervention i) {
+	public void setIntervention(Event i) {
 		this.intervention = i;
 	}
 
@@ -31,6 +31,7 @@ public class InterventionNode extends DefaultMutableTreeNode implements Comparab
 
 	@Override
 	public int compareTo(InterventionNode o) {
-		return getIntervention().compareTo(o.getIntervention());
+		//TODO
+		return getIntervention().getDate().compareTo(o.getIntervention().getDate());
 	}
 }

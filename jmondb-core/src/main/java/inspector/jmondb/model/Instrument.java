@@ -38,6 +38,10 @@ public class Instrument {
 	private CV cv;
 
 	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="instrument")
+	@MapKey(name="date")
+	private Map<Timestamp, Event> events;
+
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="instrument")
 	@MapKey(name="sampleDate")
 	private Map<Timestamp, Run> runsPerformedOnInstrument;
 
@@ -46,6 +50,7 @@ public class Instrument {
 	 * Protected access modification enforces class immutability.
 	 */
 	protected Instrument() {
+		events = new HashMap<>(15);
 		runsPerformedOnInstrument = new HashMap<>(250);
 	}
 
@@ -176,6 +181,72 @@ public class Instrument {
 		else {
 			logger.error("Can't add a <null> run to the instrument");
 			throw new NullPointerException("Can't add a <null> run to the instrument");
+		}
+	}
+
+	/**
+	 * Returns the {@link Event} for this {@code Instrument} that occurred at the given time.
+	 *
+	 * @param time  the {@link Timestamp} date when the {@code Event} was occurred
+	 * @return the {@code Event} that was occurred on this {@code Instrument} at the given time
+	 */
+	public Event getEvent(Timestamp time) {
+		if(time != null)
+			return events.get(time);
+		else
+			return null;
+	}
+
+	/**
+	 * Returns an {@link Iterator} over all {@link Event}s that occurred on this {@code Instrument}.
+	 *
+	 * @return an {@link Iterator} over all {@link Event}s that occurred on this {@code Instrument}
+	 */
+	public Iterator<Event> getEventIterator() {
+		return events.values().iterator();
+	}
+
+	/**
+	 * Returns all {@link Event}s that occurred on this {@code Instrument} in the given time period.
+	 * The time period is from {@code startTime} included until {@code stopTime} excluded.
+	 *
+	 * <em>Attention!</em> Underlying the whole range of {@code Event}s will be accessed for conversion to a {@link TreeMap}.
+	 * Therefore it is discouraged to call this method when the amount of {@code Event}s might be high.
+	 *
+	 * @param startTime  start time (inclusive) of the {@code Event}s to be included, not {@code null}
+	 * @param stopTime  stop time (excluded) of the {@code Event}s to be included, not {@code null}
+	 * @return a {@link SortedMap} of {@code Event}s that occurred on this {@code Instrument} in the given time period
+	 */
+	public SortedMap<Timestamp, Event> getEventRange(Timestamp startTime, Timestamp stopTime) {
+		if(startTime != null && stopTime != null)
+			return new TreeMap<>(events).subMap(startTime, stopTime);
+		else {
+			if(startTime == null) {
+				logger.error("The start time is not allowed to be <null>");
+				throw new NullPointerException("The start time is not allowed to be <null>");
+			}
+			else {
+				logger.error("The stop time is not allowed to be <null>");
+				throw new NullPointerException("The stop time is not allowed to be <null>");
+			}
+		}
+	}
+
+	/**
+	 * Adds the given {@link Event} to this {@code Instrument}.
+	 *
+	 * If the {@code Instrument} previously contained a {@code Event} at the same time, the old {@code Event} is replaced.
+	 *
+	 * An {@code Event} is automatically added to its {@code Instrument} upon its instantiation.
+	 *
+	 * @param event  the {@code Event} that is added to this {@code Instrument}, not {@code null}
+	 */
+	void addEvent(Event event) {
+		if(event != null)
+			events.put(event.getDate(), event);
+		else {
+			logger.error("Can't add a <null> event to the instrument");
+			throw new NullPointerException("Can't add a <null> event to the instrument");
 		}
 	}
 
