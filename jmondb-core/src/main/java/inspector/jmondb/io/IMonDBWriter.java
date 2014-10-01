@@ -48,6 +48,69 @@ public class IMonDBWriter {
 	}
 
 	/**
+	 * Write the given {@link Instrument} to the database.
+	 *
+	 * If an {@code Instrument} with the same name and type was already present in the database, it will be updated to the given {@code Instrument}.
+	 *
+	 * The {@link Run}s performed on the given {@code Instrument} will <em>not</em> be written to the database.
+	 * The {@link CV} used to define the {@code Instrument} on the other hand will be written to the database or updated if it was already present.
+	 *
+	 * @param instrument  the {@code Instrument} that will be written to the database, not {@code null}
+	 */
+	public synchronized void writeInstrument(Instrument instrument) {
+		if(instrument != null) {
+			logger.info("Store instrument <{}>", instrument.getName());
+
+			EntityManager entityManager = createEntityManager();
+
+			// persist the Instrument in a transaction
+			try {
+				// check if the Instrument is already in the database and retrieve its primary key
+				TypedQuery<Long> query = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name AND inst.type = :type AND inst.cv = :cv", Long.class);
+				query.setParameter("name", instrument.getName());
+				query.setParameter("type", instrument.getType());
+				query.setParameter("cv", instrument.getCv()).setMaxResults(1);
+				List<Long> result = query.getResultList();
+				if(result.size() > 0) {
+					logger.info("Duplicate instrument <{}, {}>: assign id <{}>", instrument.getType(), instrument.getName(), result.get(0));
+					instrument.setId(result.get(0));
+				}
+
+				// make sure a pre-existing cv is retained
+				assignDuplicateCvId(instrument.getCv(), entityManager);
+
+				// store this Instrument
+				entityManager.getTransaction().begin();
+				entityManager.merge(instrument);
+				entityManager.getTransaction().commit();
+			}
+			catch(EntityExistsException e) {
+				try {
+					entityManager.getTransaction().rollback();
+				}
+				catch(PersistenceException p) {
+					logger.error("Unable to rollback the transaction for instrument <{}> to the database: {}", instrument.getName(), p);
+				}
+
+				logger.error("Unable to persist instrument <{}> to the database: {}", instrument.getName(), e);
+				throw new IllegalArgumentException("Unable to persist instrument <" + instrument.getName() + "> to the database");
+			}
+			catch(RollbackException e) {
+				logger.error("Unable to commit the transaction for instrument <{}> to the database: {}", instrument.getName(), e);
+				throw new IllegalArgumentException("Unable to commit the transaction for instrument <" + instrument.getName() + "> to the database");
+			}
+			finally {
+				entityManager.close();
+			}
+		}
+
+		else {
+			logger.error("Unable to write <null> instrument to the database");
+			throw new NullPointerException("Unable to write <null> instrument to the database");
+		}
+	}
+
+	/**
 	 * Write the given {@link Run} to the database.
 	 *
 	 * If a {@code Run} with the same name was already present, the previous {@code Run} is replaced by the given {@code Run}.
@@ -119,6 +182,14 @@ public class IMonDBWriter {
 		}
 	}
 
+	/**
+	 * Make sure a duplicate {@link Instrument} is not persisted multiple times to the database.
+	 *
+	 * If the {@code Instrument} is already present in the database, assign its id to the new {@code Instrument}, so the original {@code Instrument} (and its relationships) will be retained (but updated information will be overwritten).
+	 *
+	 * @param instrument  the {@code Instrument} that will be checked, not {@code null}
+	 * @param entityManager  the connection to the database, not {@code null}
+	 */
 	private void assignDuplicateInstrumentId(Instrument instrument, EntityManager entityManager) {
 		TypedQuery<Long> instrumentQuery = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name AND inst.type = :type", Long.class);
 		instrumentQuery.setParameter("name", instrument.getName());
@@ -170,6 +241,24 @@ public class IMonDBWriter {
 	}
 
 	/**
+	 * Make sure a duplicate {@link CV} is not persisted multiple times to the database.
+	 *
+	 * If the {@code CV} is already present in the database, assign its id to the new {@code CV}, so the original {@code CV} (and its relationships) will be retained (but updated information will be overwritten).
+	 *
+	 * @param cv  the {@code CV} that will be checked, not {@code null}
+	 * @param entityManager  the connection to the database, not {@code null}
+	 */
+	private void assignDuplicateCvId(CV cv, EntityManager entityManager) {
+		TypedQuery<Long> cvQuery = entityManager.createQuery("SELECT cv.id FROM CV cv WHERE cv.label = :label", Long.class);
+		cvQuery.setParameter("label", cv.getLabel());
+		cvQuery.setMaxResults(1);	// restrict to a single result
+
+		List<Long> result = cvQuery.getResultList();
+		if(result.size() > 0)
+			cv.setId(result.get(0));
+	}
+
+	/**
 	 * Write the given {@link Property} to the database.
 	 *
 	 * If a {@code Property} with the same {@link CV} and accession combination was already present in the database, it will be updated to the given {@code Property}.
@@ -189,7 +278,7 @@ public class IMonDBWriter {
 			try {
 				// check if the Property is already in the database and retrieve its primary key
 				TypedQuery<Long> query = entityManager.createQuery("SELECT prop.id FROM Property prop WHERE prop.accession = :accession AND prop.cv = :cv", Long.class);
-				query.setParameter("accession", property.getAccession()).setMaxResults(1);
+				query.setParameter("accession", property.getAccession());
 				query.setParameter("cv", property.getCv()).setMaxResults(1);
 				List<Long> result = query.getResultList();
 				if(result.size() > 0) {
