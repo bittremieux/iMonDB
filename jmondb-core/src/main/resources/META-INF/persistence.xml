@@ -13,6 +13,10 @@
         <class>inspector.jmondb.model.Property</class>
         <class>inspector.jmondb.model.Value</class>
         <class>inspector.jmondb.model.CV</class>
+
+        <properties>
+            <property name="eclipselink.weaving" value="static"/>
+        </properties>
         
     </persistence-unit>
 </persistence> 

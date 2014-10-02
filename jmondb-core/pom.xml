@@ -17,6 +17,11 @@
     <name>jMonDB Core</name>
     <description>The jMonDB core implementation</description>
 
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <eclipselink.version>2.5.2</eclipselink.version>
+    </properties>
+
 	<!-- Dependencies -->
 	<dependencies>
 		<dependency>
@@ -45,7 +50,13 @@
         <dependency>
             <groupId>org.eclipse.persistence</groupId>
             <artifactId>org.eclipse.persistence.jpa</artifactId>
-            <version>2.5.2</version>
+            <version>${eclipselink.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.persistence</groupId>
+            <artifactId>eclipselink</artifactId>
+            <version>${eclipselink.version}</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
@@ -153,6 +164,28 @@
                 <configuration>
                     <mainClass>inspector.jmondb.CLI</mainClass>
                 </configuration>
+            </plugin>
+
+            <!-- EclipseLink static weaving -->
+            <plugin>
+                <groupId>de.empulse.eclipselink</groupId>
+                <artifactId>staticweave-maven-plugin</artifactId>
+                <version>1.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>weave</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.eclipse.persistence</groupId>
+                        <artifactId>org.eclipse.persistence.jpa</artifactId>
+                        <version>${eclipselink.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>
