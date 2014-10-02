@@ -43,7 +43,7 @@ public class Property {
 
 	/** all {@link Value}s that are represented by this property */
 	@OneToMany(cascade=CascadeType.REMOVE, fetch=FetchType.LAZY, mappedBy="definingProperty")
-	@MapKey
+	@MapKey(name="id")
 	private Map<Run, Value> propertyValues;
 
 	/**

@@ -36,12 +36,12 @@ public class Run {
 
 	/** additional {@link Metadata} describing the run */
 	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy= "run")
-	@MapKey
+	@MapKey(name="id")
 	private Map<String, Metadata> metadata;
 
 	/** all {@link Value}s for the run */
 	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy= "originatingRun")
-	@MapKey
+	@MapKey(name="id")
 	private Map<Property, Value> runValues;
 
 	/** inverse part of the bi-directional relationship with {@link Instrument} */
