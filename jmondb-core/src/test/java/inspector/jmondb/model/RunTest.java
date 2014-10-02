@@ -18,6 +18,8 @@ public class RunTest {
 
 	private ArrayList<Property> properties;
 
+	final int NR_OF_METADATA = 7;
+
 	@Before
 	public void setUp() {
 		final int NR_OF_VALUES = 12;
@@ -31,6 +33,9 @@ public class RunTest {
 			properties.add(prop);
 			new ValueBuilder().setFirstValue(Double.toString(Math.random() * 1000)).setDefiningProperty(prop).setOriginatingRun(run).createValue();
 		}
+
+		for(int i = 0; i < NR_OF_METADATA; i++)
+			new Metadata("meta" + i, "value" + i, run);
 	}
 
 	@Test
@@ -74,5 +79,48 @@ public class RunTest {
 		new ValueBuilder().setFirstValue(Double.toString(Math.random()*1000)).setDefiningProperty(property).setOriginatingRun(run).createValue();
 
 		assertNotNull(run.getValue(property));
+	}
+
+	@Test
+	public void getMetadata_null() {
+		assertNull(run.getMetadata(null));
+	}
+
+	@Test
+	public void getMetadata_nonExisting() {
+		assertNull(run.getMetadata("non-existing metadata"));
+	}
+
+	@Test
+	public void getMetadata_valid() {
+		for(int i = 0; i < NR_OF_METADATA; i++)
+			assertNotNull(run.getMetadata("meta" + i));
+	}
+
+	@Test(expected=NullPointerException.class)
+	public void addMetadata_null() {
+		run.addMetadata(null);
+	}
+
+	@Test
+	public void addMetadata_duplicate() {
+		Metadata oldMeta = run.getMetadata("meta" + (int)(Math.random() * NR_OF_METADATA));
+		String name = oldMeta.getName();
+		assertNotNull(oldMeta);
+
+		new Metadata(name, "new value", run);
+
+		assertNotEquals(oldMeta, run.getMetadata(name));
+	}
+
+	@Test
+	public void addMetadata_new() {
+		String name = "new metadata";
+
+		assertNull(run.getMetadata(name));
+
+		new Metadata(name, "new value", run);
+
+		assertNotNull(run.getMetadata(name));
 	}
 }

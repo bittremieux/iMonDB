@@ -34,6 +34,11 @@ public class Run {
 	@Column(name="sampledate", nullable=false)
 	private Timestamp sampleDate;
 
+	/** additional {@link Metadata} describing the run */
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy= "run")
+	@MapKey
+	private Map<String, Metadata> metadata;
+
 	/** all {@link Value}s for the run */
 	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy= "originatingRun")
 	@MapKey
@@ -49,6 +54,7 @@ public class Run {
 	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
 	 */
 	protected Run() {
+		metadata = new HashMap<>(10);
 		runValues = new HashMap<>(250);
 	}
 
@@ -141,9 +147,9 @@ public class Run {
 	}
 
 	/**
-	 * Returns an {@link Iterator} over all {@link Value}s that originate from this {@code Property}.
+	 * Returns an {@link Iterator} over all {@link Value}s that originate from this {@code Run}.
 	 *
-	 * @return an {@code Iterator} over all {@code Value}s that originate from this {@code Property}
+	 * @return an {@code Iterator} over all {@code Value}s that originate from this {@code Run}
 	 */
 	public Iterator<Value> getValueIterator() {
 		return runValues.values().iterator();
@@ -167,6 +173,46 @@ public class Run {
 		}
 	}
 
+	/**
+	 * Returns the {@link Metadata} for this {@code Run} with the given name.
+	 *
+	 * @param name  the name of the requested {@code Metadata}, {@code null} returns {@code null}
+	 * @return the {@code Metadata} for this {@code Run} with the given name if it exists, {@code null} otherwise
+	 */
+	public Metadata getMetadata(String name) {
+		if(name != null)
+			return metadata.get(name);
+		else
+			return null;
+	}
+
+	/**
+	 * Returns an {@link Iterator} over all {@link Metadata} for this {@code Run}.
+	 *
+	 * @return an {@code Iterator} over all {@code Metadata} for this {@code Run}
+	 */
+	public Iterator<Metadata> getMetadataIterator() {
+		return metadata.values().iterator();
+	}
+
+	/**
+	 * Assigns the given {@link Metadata} to this {@code Run}.
+	 *
+	 * If the {@code Run} previously contained a {@code Metadata} with the same name, the old {@code Metadata} is replaced.
+	 *
+	 * {@code Metadata} is automatically added to its {@code Run} upon its instantiation.
+	 *
+	 * @param meta  the {@code Metadata} that is assigned to this {@code Run}, not {@code null}
+	 */
+	void addMetadata(Metadata meta) {
+		if(meta != null)
+			metadata.put(meta.getName(), meta);
+		else {
+			logger.error("Can't add <null> metadata to the run");
+			throw new NullPointerException("Can't add <null> metadata to the run");
+		}
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if(this == o) return true;
@@ -177,6 +223,7 @@ public class Run {
 		if(!name.equals(run.name)) return false;
 		if(!storageName.equals(run.storageName)) return false;
 		if(!sampleDate.equals(run.sampleDate)) return false;
+		if(!instrument.equals(run.instrument)) return false;
 
 		return true;
 	}
@@ -186,11 +233,12 @@ public class Run {
 		int result = name.hashCode();
 		result = 31 * result + storageName.hashCode();
 		result = 31 * result + sampleDate.hashCode();
+		result = 31 * result + instrument.hashCode();
 		return result;
 	}
 
 	@Override
 	public String toString() {
-		return "Run {id=" + id + ", name=" + name + ", #values=" + runValues.size() + "}";
+		return "Run {id=" + id + ", name=" + name + ", instrument=" + instrument.getName() + ", #values=" + runValues.size() + "}";
 	}
 }

@@ -9,6 +9,7 @@
         <class>inspector.jmondb.model.Event</class>
         <class>inspector.jmondb.jpa.EventTypeConverter</class>
         <class>inspector.jmondb.model.Run</class>
+        <class>inspector.jmondb.model.Metadata</class>
         <class>inspector.jmondb.model.Property</class>
         <class>inspector.jmondb.model.Value</class>
         <class>inspector.jmondb.model.CV</class>
