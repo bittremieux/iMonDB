@@ -1,6 +1,5 @@
 package inspector.jmondb.io;
 
-import com.google.common.collect.Maps;
 import inspector.jmondb.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -330,62 +329,61 @@ public class IMonDBWriter {
 	/**
 	 * Write the given {@link Property} to the database.
 	 *
-	 * If a {@code Property} with the same {@link CV} and accession combination was already present in the database, it will be updated to the given {@code Property}.
+	 * If a {@code Property} with the same accession was already present in the database, an {@link IllegalArgumentException} will be thrown.
 	 *
-	 * The child {@link Value}s that are defined by the given {@code Property} will <em>not</em> be written to the database.
-	 * The referenced {@code CV} on the other hand will be written to the database or updated if it was already present.
+	 * The {@link Value}s associated with the given {@code Property} will <em>not</em> be written to the database.
+	 * The {@link CV} used to define the {@code Property} on the other hand will be written to the database or updated if it is already present.
 	 *
 	 * @param property  the {@code Property} that will be written to the database, not {@code null}
 	 */
-	public synchronized void writeProperty(Property property) {
+	public void writeProperty(Property property) {
 		if(property != null) {
 			logger.info("Store property <{}>", property.getAccession());
 
 			EntityManager entityManager = createEntityManager();
 
-			// persist the Property in a transaction
 			try {
-				// check if the Property is already in the database and retrieve its primary key
-				TypedQuery<Long> query = entityManager.createQuery("SELECT prop.id FROM Property prop WHERE prop.accession = :accession AND prop.cv = :cv", Long.class);
+				// cancel if the property is already in the database
+				TypedQuery<Long> query = entityManager.createQuery("SELECT prop.id FROM Property prop WHERE prop.accession = :accession", Long.class);
 				query.setParameter("accession", property.getAccession());
-				query.setParameter("cv", property.getCv()).setMaxResults(1);
+				query.setMaxResults(1);	// restrict to a single result
 				List<Long> result = query.getResultList();
 				if(result.size() > 0) {
-					logger.info("Duplicate property <cv={}#{}>: assign id <{}>", property.getCv().getLabel(), property.getAccession(), result.get(0));
-					property.setId(result.get(0));
+					logger.error("Property <{}> already exists with id <{}>", property.getAccession(), result.get(0));
+					throw new IllegalArgumentException("Property <" + property.getAccession() + " already exists with id <" + result.get(0) + ">");
 				}
 
-				// make sure the pre-existing cv's are retained
-				//assignDuplicatePropertyCvId(Arrays.asList(property), entityManager);
+				// make sure a pre-existing cv is updated
+				assignDuplicateCvId(property.getCv(), entityManager);
 
-				// store this Property
+				// store this property
 				entityManager.getTransaction().begin();
 				entityManager.merge(property);
 				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
 				try {
+					logger.debug("Rollback because property <{}> already exists in the database: {}", property.getAccession(), e.getMessage());
 					entityManager.getTransaction().rollback();
 				}
 				catch(PersistenceException p) {
-					logger.error("Unable to rollback the transaction for property <{}> to the database: {}", property.getAccession(), p);
+					logger.debug("Unable to rollback for property <{}>: {}", property.getAccession(), p.getMessage());
 				}
 
-				logger.error("Unable to persist property <{}> to the database: {}", property.getAccession(), e);
-				throw new IllegalArgumentException("Unable to persist property <" + property.getAccession() + "> to the database");
+				logger.error("Unable to store property <{}>: {}", property.getAccession(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store property <" + property.getAccession() + ">");
 			}
 			catch(RollbackException e) {
-				logger.error("Unable to commit the transaction for property <{}> to the database: {}", property.getAccession(), e);
-				throw new IllegalArgumentException("Unable to commit the transaction for property <" + property.getAccession() + "> to the database");
+				logger.error("Unable to store property <{}>: {}", property.getAccession(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store property <" + property.getAccession() + ">");
 			}
 			finally {
 				entityManager.close();
 			}
 		}
-
 		else {
-			logger.error("Unable to write <null> property to the database");
-			throw new NullPointerException("Unable to write <null> property to the database");
+			logger.error("Unable to store <null> property");
+			throw new NullPointerException("Unable to persist <null> property");
 		}
 	}
 
@@ -396,51 +394,43 @@ public class IMonDBWriter {
 	 *
 	 * @param cv  the {@code CV} that will be written to the database, not {@code null}
 	 */
-	public synchronized void writeCv(CV cv) {
+	public void writeCv(CV cv) {
 		if(cv != null) {
 			logger.info("Store cv <{}>", cv.getLabel());
 
 			EntityManager entityManager = createEntityManager();
 
-			// persist the CV in a transaction
 			try {
-				// check if the CV is already in the database and retrieve its primary key
-				TypedQuery<Long> query = entityManager.createQuery("SELECT cv.id FROM CV cv WHERE cv.label = :label", Long.class);
-				query.setParameter("label", cv.getLabel()).setMaxResults(1);
-				List<Long> result = query.getResultList();
-				if(result.size() > 0) {
-					logger.info("Duplicate cv <label={}>: assign id <{}>", cv.getLabel(), result.get(0));
-					cv.setId(result.get(0));
-				}
+				assignDuplicateCvId(cv, entityManager);
 
-				// store this CV
+				// store this cv
 				entityManager.getTransaction().begin();
 				entityManager.merge(cv);
 				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
 				try {
+					logger.debug("Rollback because cv <{}> already exists in the database: {}", cv.getLabel(), e.getMessage());
 					entityManager.getTransaction().rollback();
 				}
 				catch(PersistenceException p) {
-					logger.error("Unable to rollback the transaction for cv <{}> to the database: {}", cv.getLabel(), p);
+					logger.debug("Unable to rollback for cv <{}>: {}", cv.getLabel(), p.getMessage());
 				}
 
-				logger.error("Unable to persist cv <{}> to the database: {}", cv.getLabel(), e);
-				throw new IllegalArgumentException("Unable to persist cv <" + cv.getLabel() + "> to the database");
+				logger.error("Unable to store cv <{}>: {}", cv.getLabel(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store cv <" + cv.getLabel() + ">");
 			}
 			catch(RollbackException e) {
-				logger.error("Unable to commit the transaction for cv <{}> to the database: {}", cv.getLabel(), e);
-				throw new IllegalArgumentException("Unable to commit the transaction for cv <" + cv.getLabel() + "> to the database");
+				logger.error("Unable to store cv <{}>: {}", cv.getLabel(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store cv <" + cv.getLabel() + ">");
 			}
 			finally {
 				entityManager.close();
 			}
 		}
-
 		else {
-			logger.error("Unable to write <null> cv to the database");
-			throw new NullPointerException("Unable to write <null> cv to the database");
+			logger.error("Unable to store <null> cv");
+			throw new NullPointerException("Unable to persist <null> cv");
 		}
 	}
 }
