@@ -1,8 +1,6 @@
 package inspector.jmondb.io;
 
-import inspector.jmondb.model.Property;
-import inspector.jmondb.model.Run;
-import inspector.jmondb.model.Value;
+import inspector.jmondb.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -50,6 +48,61 @@ public class IMonDBReader {
 		catch(Exception e) {
 			logger.info("Error while creating the EntityManager to connect to the database: {}", e);
 			throw new IllegalStateException("Couldn't connect to the database: " + e);
+		}
+	}
+
+	/**
+	 * Retrieves the {@link Instrument} specified by the given name from the database.
+	 *
+	 * The {@link Event}s that occurred for this {@code Instrument} nor the {@link Run}s that were performed on the {@code Instrument} are not automatically retrieved.
+	 *
+	 * @param name  the name of the requested {@code Instrument}
+	 * @return the {@code Instrument} specified by the given name if it is present in the database, else {@code null}
+	 */
+	public Instrument getInstrument(String name) {
+		return getInstrument(name, false);
+	}
+
+	/**
+	 * Retrieves the {@link Instrument} specified by the given name from the database.
+	 *
+	 * Unless explicitly specified, the {@link Event}s that occurred on the {@code Instrument} are not retrieved from the database (lazy loading).
+	 * The {@link Run}s that were performed on the {@code Instrument} are never automatically retrieved.
+	 *
+	 * @param name  the name of the requested {@code Instrument}
+	 * @param includeEvents  flag that indicated whether the {@code Event}s that occurred on the {@code Instrument} need to be retrieved as well
+	 * @return the {@code Instrument} specified by the given name if it is present in the database, else {@code null}
+	 */
+	public Instrument getInstrument(String name, boolean includeEvents) {
+		logger.info("Retrieve instrument <{}>", name);
+
+		EntityManager entityManager = createEntityManager();
+
+		try {
+			TypedQuery<Instrument> query = entityManager.createQuery("SELECT inst FROM Instrument inst WHERE inst.name = :name", Instrument.class);
+			query.setParameter("name", name);
+
+			// get the instrument
+			Instrument instrument = query.getSingleResult();
+			logger.debug("Instrument <{}> retrieved from the database", name);
+
+			// explicitly load all events if requested (lazy loading)
+			if(includeEvents) {
+				logger.debug("Load all events for instrument <{}>", name);
+				for(Iterator<Event> it = instrument.getEventIterator(); it.hasNext(); ) {
+					Event event = it.next();
+					logger.trace("Event <{}> retrieved", event.getDate());
+				}
+			}
+
+			return instrument;
+		}
+		catch(NoResultException e) {
+			logger.debug("Instrument <{}> not found in the database", name);
+			return null;
+		}
+		finally {
+			entityManager.close();
 		}
 	}
 

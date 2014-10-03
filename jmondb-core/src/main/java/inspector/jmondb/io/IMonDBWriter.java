@@ -246,7 +246,7 @@ public class IMonDBWriter {
 				List<Long> runResult = runQuery.getResultList();
 				if(runResult.size() > 0) {
 					logger.error("Run <{}> for instrument <{}> already exists with id <{}>", run.getName(),  run.getInstrument().getName(), runResult.get(0));
-					throw new IllegalArgumentException("Run <" + run.getName() + "> for instrument <" + run.getInstrument().getName() + " already exists with id <" + runResult.get(0) + ">");
+					throw new IllegalArgumentException("Run <" + run.getName() + "> for instrument <" + run.getInstrument().getName() + "> already exists with id <" + runResult.get(0) + ">");
 				}
 
 				// make sure the pre-existing properties and corresponding cv's are retained
