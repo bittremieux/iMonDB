@@ -6,7 +6,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.persistence.*;
-import java.sql.Timestamp;
 import java.util.*;
 
 /**
@@ -51,7 +50,7 @@ public class IMonDBWriter {
 	/**
 	 * Write the given {@link Instrument} to the database.
 	 *
-	 * If an {@code Instrument} with the same name was already present in the database, it will be updated to the given {@code Instrument}.
+	 * If an {@code Instrument} with the same name was already present in the database, an {@link IllegalArgumentException} will be thrown.
 	 *
 	 * The {@link Run}s performed on the given {@code Instrument} will <em>not</em> be written to the database.
 	 * The {@link CV} used to define the {@code Instrument} on the other hand will be written to the database or updated if it is already present.
@@ -59,7 +58,7 @@ public class IMonDBWriter {
 	 *
 	 * @param instrument  the {@code Instrument} that will be written to the database, not {@code null}
 	 */
-	public synchronized void writeInstrument(Instrument instrument) {
+	public void writeInstrument(Instrument instrument) {
 		if(instrument != null) {
 			logger.info("Store instrument <{}>", instrument.getName());
 
@@ -67,20 +66,14 @@ public class IMonDBWriter {
 
 			// persist the instrument in a transaction
 			try {
-				// check if the instrument is already in the database and retrieve its primary key
+				// cancel if the instrument is already in the database
 				TypedQuery<Long> query = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name", Long.class);
 				query.setParameter("name", instrument.getName());
 				query.setMaxResults(1);	// restrict to a single result
 				List<Long> result = query.getResultList();
 				if(result.size() > 0) {
-					logger.debug("Duplicate instrument <{}>: assign id <{}>", instrument.getName(), result.get(0));
-					instrument.setId(result.get(0));
-
-					// make sure pre-existing events are updated
-					ArrayList<Event> events = new ArrayList<>();
-					for(Iterator<Event> it = instrument.getEventIterator(); it.hasNext(); )
-						events.add(it.next());
-					assignDuplicateEventId(instrument.getId(), events, entityManager);
+					logger.error("Instrument <{}> already exists with id <{}>", instrument.getName(), result.get(0));
+					throw new IllegalArgumentException("Instrument <" + instrument.getName() + " already exists with id <" + result.get(0) + ">");
 				}
 
 				// make sure a pre-existing cv is updated
@@ -88,7 +81,7 @@ public class IMonDBWriter {
 
 				// store this instrument
 				entityManager.getTransaction().begin();
-				entityManager.merge(instrument);
+				entityManager.persist(instrument);
 				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
@@ -100,50 +93,21 @@ public class IMonDBWriter {
 					logger.error("Unable to rollback for instrument <{}>: {}", instrument.getName(), p.getMessage());
 				}
 
-				logger.error("Unable to persist instrument <{}>: {}", instrument.getName(), e.getMessage());
-				throw new IllegalArgumentException("Unable to persist instrument <" + instrument.getName() + ">");
+				logger.error("Unable to store instrument <{}>: {}", instrument.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store instrument <" + instrument.getName() + ">");
 			}
 			catch(RollbackException e) {
-				logger.error("Unable to persist instrument <{}>: {}", instrument.getName(), e.getMessage());
-				throw new IllegalArgumentException("Unable to persist instrument <" + instrument.getName() + ">");
+				logger.error("Unable to store instrument <{}>: {}", instrument.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store instrument <" + instrument.getName() + ">");
 			}
 			finally {
 				entityManager.close();
 			}
 		}
 		else {
-			logger.error("Unable to persist <null> instrument");
+			logger.error("Unable to store <null> instrument");
 			throw new NullPointerException("Unable to persist <null> instrument");
 		}
-	}
-
-	/**
-	 * Assign the correct {@code id} to pre-existing {@link Event}s in the database.
-	 *
-	 * This ensures that pre-existing {@code Event}s are correctly merged, (possibly) updating the old event information.
-	 *
-	 * For a specific {@link Instrument} all {@code Event}s have a unique event date.
-	 *
-	 * @param instrumentId  the {@code id} of the {@code Instrument} on which the events occurred, not {@code null}
-	 * @param events  a list of {@code Event}s, not {@code null}
-	 * @param entityManager  the connection to the database, not {@code null}
-	 */
-	private void assignDuplicateEventId(Long instrumentId, List<Event> events, EntityManager entityManager) {
-		logger.debug("Checking for pre-existing events for instrument <{}>", instrumentId);
-
-		// get all pre-existing events for the given instrument from the database
-		TypedQuery<IdDataPair> eventQuery = entityManager.createQuery("SELECT NEW inspector.jmondb.io.IdDataPair(event.id, event.date) FROM Event event WHERE event.instrument.id = :instrumentId", IdDataPair.class);
-		eventQuery.setParameter("instrumentId", instrumentId);
-		HashMap<Timestamp, Long> eventDateIdMap = new HashMap<>();
-		for(IdDataPair mapping : eventQuery.getResultList())
-			eventDateIdMap.put((Timestamp)mapping.getData(), mapping.getId());
-
-		// assign id's from pre-existing events
-		for(Event event : events)
-			if(eventDateIdMap.containsKey(event.getDate())) {
-				event.setId(eventDateIdMap.get(event.getDate()));
-				logger.debug("Duplicate event <{}>: assign id <{}>", event.getDate(), event.getId());
-			}
 	}
 
 	/**
