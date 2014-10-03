@@ -148,34 +148,33 @@ public class IMonDBReader {
 	}
 
 	/**
-	 * Returns the {@link Property} specified by the given name.
+	 * Retrieves the {@link Property} specified by the given accession.
 	 *
-	 * @param name  the name of the requested {@code Property}
-	 * @return the {@code Property} specified by the given name if found, else {@code null}
+	 * @param accession  the accession of the requested {@code Property}
+	 * @return the {@code Property} specified by the given accession if found, else {@code null}
 	 */
-	public Property getProperty(String name) {
-		logger.info("Retrieve property <{}>", name);
+	public Property getProperty(String accession) {
+		logger.info("Retrieve property <{}>", accession);
 
 		EntityManager entityManager = createEntityManager();
 
 		try {
-			TypedQuery<Property> query = entityManager.createQuery("SELECT prop FROM Property prop WHERE prop.name = :name", Property.class);
-			query.setParameter("name", name);
+			TypedQuery<Property> query = entityManager.createQuery("SELECT prop FROM Property prop WHERE prop.accession = :accession", Property.class);
+			query.setParameter("accession", accession);
 
 			// get the property
-			Property prop = query.getSingleResult();
+			Property property = query.getSingleResult();
+			logger.debug("Property <{}> retrieved from the database", accession);
 
 			// explicitly retrieve all values and associated runs for the property
-			Iterator<Value> valIt = prop.getValueIterator();
-			while(valIt.hasNext()) {
-				Value val = valIt.next();
-				val.hashCode();
-				val.getOriginatingRun().hashCode();
-			}
+			logger.debug("Load all values and associated runs for property <{}>", accession);
+			for(Iterator<Value> valIt = property.getValueIterator(); valIt.hasNext(); )
+				logger.trace("Value and run <{}> retrieved", valIt.next().getOriginatingRun().getName());
 
-			return prop;
+			return property;
 		}
 		catch(NoResultException e) {
+			logger.debug("Property <{}> not found in the database", accession);
 			return null;
 		}
 		finally {
@@ -226,7 +225,10 @@ public class IMonDBReader {
 						query.setParameter(entry.getKey(), entry.getValue());
 					}
 
-				return query.getResultList();
+				List<T> result = query.getResultList();
+				logger.debug("Result list retrieved from the database");
+
+				return result;
 			}
 			finally {
 				entityManager.close();
