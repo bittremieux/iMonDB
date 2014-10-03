@@ -61,7 +61,7 @@ public class Value {
 	private Property definingProperty;
 
 	/** inverse part of the bi-directional relationship with {@link Run} */
-	@ManyToOne(cascade={CascadeType.PERSIST, CascadeType.MERGE}, fetch=FetchType.LAZY)
+	@ManyToOne(fetch=FetchType.LAZY)
 	@JoinColumn(name="l_imon_run_id", nullable=false, referencedColumnName="id")
 	private Run originatingRun;
 

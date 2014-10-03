@@ -30,7 +30,7 @@ public class Metadata {
 	private String value;
 
 	/** inverse part of the bi-directional relationship with {@link Run} */
-	@ManyToOne(cascade={CascadeType.PERSIST, CascadeType.MERGE}, fetch=FetchType.LAZY)
+	@ManyToOne(fetch=FetchType.LAZY)
 	@JoinColumn(name="l_imon_run_id", nullable=false, referencedColumnName="id")
 	private Run run;
 

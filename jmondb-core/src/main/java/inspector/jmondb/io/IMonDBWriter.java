@@ -54,7 +54,6 @@ public class IMonDBWriter {
 	 *
 	 * The {@link Run}s performed on the given {@code Instrument} will <em>not</em> be written to the database.
 	 * The {@link CV} used to define the {@code Instrument} on the other hand will be written to the database or updated if it is already present.
-	 * The {@link Event}s that occurred on the given {@code Instrument} will be written to the database.
 	 *
 	 * @param instrument  the {@code Instrument} that will be written to the database, not {@code null}
 	 */
@@ -80,7 +79,7 @@ public class IMonDBWriter {
 
 				// store this instrument
 				entityManager.getTransaction().begin();
-				entityManager.persist(instrument);
+				entityManager.merge(instrument);
 				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
@@ -134,9 +133,83 @@ public class IMonDBWriter {
 	}
 
 	/**
+	 * Write the given {@link Event} to the database.
+	 *
+	 * If an {@code Event} which occurred on the same {@link Instrument} at the same time was already present, the previous {@code Event} is updated to the given {@code Event}.
+	 *
+	 * If the {@link Instrument} for which the {@code Event} occurred is not present in the database, an {@link IllegalStateException} will be thrown.
+	 *
+	 * @param event  the {@code Event} that will be written to the database, not {@code null}
+	 */
+	public void writeOrUpdateEvent(Event event) {
+		if(event != null) {
+			logger.info("Store event <{}> which occurred on instrument <{}>", event.getDate(), event.getInstrument().getName());
+
+			EntityManager entityManager = createEntityManager();
+
+			try {
+				// cancel if the instrument for which the event occurred is not yet in the database
+				TypedQuery<Long> instQuery = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name", Long.class);
+				instQuery.setParameter("name", event.getInstrument().getName());
+				instQuery.setMaxResults(1);	// restrict to a single result
+				List<Long> instResult = instQuery.getResultList();
+				if(instResult.size() == 0) {
+					logger.error("Instrument <{}> for which event <{}> occurred is not in the database yet", event.getInstrument().getName(), event.getDate());
+					throw new IllegalStateException("Instrument <" + event.getInstrument().getName() + "> for which event <" + event.getDate() + "> occurred is not in the database yet");
+				}
+				// else, assign the correct id for the instrument
+				else {
+					logger.debug("Existing instrument <{}>: assign id <{}>", event.getInstrument().getName(), instResult.get(0));
+					event.getInstrument().setId(instResult.get(0));
+				}
+
+				// check if the event is already in the database and assign its id
+				TypedQuery<Long> eventQuery = entityManager.createQuery("SELECT event.id FROM Event event WHERE event.date = :date AND event.instrument.name = :instName", Long.class);
+				eventQuery.setParameter("date", event.getDate());
+				eventQuery.setParameter("instName", event.getInstrument().getName());
+				eventQuery.setMaxResults(1);	// restrict to a single result
+				List<Long> eventResult = eventQuery.getResultList();
+				if(eventResult.size() > 0) {
+					logger.debug("Existing event <{}> which occurred on instrument <{}>: assign id <{}>", event.getDate(),  event.getInstrument().getName(), eventResult.get(0));
+					event.setId(eventResult.get(0));
+				}
+
+				// store the new event
+				entityManager.getTransaction().begin();
+				entityManager.merge(event);
+				entityManager.getTransaction().commit();
+			}
+			catch(EntityExistsException e) {
+				try {
+					logger.debug("Rollback because event <{}> already exists in the database: {}", event.getDate(), e.getMessage());
+					entityManager.getTransaction().rollback();
+				}
+				catch(PersistenceException p) {
+					logger.debug("Unable to rollback for event <{}>: {}", event.getDate(), p.getMessage());
+				}
+
+				logger.error("Unable to store event <{}>: {}", event.getDate(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store event <" + event.getDate() + ">");
+			}
+			catch(RollbackException e) {
+				logger.error("Unable to store event <{}>: {}", event.getDate(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store event <" + event.getDate() + ">");
+			}
+			finally {
+				entityManager.close();
+			}
+		}
+		else {
+			logger.error("Unable to store <null> event");
+			throw new NullPointerException("Unable to persist <null> event");
+		}
+	}
+
+	/**
 	 * Write the given {@link Run} to the database.
 	 *
-	 * If a {@code Run} with the same name was already present, the previous {@code Run} is replaced by the given {@code Run}.
+	 * If the {@link Instrument} on which the {@code Run} is performed is not present in the database, an {@link IllegalStateException} will be thrown.
+	 * If a {@code Run} with the same name performed on the same {@code Instrument} was already present in the database, an {@link IllegalArgumentException} will be thrown.
 	 *
 	 * All child {@link Value}s and their associated {@link Property}s and {@link CV}'s will be written to the database as well.
 	 * If some of these {@code Property}s or {@code CV}'s were already present in the database, they will be updated.
@@ -159,14 +232,15 @@ public class IMonDBWriter {
 					logger.error("Instrument <{}> for run <{}> is not in the database yet", run.getInstrument().getName(), run.getName());
 					throw new IllegalStateException("Instrument <" + run.getInstrument().getName() + "> for run <" + run.getName() + "> is not in the database yet");
 				}
-				// else, assign the correct id for the instrument
+				// else, assign the correct id for the instrument and its referenced cv
 				else {
 					logger.debug("Existing instrument <{}>: assign id <{}>", run.getInstrument().getName(), instResult.get(0));
 					run.getInstrument().setId(instResult.get(0));
+					assignDuplicateCvId(run.getInstrument().getCv(), entityManager);
 				}
 
 				// cancel if the run is already in the database
-				TypedQuery<Long> runQuery = entityManager.createQuery("SELECT run.id FROM Run run WHERE run.name = :name AND run.instrument.name = : instName", Long.class);
+				TypedQuery<Long> runQuery = entityManager.createQuery("SELECT run.id FROM Run run WHERE run.name = :name AND run.instrument.name = :instName", Long.class);
 				runQuery.setParameter("name", run.getName());
 				runQuery.setParameter("instName", run.getInstrument().getName());
 				runQuery.setMaxResults(1);	// restrict to a single result
@@ -186,7 +260,7 @@ public class IMonDBWriter {
 
 				// store the new run
 				entityManager.getTransaction().begin();
-				entityManager.persist(run);
+				entityManager.merge(run);
 				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
@@ -282,7 +356,7 @@ public class IMonDBWriter {
 				}
 
 				// make sure the pre-existing cv's are retained
-				assignDuplicatePropertyCvId(Arrays.asList(property), entityManager);
+				//assignDuplicatePropertyCvId(Arrays.asList(property), entityManager);
 
 				// store this Property
 				entityManager.getTransaction().begin();

@@ -25,7 +25,7 @@ public class Event {
 	private Long id;
 
 	/** the {@link Instrument} on which the event occurred */
-	@ManyToOne(cascade={CascadeType.PERSIST, CascadeType.MERGE}, fetch=FetchType.EAGER)
+	@ManyToOne(fetch=FetchType.EAGER)
 	@JoinColumn(name="l_imon_instrument_id", nullable=false, referencedColumnName="id")
 	private Instrument instrument;
 

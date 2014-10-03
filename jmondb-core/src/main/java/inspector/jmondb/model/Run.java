@@ -45,7 +45,7 @@ public class Run {
 	private Map<Property, Value> runValues;
 
 	/** inverse part of the bi-directional relationship with {@link Instrument} */
-	@ManyToOne(cascade={CascadeType.PERSIST, CascadeType.MERGE}, fetch=FetchType.LAZY)
+	@ManyToOne(fetch=FetchType.LAZY)
 	@JoinColumn(name="l_imon_instrument_id", nullable=false, referencedColumnName="id")
 	private Instrument instrument;
 

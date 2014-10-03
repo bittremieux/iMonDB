@@ -37,7 +37,7 @@ public class Instrument {
 	@JoinColumn(name="l_imon_cv_id", nullable=false, referencedColumnName="id")
 	private CV cv;
 
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="instrument")
+	@OneToMany(cascade=CascadeType.REMOVE, fetch=FetchType.LAZY, mappedBy="instrument")
 	@MapKey(name="date")
 	private Map<Timestamp, Event> events;
 
