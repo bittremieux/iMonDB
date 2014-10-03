@@ -2,6 +2,9 @@ package inspector.jmondb.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.annotations.Sort;
+import org.hibernate.annotations.SortNatural;
+import org.hibernate.annotations.SortType;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
@@ -39,19 +42,23 @@ public class Instrument {
 
 	@OneToMany(cascade=CascadeType.REMOVE, fetch=FetchType.LAZY, mappedBy="instrument")
 	@MapKey(name="date")
-	private Map<Timestamp, Event> events;
+	@OrderBy("date ASC")
+	@SortNatural
+	private SortedMap<Timestamp, Event> events;
 
 	@OneToMany(cascade=CascadeType.REMOVE, fetch=FetchType.LAZY, mappedBy="instrument")
 	@MapKey(name="sampleDate")
-	private Map<Timestamp, Run> runsPerformedOnInstrument;
+	@OrderBy("sampleDate ASC")
+	@SortNatural
+	private SortedMap<Timestamp, Run> runsPerformedOnInstrument;
 
 	/**
 	 * Default constructor required by JPA.
 	 * Protected access modification enforces class immutability.
 	 */
 	protected Instrument() {
-		events = new HashMap<>(15);
-		runsPerformedOnInstrument = new HashMap<>(250);
+		events = new TreeMap<>();
+		runsPerformedOnInstrument = new TreeMap<>();
 	}
 
 	/**
@@ -153,7 +160,7 @@ public class Instrument {
 	 */
 	public SortedMap<Timestamp, Run> getRunRange(Timestamp startTime, Timestamp stopTime) {
 		if(startTime != null && stopTime != null)
-			return new TreeMap<>(runsPerformedOnInstrument).subMap(startTime, stopTime);
+			return runsPerformedOnInstrument.subMap(startTime, stopTime);
 		else {
 			if(startTime == null) {
 				logger.error("The start time is not allowed to be <null>");
@@ -219,7 +226,7 @@ public class Instrument {
 	 */
 	public SortedMap<Timestamp, Event> getEventRange(Timestamp startTime, Timestamp stopTime) {
 		if(startTime != null && stopTime != null)
-			return new TreeMap<>(events).subMap(startTime, stopTime);
+			return events.subMap(startTime, stopTime);
 		else {
 			if(startTime == null) {
 				logger.error("The start time is not allowed to be <null>");
