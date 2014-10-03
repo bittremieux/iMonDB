@@ -12,7 +12,7 @@ import java.util.*;
  */
 @Entity
 @Access(AccessType.FIELD)
-@Table(name="imon_run")
+@Table(name="imon_run", uniqueConstraints=@UniqueConstraint(columnNames={"l_imon_instrument_id", "name"}))
 public class Run {
 
 	@Transient
@@ -25,7 +25,7 @@ public class Run {
 	private Long id;
 
 	/** the name identifying the run */
-	@Column(name="name", nullable=false, unique=true, length=100)
+	@Column(name="name", nullable=false, length=100)
 	private String name;
 	/** the location of the raw data belonging to the run */
 	@Column(name="storage_name", nullable=false, length=255)

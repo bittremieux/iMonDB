@@ -64,7 +64,6 @@ public class IMonDBWriter {
 
 			EntityManager entityManager = createEntityManager();
 
-			// persist the instrument in a transaction
 			try {
 				// cancel if the instrument is already in the database
 				TypedQuery<Long> query = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name", Long.class);
@@ -90,7 +89,7 @@ public class IMonDBWriter {
 					entityManager.getTransaction().rollback();
 				}
 				catch(PersistenceException p) {
-					logger.error("Unable to rollback for instrument <{}>: {}", instrument.getName(), p.getMessage());
+					logger.debug("Unable to rollback for instrument <{}>: {}", instrument.getName(), p.getMessage());
 				}
 
 				logger.error("Unable to store instrument <{}>: {}", instrument.getName(), e.getMessage());
@@ -144,122 +143,112 @@ public class IMonDBWriter {
 	 *
 	 * @param run  the {@code Run} that will be written to the database, not {@code null}
 	 */
-	public synchronized void writeRun(Run run) {
+	public void writeRun(Run run) {
 		if(run != null) {
-			logger.info("Store run <{}>", run.getName());
+			logger.info("Store run <{}> for instrument <{}>", run.getName(), run.getInstrument().getName());
 
 			EntityManager entityManager = createEntityManager();
 
-			// persist the run in a transaction
 			try {
-				// check if the run is already in the database and if so, delete the old run
-				// (the delete will cascade to the child values)
-				TypedQuery<Long> runQuery = entityManager.createQuery("SELECT run.id FROM Run run WHERE run.name = :name", Long.class);
-				runQuery.setParameter("name", run.getName());
-				runQuery.setMaxResults(1);	// restrict to a single result (name is unique anyway)
-
-				List<Long> result = runQuery.getResultList();
-				if(result.size() > 0) {
-					// delete the old run (delete will be cascaded to the values)
-					logger.info("Duplicate run <name={}>: delete old run <id={}>", run.getName(), result.get(0));
-					Run oldRun = entityManager.find(Run.class, result.get(0));
-					entityManager.getTransaction().begin();
-					entityManager.remove(oldRun);
-					entityManager.getTransaction().commit();
+				// cancel if the run's instrument is not yet in the database
+				TypedQuery<Long> instQuery = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name", Long.class);
+				instQuery.setParameter("name", run.getInstrument().getName());
+				instQuery.setMaxResults(1);	// restrict to a single result
+				List<Long> instResult = instQuery.getResultList();
+				if(instResult.size() == 0) {
+					logger.error("Instrument <{}> for run <{}> is not in the database yet", run.getInstrument().getName(), run.getName());
+					throw new IllegalStateException("Instrument <" + run.getInstrument().getName() + "> for run <" + run.getName() + "> is not in the database yet");
+				}
+				// else, assign the correct id for the instrument
+				else {
+					logger.debug("Existing instrument <{}>: assign id <{}>", run.getInstrument().getName(), instResult.get(0));
+					run.getInstrument().setId(instResult.get(0));
 				}
 
-				// make sure the pre-existing instruments are retained
-				assignDuplicateInstrumentId(run.getInstrument(), entityManager);
-				// make sure the pre-existing properties and cv's are retained
-				ArrayList<Property> properties = new ArrayList<>();
-				for(Iterator<Value> it = run.getValueIterator(); it.hasNext(); )
-					properties.add(it.next().getDefiningProperty());
+				// cancel if the run is already in the database
+				TypedQuery<Long> runQuery = entityManager.createQuery("SELECT run.id FROM Run run WHERE run.name = :name AND run.instrument.name = : instName", Long.class);
+				runQuery.setParameter("name", run.getName());
+				runQuery.setParameter("instName", run.getInstrument().getName());
+				runQuery.setMaxResults(1);	// restrict to a single result
+				List<Long> runResult = runQuery.getResultList();
+				if(runResult.size() > 0) {
+					logger.error("Run <{}> for instrument <{}> already exists with id <{}>", run.getName(),  run.getInstrument().getName(), runResult.get(0));
+					throw new IllegalArgumentException("Run <" + run.getName() + "> for instrument <" + run.getInstrument().getName() + " already exists with id <" + runResult.get(0) + ">");
+				}
+
+				// make sure the pre-existing properties and corresponding cv's are retained
+				HashMap<String, Property> properties = new HashMap<>();
+				for(Iterator<Value> it = run.getValueIterator(); it.hasNext(); ) {
+					Property prop = it.next().getDefiningProperty();
+					properties.put(prop.getAccession(), prop);
+				}
 				assignDuplicatePropertyCvId(properties, entityManager);
 
 				// store the new run
 				entityManager.getTransaction().begin();
-				entityManager.merge(run);
+				entityManager.persist(run);
 				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
 				try {
+					logger.debug("Rollback because run <{}> already exists in the database: {}", run.getName(), e.getMessage());
 					entityManager.getTransaction().rollback();
 				}
 				catch(PersistenceException p) {
-					logger.error("Unable to rollback the transaction for run <{}> to the database: {}", run.getName(), p);
+					logger.debug("Unable to rollback for run <{}>: {}", run.getName(), p.getMessage());
 				}
 
-				logger.error("Unable to write run <{}> to the database: {}", run.getName(), e);
-				throw new IllegalArgumentException("Unable to write run <" + run.getName() + "> to the database");
+				logger.error("Unable to store run <{}>: {}", run.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store run <" + run.getName() + ">");
 			}
 			catch(RollbackException e) {
-				logger.error("Unable to commit the transaction for run <{}> to the database: {}", run.getName(), e);
-				throw new IllegalArgumentException("Unable to commit the transaction for run <" + run.getName() + "> to the database");
+				logger.error("Unable to store run <{}>: {}", run.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store run <" + run.getName() + ">");
 			}
 			finally {
 				entityManager.close();
 			}
 		}
 		else {
-			logger.error("Unable to write <null> run element to the database");
-			throw new NullPointerException("Unable to write <null> run element to the database");
+			logger.error("Unable to store <null> run");
+			throw new NullPointerException("Unable to persist <null> run");
 		}
 	}
 
 	/**
-	 * Make sure a duplicate {@link Instrument} is not persisted multiple times to the database.
-	 *
-	 * If the {@code Instrument} is already present in the database, assign its id to the new {@code Instrument}, so the original {@code Instrument} (and its relationships) will be retained (but updated information will be overwritten).
-	 *
-	 * @param instrument  the {@code Instrument} that will be checked, not {@code null}
-	 * @param entityManager  the connection to the database, not {@code null}
-	 */
-	private void assignDuplicateInstrumentId(Instrument instrument, EntityManager entityManager) {
-		TypedQuery<Long> instrumentQuery = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name AND inst.type = :type", Long.class);
-		instrumentQuery.setParameter("name", instrument.getName());
-		instrumentQuery.setParameter("type", instrument.getType());
-		instrumentQuery.setMaxResults(1);	// restrict to a single result
-
-		List<Long> result = instrumentQuery.getResultList();
-		if(result.size() > 0)
-			instrument.setId(result.get(0));
-	}
-
-	/**
-	 * Make sure duplicate {@link Property}s and {@link CV}'s are not persisted multiple times to the database.
+	 * Make sure duplicate {@link Property}s and {@link CV}s are not persisted multiple times to the database.
 	 *
 	 * If an item is already present in the database, assign its id to the new item, so the original item (and its relationships) will be retained (but updated information will be overwritten).
 	 *
-	 * @param properties  the {@code List} with {@code Property}s that will be checked, not {@code null}
+	 * @param properties  a {@code Map} with {@code Property}s as values and their {@code accession} as keys, not {@code null}
 	 * @param entityManager  the connection to the database, not {@code null}
 	 */
-	private void assignDuplicatePropertyCvId(List<Property> properties, EntityManager entityManager) {
-		// get all pre-existing properties and cv's from the database
-		ArrayList<String> propAccessions = new ArrayList<>();
-		ArrayList<String> cvLabels = new ArrayList<>();
-		for(Property prop : properties) {
-			propAccessions.add(prop.getAccession());
-			cvLabels.add(prop.getCv().getLabel());
-		}
+	private void assignDuplicatePropertyCvId(Map<String, Property> properties, EntityManager entityManager) {
+		logger.debug("Updating all properties in the database associated to the run");
 
-		TypedQuery<Property> propQuery = entityManager.createQuery("SELECT prop FROM Property prop WHERE prop.accession in :propAccessions", Property.class);
-		propQuery.setParameter("propAccessions", propAccessions);
-		Map<String, Property> propAccessionMap = Maps.uniqueIndex(propQuery.getResultList(), Property::getAccession);
+		// get all pre-existing properties that have the same accession number
+		TypedQuery<IdDataPair> propQuery = entityManager.createQuery("SELECT NEW inspector.jmondb.io.IdDataPair(prop.id, prop.accession) FROM Property prop WHERE prop.accession in :propAccessions", IdDataPair.class);
+		propQuery.setParameter("propAccessions", properties.keySet());
+		Map<String, Long> propAccessionIdMap = new HashMap<>();
+		for(IdDataPair propPair : propQuery.getResultList())
+			propAccessionIdMap.put((String) propPair.getData(), propPair.getId());
 
-		TypedQuery<CV> cvQuery = entityManager.createQuery("SELECT cv FROM CV cv WHERE cv.label in :cvLabels", CV.class);
-		cvQuery.setParameter("cvLabels", cvLabels);
-		Map<String, CV> cvLabelMap = Maps.uniqueIndex(cvQuery.getResultList(), CV::getLabel);
+		// get all pre-existing cv's (not filtered on label, but should be a low number of items)
+		TypedQuery<IdDataPair> cvQuery = entityManager.createQuery("SELECT NEW inspector.jmondb.io.IdDataPair(cv.id, cv.label) FROM CV cv", IdDataPair.class);
+		Map<String, Long> cvLabelIdMap = new HashMap<>();
+		for(IdDataPair cvPair : cvQuery.getResultList())
+			cvLabelIdMap.put((String) cvPair.getData(), cvPair.getId());
 
-		// assign id's from pre-existing items to new items
-		for(Property prop : properties) {
-			if(prop.getId() == null && propAccessionMap.containsKey(prop.getAccession())) {
-				prop.setId(propAccessionMap.get(prop.getAccession()).getId());
-				logger.info("Duplicate Property <accession={}>: assign id <{}>", prop.getAccession(), prop.getId());
+		// assign id's from pre-existing entities
+		for(Property prop : properties.values()) {
+			if(prop.getId() == null && propAccessionIdMap.containsKey(prop.getAccession())) {
+				prop.setId(propAccessionIdMap.get(prop.getAccession()));
+				logger.debug("Duplicate property <{}>: assign id <{}>", prop.getAccession(), prop.getId());
 			}
 			CV cv = prop.getCv();
-			if(cv.getId() == null && cvLabelMap.containsKey(cv.getLabel())) {
-				cv.setId(cvLabelMap.get(cv.getLabel()).getId());
-				logger.info("Duplicate CV <label={}>: assign id <{}>", cv.getLabel(), cv.getId());
+			if(cv.getId() == null && cvLabelIdMap.containsKey(cv.getLabel())) {
+				cv.setId(cvLabelIdMap.get(cv.getLabel()));
+				logger.debug("Duplicate cv <label={}>: assign id <{}>", cv.getLabel(), cv.getId());
 			}
 		}
 	}
