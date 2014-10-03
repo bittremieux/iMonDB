@@ -168,8 +168,11 @@ public class IMonDBReader {
 
 			// explicitly retrieve all values and associated runs for the property
 			logger.debug("Load all values and associated runs for property <{}>", accession);
-			for(Iterator<Value> valIt = property.getValueIterator(); valIt.hasNext(); )
-				logger.trace("Value and run <{}> retrieved", valIt.next().getOriginatingRun().getName());
+			for(Iterator<Value> valIt = property.getValueIterator(); valIt.hasNext(); ) {
+				Run run = valIt.next().getOriginatingRun();
+				run.getInstrument().hashCode();
+				logger.trace("Value and run <{}> retrieved", run.getName());
+			}
 
 			return property;
 		}

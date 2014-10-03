@@ -223,7 +223,7 @@ public class Run {
 		if(!name.equals(run.name)) return false;
 		if(!storageName.equals(run.storageName)) return false;
 		if(!sampleDate.equals(run.sampleDate)) return false;
-		if(!instrument.equals(run.instrument)) return false;
+		if(!instrument.getName().equals(run.instrument.getName())) return false;
 
 		return true;
 	}

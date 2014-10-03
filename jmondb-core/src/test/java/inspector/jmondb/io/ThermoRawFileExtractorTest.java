@@ -17,9 +17,9 @@ import java.util.Map;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
-public class IMonDBReaderWriterTest {
+public class ThermoRawFileExtractorTest {
 
-	private EntityManagerFactory emf;
+	/*private EntityManagerFactory emf;
 	private IMonDBReader reader;
 	private IMonDBWriter writer;
 	private ThermoRawFileExtractor extractor;
@@ -217,5 +217,5 @@ public class IMonDBReaderWriterTest {
 
 		// compare all elements
 		assertEquals(run, runDb);
-	}
+	}*/
 }
