@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.persistence.*;
+import java.sql.Timestamp;
 import java.util.*;
 
 /**
@@ -50,10 +51,11 @@ public class IMonDBWriter {
 	/**
 	 * Write the given {@link Instrument} to the database.
 	 *
-	 * If an {@code Instrument} with the same name and type was already present in the database, it will be updated to the given {@code Instrument}.
+	 * If an {@code Instrument} with the same name was already present in the database, it will be updated to the given {@code Instrument}.
 	 *
 	 * The {@link Run}s performed on the given {@code Instrument} will <em>not</em> be written to the database.
-	 * The {@link CV} used to define the {@code Instrument} on the other hand will be written to the database or updated if it was already present.
+	 * The {@link CV} used to define the {@code Instrument} on the other hand will be written to the database or updated if it is already present.
+	 * The {@link Event}s that occurred on the given {@code Instrument} will be written to the database.
 	 *
 	 * @param instrument  the {@code Instrument} that will be written to the database, not {@code null}
 	 */
@@ -63,50 +65,108 @@ public class IMonDBWriter {
 
 			EntityManager entityManager = createEntityManager();
 
-			// persist the Instrument in a transaction
+			// persist the instrument in a transaction
 			try {
-				// check if the Instrument is already in the database and retrieve its primary key
-				TypedQuery<Long> query = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name AND inst.type = :type AND inst.cv = :cv", Long.class);
+				// check if the instrument is already in the database and retrieve its primary key
+				TypedQuery<Long> query = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name", Long.class);
 				query.setParameter("name", instrument.getName());
-				query.setParameter("type", instrument.getType());
-				query.setParameter("cv", instrument.getCv()).setMaxResults(1);
+				query.setMaxResults(1);	// restrict to a single result
 				List<Long> result = query.getResultList();
 				if(result.size() > 0) {
-					logger.info("Duplicate instrument <{}, {}>: assign id <{}>", instrument.getType(), instrument.getName(), result.get(0));
+					logger.debug("Duplicate instrument <{}>: assign id <{}>", instrument.getName(), result.get(0));
 					instrument.setId(result.get(0));
+
+					// make sure pre-existing events are updated
+					ArrayList<Event> events = new ArrayList<>();
+					for(Iterator<Event> it = instrument.getEventIterator(); it.hasNext(); )
+						events.add(it.next());
+					assignDuplicateEventId(instrument.getId(), events, entityManager);
 				}
 
-				// make sure a pre-existing cv is retained
+				// make sure a pre-existing cv is updated
 				assignDuplicateCvId(instrument.getCv(), entityManager);
 
-				// store this Instrument
+				// store this instrument
 				entityManager.getTransaction().begin();
 				entityManager.merge(instrument);
 				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
 				try {
+					logger.debug("Rollback because instrument <{}> already exists in the database: {}", instrument.getName(), e.getMessage());
 					entityManager.getTransaction().rollback();
 				}
 				catch(PersistenceException p) {
-					logger.error("Unable to rollback the transaction for instrument <{}> to the database: {}", instrument.getName(), p);
+					logger.error("Unable to rollback for instrument <{}>: {}", instrument.getName(), p.getMessage());
 				}
 
-				logger.error("Unable to persist instrument <{}> to the database: {}", instrument.getName(), e);
-				throw new IllegalArgumentException("Unable to persist instrument <" + instrument.getName() + "> to the database");
+				logger.error("Unable to persist instrument <{}>: {}", instrument.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to persist instrument <" + instrument.getName() + ">");
 			}
 			catch(RollbackException e) {
-				logger.error("Unable to commit the transaction for instrument <{}> to the database: {}", instrument.getName(), e);
-				throw new IllegalArgumentException("Unable to commit the transaction for instrument <" + instrument.getName() + "> to the database");
+				logger.error("Unable to persist instrument <{}>: {}", instrument.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to persist instrument <" + instrument.getName() + ">");
 			}
 			finally {
 				entityManager.close();
 			}
 		}
-
 		else {
-			logger.error("Unable to write <null> instrument to the database");
-			throw new NullPointerException("Unable to write <null> instrument to the database");
+			logger.error("Unable to persist <null> instrument");
+			throw new NullPointerException("Unable to persist <null> instrument");
+		}
+	}
+
+	/**
+	 * Assign the correct {@code id} to pre-existing {@link Event}s in the database.
+	 *
+	 * This ensures that pre-existing {@code Event}s are correctly merged, (possibly) updating the old event information.
+	 *
+	 * For a specific {@link Instrument} all {@code Event}s have a unique event date.
+	 *
+	 * @param instrumentId  the {@code id} of the {@code Instrument} on which the events occurred, not {@code null}
+	 * @param events  a list of {@code Event}s, not {@code null}
+	 * @param entityManager  the connection to the database, not {@code null}
+	 */
+	private void assignDuplicateEventId(Long instrumentId, List<Event> events, EntityManager entityManager) {
+		logger.debug("Checking for pre-existing events for instrument <{}>", instrumentId);
+
+		// get all pre-existing events for the given instrument from the database
+		TypedQuery<IdDataPair> eventQuery = entityManager.createQuery("SELECT NEW inspector.jmondb.io.IdDataPair(event.id, event.date) FROM Event event WHERE event.instrument.id = :instrumentId", IdDataPair.class);
+		eventQuery.setParameter("instrumentId", instrumentId);
+		HashMap<Timestamp, Long> eventDateIdMap = new HashMap<>();
+		for(IdDataPair mapping : eventQuery.getResultList())
+			eventDateIdMap.put((Timestamp)mapping.getData(), mapping.getId());
+
+		// assign id's from pre-existing events
+		for(Event event : events)
+			if(eventDateIdMap.containsKey(event.getDate())) {
+				event.setId(eventDateIdMap.get(event.getDate()));
+				logger.debug("Duplicate event <{}>: assign id <{}>", event.getDate(), event.getId());
+			}
+	}
+
+	/**
+	 * Make sure a duplicate {@link CV} is not persisted multiple times to the database.
+	 *
+	 * If the {@code CV} is already present in the database, assign its id to the new {@code CV}, so the original {@code CV} (and its relationships) will be retained (but updated information will be overwritten).
+	 *
+	 * @param cv  the {@code CV} that will be checked, not {@code null}
+	 * @param entityManager  the connection to the database, not {@code null}
+	 */
+	private void assignDuplicateCvId(CV cv, EntityManager entityManager) {
+		logger.debug("Checking if cv <{}> is already present in the database", cv.getLabel());
+
+		// check if the cv already exists in the database
+		TypedQuery<Long> cvQuery = entityManager.createQuery("SELECT cv.id FROM CV cv WHERE cv.label = :label", Long.class);
+		cvQuery.setParameter("label", cv.getLabel());
+		cvQuery.setMaxResults(1);	// restrict to a single result
+
+		// if so, assign its id to the new cv
+		List<Long> result = cvQuery.getResultList();
+		if(result.size() > 0) {
+			logger.debug("Duplicate cv <{}>: assign id <{}>", cv.getLabel(), result.get(0));
+			cv.setId(result.get(0));
 		}
 	}
 
@@ -238,24 +298,6 @@ public class IMonDBWriter {
 				logger.info("Duplicate CV <label={}>: assign id <{}>", cv.getLabel(), cv.getId());
 			}
 		}
-	}
-
-	/**
-	 * Make sure a duplicate {@link CV} is not persisted multiple times to the database.
-	 *
-	 * If the {@code CV} is already present in the database, assign its id to the new {@code CV}, so the original {@code CV} (and its relationships) will be retained (but updated information will be overwritten).
-	 *
-	 * @param cv  the {@code CV} that will be checked, not {@code null}
-	 * @param entityManager  the connection to the database, not {@code null}
-	 */
-	private void assignDuplicateCvId(CV cv, EntityManager entityManager) {
-		TypedQuery<Long> cvQuery = entityManager.createQuery("SELECT cv.id FROM CV cv WHERE cv.label = :label", Long.class);
-		cvQuery.setParameter("label", cv.getLabel());
-		cvQuery.setMaxResults(1);	// restrict to a single result
-
-		List<Long> result = cvQuery.getResultList();
-		if(result.size() > 0)
-			cv.setId(result.get(0));
 	}
 
 	/**

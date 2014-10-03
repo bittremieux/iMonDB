@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat;
  */
 @Entity
 @Access(AccessType.FIELD)
-@Table(name="imon_event")
+@Table(name="imon_event", uniqueConstraints=@UniqueConstraint(columnNames={"l_imon_instrument_id", "eventdate"}))
 public class Event {
 
 	@Transient
@@ -90,6 +90,14 @@ public class Event {
 	public Event(Instrument instrument, Timestamp date, EventType type, String description, byte[] picture) {
 		this(instrument, date, type, description);
 		setPicture(picture);
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
 	}
 
 	public Instrument getInstrument() {
