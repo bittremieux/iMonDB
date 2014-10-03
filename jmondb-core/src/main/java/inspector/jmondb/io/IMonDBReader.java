@@ -107,34 +107,39 @@ public class IMonDBReader {
 	}
 
 	/**
-	 * Returns the {@link Run} specified by the given name.
+	 * Retrieves the {@link Run} specified by the given name and performed on the {@link Instrument} with the given name from the database.
 	 *
-	 * @param name  the name of the requested {@code Run}
-	 * @return the {@code Run} specified by the given name if present in the database, else {@code null}
+	 * @param runName  the name of the requested {@code Run}
+	 * @param instrumentName  the name of the {@code Instrument} on which the {@code Run} was performed
+	 * @return the {@code Run} specified by the given name and performed on the given {@code Instrument} if present in the database, else {@code null}
 	 */
-	public Run getRun(String name) {
-		logger.info("Retrieve run <{}>", name);
+	public Run getRun(String runName, String instrumentName) {
+		logger.info("Retrieve run <{}> for instrument <{}>", runName, instrumentName);
 
 		EntityManager entityManager = createEntityManager();
 
 		try {
-			TypedQuery<Run> query = entityManager.createQuery("SELECT run FROM Run run WHERE run.name = :name", Run.class);
-			query.setParameter("name", name);
+			TypedQuery<Run> query = entityManager.createQuery("SELECT run FROM Run run WHERE run.name = :runName AND run.instrument.name = :instName", Run.class);
+			query.setParameter("runName", runName);
+			query.setParameter("instName", instrumentName);
 
 			// get the run
 			Run run = query.getSingleResult();
+			logger.debug("Run <{}> retrieved from the database", runName);
 
-			// explicitly retrieve all values and associated properties for the run
-			Iterator<Value> valIt = run.getValueIterator();
-			while(valIt.hasNext()) {
-				Value val = valIt.next();
-				val.hashCode();
-				val.getDefiningProperty().hashCode();
-			}
+			// explicitly load all values and associated properties (lazy loading)
+			logger.debug("Load all values and associated properties from run <{}>", runName);
+			for(Iterator<Value> valIt = run.getValueIterator(); valIt.hasNext(); )
+				logger.trace("Value and property <{}> retrieved", valIt.next().getDefiningProperty().getAccession());
+
+			// explicitly load the run's instrument
+			logger.debug("Load the instrument on which run <{}> was performed", runName);
+			run.getInstrument().hashCode();
 
 			return run;
 		}
 		catch(NoResultException e) {
+			logger.debug("Run <{}> not found for instrument <{}> in the database", runName, instrumentName);
 			return null;
 		}
 		finally {
