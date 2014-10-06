@@ -24,4 +24,13 @@ public enum InstrumentModel {
 	public String toString() {
 		return cvAccession;
 	}
+
+	public static InstrumentModel fromString(String text) {
+		if(text != null)
+			for(InstrumentModel model : values())
+				if(text.equals(model.toString()))
+					return model;
+
+		return UNKNOWN_MODEL;
+	}
 }

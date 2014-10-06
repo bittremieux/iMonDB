@@ -346,40 +346,10 @@ public class ThermoRawFileExtractor {
 	private InstrumentModel readInstrumentModel(BufferedReader reader) throws IOException {
 
 		String modelLine = reader.readLine();
-		InstrumentModel model = null;
-		if(modelLine != null) {
-			String modelCv = modelLine.split("\t")[1];
-			//TODO: interpret the PSI-MS OBO file
-			switch(modelCv) {
-				case "MS:1000449":
-					model = InstrumentModel.THERMO_LTQ_ORBITRAP;
-					break;
-				case "MS:1000556":
-					model = InstrumentModel.THERMO_ORBITRAP_XL;
-					break;
-				case "MS:1000855":
-					model = InstrumentModel.THERMO_LTQ_VELOS;
-					break;
-				case "MS:1001510":
-					model = InstrumentModel.THERMO_TSQ_VANTAGE;
-					break;
-				case "MS:1001742":
-					model = InstrumentModel.THERMO_ORBITRAP_VELOS;
-					break;
-				case "MS:1001911":
-					model = InstrumentModel.THERMO_Q_EXACTIVE;
-					break;
-				case "MS:1002416":
-					model = InstrumentModel.THERMO_ORBITRAP_FUSION;
-					break;
-				default:
-					model = InstrumentModel.UNKNOWN_MODEL;
-					logger.info("Unknown instrument model <{}>", modelCv);
-					break;
-			}
-		}
+		if(modelLine != null)
+			return InstrumentModel.fromString(modelLine.split("\t")[1]);
 
-		return model;
+		return null;
 	}
 
 	/**
