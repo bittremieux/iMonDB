@@ -2,8 +2,8 @@ package inspector.jmondb.convert.Thermo;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import inspector.jmondb.convert.RawFileMetadata;
 import inspector.jmondb.model.InstrumentModel;
-import inspector.jmondb.convert.RawFileMetaData;
 import inspector.jmondb.model.*;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
@@ -43,12 +43,10 @@ public class ThermoRawFileExtractor {
 	/** properties containing a list of value names that have to be excluded */
 	private PropertiesConfiguration exclusionProperties;
 
-	//TODO 1: correctly specify the used cv
-	//TODO 1: maybe we can even re-use some terms from the PSI-MS cv?
-	//TODO 2: this is a global variable to fix a duplicate key error when inserting multiple CV objects with the same label that didn't exist in the database before
-	//TODO 2: fix this by having a global CV list or something
-	private CV cv = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
-	private CV cvMS = new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
+	//TODO: correctly specify the used cv
+	//TODO: maybe we can even re-use some terms from the PSI-MS cv?
+	private static CV cvIMon = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
+	private static CV cvMS = new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
 
 	/**
 	 * Creates an extractor to retrieve instrument data from Thermo raw files.
@@ -173,21 +171,21 @@ public class ThermoRawFileExtractor {
 	 *
 	 * @param fileName  the name of the raw file from which the instrument data will be extracted, not {@code null}
 	 * @param runName  the name of the created {@code Run}, if {@code null} the base file name is used
+	 * @param instrumentName  the name of the {@link Instrument} on which the {@code Run} was performed, not {@code null}
 	 * @return a {@code Run} containing the instrument data as {@code Value}s
 	 */
-	public Run extractInstrumentData(String fileName, String runName) {
+	public Run extractInstrumentData(String fileName, String runName, String instrumentName) {
 		try {
 			// test if the file name is valid
 			File rawFile = getFile(fileName);
 
 			// extract raw file meta data
-			RawFileMetaData metaData = getMetaData(rawFile);
-			Timestamp date = metaData.getDate();
-			InstrumentModel model = metaData.getModel();
+			RawFileMetadata metadata = getMetadata(rawFile);
+			Timestamp date = metadata.getDate();
+			InstrumentModel model = metadata.getModel();
 
 			// create the instrument on which the run was performed
-			//TODO: get instrument name (from where?)
-			Instrument instrument = new Instrument("my instrument name", model, cvMS);
+			Instrument instrument = new Instrument(instrumentName, model, cvMS);
 			// create a run to store all the instrument data values
 			if(runName == null)
 				runName = FilenameUtils.getBaseName(rawFile.getName());
@@ -237,9 +235,9 @@ public class ThermoRawFileExtractor {
 	 * Extracts experiment meta data from the raw file, such as the sample date and the instrument model.
 	 *
 	 * @param rawFile  the raw file from which the instrument data will be read, not {@code null}
-	 * @return {@link RawFileMetaData} information containing the sample date and the instrument model
+	 * @return {@link RawFileMetadata} information containing the sample date and the instrument model
 	 */
-	private RawFileMetaData getMetaData(File rawFile) {
+	private RawFileMetadata getMetadata(File rawFile) {
 		// execute the CLI process
 		Process process = executeProcess("./Thermo/ThermoMetaData.exe", rawFile);
 
@@ -258,7 +256,7 @@ public class ThermoRawFileExtractor {
 			// close resources
 			reader.close();
 
-			return new RawFileMetaData(date, model);
+			return new RawFileMetadata(date, model);
 
 		} catch(IOException e) {
 			logger.error("Could not read the raw file extractor output: {}", e.getMessage());
@@ -409,6 +407,7 @@ public class ThermoRawFileExtractor {
 						case THERMO_ORBITRAP_FUSION:
 							header = headerOrbitrapFusion(values[0], header);
 							break;
+						case UNKNOWN_MODEL:
 						default:
 							header = values[0];
 							break;
@@ -431,6 +430,7 @@ public class ThermoRawFileExtractor {
 						case THERMO_ORBITRAP_FUSION:
 							nameValue = valueQExactiveFusion(values);
 							break;
+						case UNKNOWN_MODEL:
 						default:
 							nameValue = values;
 							break;
@@ -576,10 +576,10 @@ public class ThermoRawFileExtractor {
 				q3 = stats.getPercentile(75);
 			}
 
-			//TODO: correctly set the accession number once we have a valid cv
+			//TODO: correctly set the accession number once we have a valid cvIMon
 			String name = cell.getRowKey() + " - " + cell.getColumnKey();
 			String accession = name;
-			Property property = new Property(name, valueType, accession, cv, isNumeric);
+			Property property = new Property(name, valueType, accession, cvIMon, isNumeric);
 			// values are automatically added to the run and the property
 			new Value(firstValue, n, nDiff, min, max, mean, median, sd, q1, q3, property, run);
 		}

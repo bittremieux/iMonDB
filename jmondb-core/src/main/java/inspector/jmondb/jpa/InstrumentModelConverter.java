@@ -15,10 +15,6 @@ public class InstrumentModelConverter implements AttributeConverter<InstrumentMo
 
 	@Override
 	public InstrumentModel convertToEntityAttribute(String s) {
-		InstrumentModel[] models = InstrumentModel.values();
-		for(InstrumentModel model : models)
-			if(model.toString().equals(s))
-				return model;
-		return null;
+		return InstrumentModel.fromString(s);
 	}
 }

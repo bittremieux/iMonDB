@@ -16,4 +16,13 @@ public enum EventType {
 	public String toString() {
 		return type;
 	}
+
+	public static EventType fromString(String text) {
+		if(text != null)
+			for(EventType event : values())
+				if(text.equals(event.toString()))
+					return event;
+
+		return null;
+	}
 }

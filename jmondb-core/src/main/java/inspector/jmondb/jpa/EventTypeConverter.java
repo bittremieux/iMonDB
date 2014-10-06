@@ -16,10 +16,6 @@ public class EventTypeConverter implements AttributeConverter<EventType, String>
 
 	@Override
 	public EventType convertToEntityAttribute(String s) {
-		EventType[] types = EventType.values();
-		for(EventType type : types)
-			if(type.toString().equals(s))
-				return type;
-		return null;
+		return EventType.fromString(s);
 	}
 }
