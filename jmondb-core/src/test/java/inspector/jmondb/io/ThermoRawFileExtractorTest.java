@@ -33,9 +33,12 @@ public class ThermoRawFileExtractorTest {
 		em.getTransaction().begin();
 		em.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
 		em.createNativeQuery("TRUNCATE TABLE imon_value").executeUpdate();
-		em.createNativeQuery("TRUNCATE TABLE imon_cv").executeUpdate();
+		em.createNativeQuery("TRUNCATE TABLE imon_property").executeUpdate();
+		em.createNativeQuery("TRUNCATE TABLE imon_metadata").executeUpdate();
 		em.createNativeQuery("TRUNCATE TABLE imon_run").executeUpdate();
-		em.createNativeQuery("TRUNCATE TABLE imon_project").executeUpdate();
+		em.createNativeQuery("TRUNCATE TABLE imon_event").executeUpdate();
+		em.createNativeQuery("TRUNCATE TABLE imon_instrument").executeUpdate();
+		em.createNativeQuery("TRUNCATE TABLE imon_cv").executeUpdate();
 		em.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
 		em.getTransaction().commit();
 

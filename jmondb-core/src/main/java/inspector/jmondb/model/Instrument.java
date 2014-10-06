@@ -2,9 +2,7 @@ package inspector.jmondb.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hibernate.annotations.Sort;
 import org.hibernate.annotations.SortNatural;
-import org.hibernate.annotations.SortType;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
