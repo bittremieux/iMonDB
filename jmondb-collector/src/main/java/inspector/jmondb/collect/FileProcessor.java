@@ -21,7 +21,6 @@ public class FileProcessor implements Callable<Timestamp> {
 	private IMonDBReader dbReader;
 	private IMonDBWriter dbWriter;
 	private ThermoRawFileExtractor extractor;
-	private String renameMask;
 	private File file;
 	private String instrumentName;
 
@@ -30,14 +29,12 @@ public class FileProcessor implements Callable<Timestamp> {
 	 *
 	 * @param dbReader  The {@link IMonDBReader} used to verify the current file isn't present in the database yet
 	 * @param dbWriter  The {@link IMonDBWriter} used to write the new {@link Run} to the database
-	 * @param renameMask  The mask used to rename the run's name
 	 * @param file  The raw file that will be processed
 	 */
-	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, String renameMask, File file, String instrumentName) {
+	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, File file, String instrumentName) {
 		this.dbReader = dbReader;
 		this.dbWriter = dbWriter;
 		this.extractor = extractor;
-		this.renameMask = renameMask;
 		this.file = file;
 		this.instrumentName = instrumentName;
 	}
@@ -46,8 +43,7 @@ public class FileProcessor implements Callable<Timestamp> {
 	public Timestamp call() {
 		logger.info("Process file <{}>", file.getAbsolutePath());
 
-		String runName = renameMask.replace("%dn", FilenameUtils.getBaseName(file.getParent())).
-				replace("%fn", FilenameUtils.getBaseName(file.getName()));
+		String runName = FilenameUtils.getBaseName(file.getName());
 
 		// check if this run already exists in the database for the given instrument
 		Map<String, String> parameters = ImmutableMap.of("runName", runName, "instName", instrumentName);

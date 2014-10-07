@@ -68,7 +68,6 @@ public class Collector {
 			Timestamp newestTimestamp = config.getLastDate();
 
 			String matchFile = config.getMatchFile();
-			String renameMask = getRenameMask();	//TODO
 
 			// thread pool
 			int nrOfThreads = config.getNumberOfThreads();
@@ -96,7 +95,7 @@ public class Collector {
 					String instrumentName = config.getInstrumentNameForFile(file);
 
 					logger.trace("Add file <{}> for instrument <{}> to the thread pool", file.getCanonicalPath(), instrumentName);
-					pool.submit(new FileProcessor(dbReader, dbWriter, extractor, renameMask, file, instrumentName));
+					pool.submit(new FileProcessor(dbReader, dbWriter, extractor, file, instrumentName));
 					threadsSubmitted++;
 				}
 			} catch(IOException e) {

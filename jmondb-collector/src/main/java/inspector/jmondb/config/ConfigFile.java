@@ -183,8 +183,8 @@ public class ConfigFile {
 
 		List<Map<String, String>> instruments = (List<Map<String, String>>) rootMap.get("instruments");
 		for(Map<String, String> instrument : instruments) {
-			if((instrument.get("type").equals("name") && fileName.matches(instrument.get("regex")))
-				|| (instrument.get("type").equals("path") && filePath.matches(instrument.get("regex"))))
+			if((instrument.get("regex-source").equals("name") && fileName.matches(instrument.get("regex")))
+				|| (instrument.get("regex-source").equals("path") && filePath.matches(instrument.get("regex"))))
 				return instrument.get("name");
 		}
 

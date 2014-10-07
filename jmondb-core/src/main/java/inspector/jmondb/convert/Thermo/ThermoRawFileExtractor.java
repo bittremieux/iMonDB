@@ -312,8 +312,8 @@ public class ThermoRawFileExtractor {
 			logger.error("Could not read the raw file extractor output: {}", e.getMessage());
 			throw new IllegalStateException("Could not read the raw file extractor output: " + e.getMessage());
 		} catch(InterruptedException e) {
-			logger.error("Error while extracting the raw file: {}", e);
-			throw new IllegalStateException("Error while extracting the raw file: " + e);
+			logger.error("Error while extracting the raw file: {}", e.getMessage());
+			throw new IllegalStateException("Error while extracting the raw file: " + e.getMessage());
 		}
 	}
 
@@ -329,8 +329,8 @@ public class ThermoRawFileExtractor {
 			// execute the CLI process
 			return Runtime.getRuntime().exec(new File(cliPath).getAbsolutePath() + " \"" + rawFile.getAbsoluteFile() + "\"");
 		} catch(IOException e) {
-			logger.error("Could not execute the raw file extractor: {}", e);
-			throw new IllegalStateException("Could not execute the raw file extractor. Are you running this on a Windows platform? " + e);
+			logger.error("Could not execute the raw file extractor: {}", e.getMessage());
+			throw new IllegalStateException("Could not execute the raw file extractor. Are you running this on a Windows platform? " + e.getMessage());
 		}
 	}
 
