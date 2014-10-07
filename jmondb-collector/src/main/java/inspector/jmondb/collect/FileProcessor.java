@@ -22,8 +22,8 @@ public class FileProcessor implements Callable<Timestamp> {
 	private IMonDBWriter dbWriter;
 	private ThermoRawFileExtractor extractor;
 	private String renameMask;
-	private String projectLabel;
 	private File file;
+	private String instrumentName;
 
 	/**
 	 * Processes a file by extracting the instrument data from it and storing the resulting run in the database.
@@ -31,33 +31,31 @@ public class FileProcessor implements Callable<Timestamp> {
 	 * @param dbReader  The {@link IMonDBReader} used to verify the current file isn't present in the database yet
 	 * @param dbWriter  The {@link IMonDBWriter} used to write the new {@link Run} to the database
 	 * @param renameMask  The mask used to rename the run's name
-	 * @param projectLabel  The label of the project to which the run belongs
 	 * @param file  The raw file that will be processed
 	 */
-	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, String renameMask, String projectLabel, File file) {
+	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, String renameMask, File file, String instrumentName) {
 		this.dbReader = dbReader;
 		this.dbWriter = dbWriter;
 		this.extractor = extractor;
 		this.renameMask = renameMask;
-		this.projectLabel = projectLabel;
 		this.file = file;
+		this.instrumentName = instrumentName;
 	}
 
 	@Override
 	public Timestamp call() {
 		logger.info("Process file <{}>", file.getAbsolutePath());
 
-		String runName = renameMask.replace("%p", projectLabel).
-				replace("%dn", FilenameUtils.getBaseName(file.getParent())).
+		String runName = renameMask.replace("%dn", FilenameUtils.getBaseName(file.getParent())).
 				replace("%fn", FilenameUtils.getBaseName(file.getName()));
 
 		// check if this run already exists in the database for the given project
-		Map<String, String> parameters = ImmutableMap.of("runName", runName, "projectLabel", projectLabel);
-		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = :runName AND run.fromProject.label = :projectLabel";
+		Map<String, String> parameters = ImmutableMap.of("runName", runName);
+		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = :runName";
 		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class, parameters).get(0).equals(1L);
 
 		if(!exists) {
-			Run run = extractor.extractInstrumentData(file.getAbsolutePath(), runName);
+			Run run = extractor.extractInstrumentData(file.getAbsolutePath(), runName, instrumentName);
 
 			// write the run to the database
 			dbWriter.writeRun(run);

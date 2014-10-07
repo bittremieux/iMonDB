@@ -29,6 +29,15 @@
         </developer>
     </developers>
 
+    <repositories>
+        <repository>
+            <id>Sonatype-public</id>
+            <name>SnakeYAML repository</name>
+            <url>http://oss.sonatype.org/content/groups/public/</url>
+        </repository>
+
+    </repositories>
+
 	<!-- Dependencies -->
 	<dependencies>
         <dependency>
@@ -83,6 +92,13 @@
             <artifactId>commons-cli</artifactId>
             <version>1.2</version>
         </dependency>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>1.15-SNAPSHOT</version>
+        </dependency>
+
+
     </dependencies>
 
     <build>
