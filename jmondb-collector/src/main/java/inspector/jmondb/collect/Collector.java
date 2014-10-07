@@ -1,10 +1,14 @@
 package inspector.jmondb.collect;
 
+import com.google.common.collect.ImmutableMap;
 import inspector.jmondb.config.ConfigFile;
 import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
+import inspector.jmondb.model.CV;
+import inspector.jmondb.model.Instrument;
+import inspector.jmondb.model.InstrumentModel;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.filefilter.*;
@@ -16,6 +20,8 @@ import java.io.*;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 /**
@@ -30,6 +36,8 @@ public class Collector {
 	/** a YAML configuration file */
 	private ConfigFile config;
 
+	private static CV cvMS = new CV("MS", "PSI MS controlled vocabulary", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
+
 	/**
 	 * Creates a collector that will collect the instrument data for all raw files and store it in the iMonDB.
 	 *
@@ -43,13 +51,13 @@ public class Collector {
 	 * Collects the instrument data for all the raw files based on the settings in the config file.
 	 */
 	public void collect() {
-		logger.info("Executing the Collector");
+		logger.info("Executing the collector");
 
 		EntityManagerFactory emf = null;
 
 		try {
 			// create database connection
-			emf = getEntityManagerFactory(config);
+			emf = getEntityManagerFactory();
 			IMonDBReader dbReader = new IMonDBReader(emf);
 			IMonDBWriter dbWriter = new IMonDBWriter(emf);
 
@@ -68,6 +76,9 @@ public class Collector {
 			CompletionService<Timestamp> pool = new ExecutorCompletionService<>(threadPool);
 			int threadsSubmitted = 0;
 
+			// make sure all required instruments are present in the database
+			addNewInstruments(dbReader, dbWriter, config.getInstruments());
+
 			// browse the start directory and underlying directories to find new raw files
 			File startDir = config.getStartDirectory();
 			try {
@@ -85,7 +96,7 @@ public class Collector {
 					String instrumentName = config.getInstrumentNameForFile(file);
 
 					logger.trace("Add file <{}> for instrument <{}> to the thread pool", file.getCanonicalPath(), instrumentName);
-					pool.submit(new FileProcessor(dbReader, dbWriter, extractor, renameMask, file));
+					pool.submit(new FileProcessor(dbReader, dbWriter, extractor, renameMask, file, instrumentName));
 					threadsSubmitted++;
 				}
 			} catch(IOException e) {
@@ -144,7 +155,7 @@ public class Collector {
 		}
 	}
 
-	private EntityManagerFactory getEntityManagerFactory(ConfigFile config) {
+	private EntityManagerFactory getEntityManagerFactory() {
 		return IMonDBManagerFactory.createMySQLFactory(config.getDatabaseHost(), config.getDatabasePort(),
 				config.getDatabaseName(), config.getDatabaseUser(), config.getDatabasePassword());
 	}
@@ -157,5 +168,20 @@ public class Collector {
 		}
 		return renameMask;*/
 		return null;
+	}
+
+	private void addNewInstruments(IMonDBReader reader, IMonDBWriter writer, List<Map<String, String>> instruments) {
+		for(Map<String, String> instrument : instruments) {
+			// check if the instrument is already in the database
+			Map<String, String> parameters = ImmutableMap.of("name", instrument.get("name"));
+			String query = "SELECT COUNT(inst) FROM Instrument inst WHERE inst.name = :name";
+			boolean exists = reader.getFromCustomQuery(query, Long.class, parameters).get(0).equals(1L);
+
+			// else, add it to the database
+			if(!exists)
+				writer.writeInstrument(new Instrument(instrument.get("name"), InstrumentModel.fromString(instrument.get("type")), cvMS));
+			else
+				logger.trace("Instrument <{}> found in the database", instrument.get("name"));
+		}
 	}
 }

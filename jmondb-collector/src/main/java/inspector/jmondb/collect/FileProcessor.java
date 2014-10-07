@@ -49,9 +49,9 @@ public class FileProcessor implements Callable<Timestamp> {
 		String runName = renameMask.replace("%dn", FilenameUtils.getBaseName(file.getParent())).
 				replace("%fn", FilenameUtils.getBaseName(file.getName()));
 
-		// check if this run already exists in the database for the given project
-		Map<String, String> parameters = ImmutableMap.of("runName", runName);
-		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = :runName";
+		// check if this run already exists in the database for the given instrument
+		Map<String, String> parameters = ImmutableMap.of("runName", runName, "instName", instrumentName);
+		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = :runName AND run.instrument.name = :instName";
 		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class, parameters).get(0).equals(1L);
 
 		if(!exists) {

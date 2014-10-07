@@ -166,6 +166,10 @@ public class ConfigFile {
 			return numThreads;
 	}
 
+	public List<Map<String, String>> getInstruments() {
+		return (List<Map<String, String>>) rootMap.get("instruments");
+	}
+
 	public String getInstrumentNameForFile(File file) {
 		String fileName = file.getName();
 		String filePath;
@@ -176,8 +180,8 @@ public class ConfigFile {
 			throw new IllegalArgumentException("Error while evaluating the file path: " + e.getMessage());
 		}
 
-		List<Map<String, String>> instrumentMap = (List<Map<String, String>>) rootMap.get("instruments");
-		for(Map<String, String> instrument : instrumentMap) {
+		List<Map<String, String>> instruments = (List<Map<String, String>>) rootMap.get("instruments");
+		for(Map<String, String> instrument : instruments) {
 			if((instrument.get("type").equals("name") && fileName.matches(instrument.get("regex")))
 				|| (instrument.get("type").equals("path") && filePath.matches(instrument.get("regex"))))
 				return instrument.get("name");

@@ -224,7 +224,7 @@ public class IMonDBReader {
 
 				if(parameters != null)
 					for(Map.Entry<String, String> entry : parameters.entrySet()) {
-						logger.info("Set parameter <>: <>", entry.getKey(), entry.getValue());
+						logger.info("Set parameter <{}>: <{}>", entry.getKey(), entry.getValue());
 						query.setParameter(entry.getKey(), entry.getValue());
 					}
 
