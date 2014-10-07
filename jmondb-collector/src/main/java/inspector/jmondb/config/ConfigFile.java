@@ -1,5 +1,6 @@
 package inspector.jmondb.config;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.DumperOptions;
@@ -174,7 +175,7 @@ public class ConfigFile {
 		String fileName = file.getName();
 		String filePath;
 		try {
-			filePath = file.getCanonicalPath();
+			filePath = FilenameUtils.getFullPath(file.getCanonicalPath());
 		} catch(IOException e) {
 			logger.error("Error while evaluating the file path: {}", e.getMessage());
 			throw new IllegalArgumentException("Error while evaluating the file path: " + e.getMessage());
