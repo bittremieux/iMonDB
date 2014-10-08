@@ -199,7 +199,10 @@ public class ConfigFile {
 
 	public MetadataMapper getMetadataMapper() {
 		@SuppressWarnings("unchecked")
-		MetadataMapper result = new MetadataMapper((List<Map<String, String>>) rootMap.get("metadata"));
-		return result;
+		List<Map<String, String>> metadataMap = (List<Map<String, String>>) rootMap.get("metadata");
+		if(metadataMap != null)
+			return new MetadataMapper(metadataMap);
+		else
+			return null;
 	}
 }

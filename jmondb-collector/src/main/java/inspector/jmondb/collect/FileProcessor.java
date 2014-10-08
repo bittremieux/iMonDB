@@ -73,7 +73,8 @@ public class FileProcessor implements Callable<Timestamp> {
 			Run run = extractor.extractInstrumentData(file.getAbsolutePath(), runName, instrumentName);
 
 			// extract metadata
-			metadataMapper.applyMetadata(run, file);
+			if(metadataMapper != null)
+				metadataMapper.applyMetadata(run, file);
 
 			// write the run to the database
 			dbWriter.writeRun(run);
