@@ -62,12 +62,20 @@ public class CLI {
 
 				// raw file information
 				String rawFile = null;
+				String instrumentName = null;
 				if(cmd.hasOption("f"))
 					rawFile = cmd.getOptionValue("f");
 				else {
 					error = true;
 					logger.error("No raw file provided");
 					System.err.println("No raw file provided");
+				}
+				if(cmd.hasOption("i"))
+					instrumentName = cmd.getOptionValue("i");
+				else {
+					error = true;
+					logger.error("No instrument name provided");
+					System.err.println("No instrument name provided");
 				}
 
 				if(!error) {
@@ -76,7 +84,7 @@ public class CLI {
 					IMonDBWriter writer = new IMonDBWriter(emf);
 
 					// store raw file in the database
-					Run run = new ThermoRawFileExtractor().extractInstrumentData(rawFile);
+					Run run = new ThermoRawFileExtractor().extractInstrumentData(rawFile, null, instrumentName);
 					writer.writeRun(run);
 				}
 				else
@@ -106,6 +114,7 @@ public class CLI {
 		options.addOption(new Option("pw", "password", true, "the iMonDB MySQL password"));
 		// raw file options
 		options.addOption(new Option("f", "file", true, "the raw file to store in the iMonDB"));
+		options.addOption(new Option("i", "instrument", true, "the name of the instrument on which the raw file was obtained (this instrument should be in the iMonDB already)"));
 
 		return options;
 	}
