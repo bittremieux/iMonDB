@@ -9,6 +9,10 @@ import java.util.*;
 
 /**
  * An iMonDB output writer to write to an RDBMS.
+ *
+ * <em>Attention:</em> This class is not thread-safe!
+ * If multiple threads try to write to the same database concurrently, this must be synchronized externally.
+ * (For example: most {@link Instrument}s will refer to the same {@link CV}, {@link Property}s are applicable for multiple {@link Value}s, ...)
  */
 public class IMonDBWriter {
 
