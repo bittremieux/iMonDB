@@ -56,15 +56,15 @@ public class Viewer extends JPanel {
 	// interventions information
 	private DefaultMutableTreeNode nodeCalibration;
 	private HashMap<Date, ValueMarker> markerCalibration;
-	private DefaultMutableTreeNode nodeEvent;
-	private HashMap<Date, ValueMarker> markerEvent;
+	private DefaultMutableTreeNode nodeMaintenance;
+	private HashMap<Date, ValueMarker> markerMaintenance;
 	private DefaultMutableTreeNode nodeIncident;
 	private HashMap<Date, ValueMarker> markerIncident;
 
-	private JTree treeInterventions;
+	private JTree treeEvents;
 
 	private JCheckBox checkBoxCalibration;
-	private JCheckBox checkBoxEvent;
+	private JCheckBox checkBoxMaintenace;
 	private JCheckBox checkBoxIncident;
 
 	// connection to the iMonDB
@@ -104,8 +104,8 @@ public class Viewer extends JPanel {
 		// arrange panels
 		JPanel panelSelection = new JPanel();
 		JPanel panelDbConnection = new JPanel();
-		JPanel panelInterventions = new JPanel();
-		arrangePanels(panelParent, panelSelection, panelDbConnection, panelInterventions);
+		JPanel panelEvents = new JPanel();
+		arrangePanels(panelParent, panelSelection, panelDbConnection, panelEvents);
 
 		// value selection panel
 		createSelectionPanel(panelSelection);
@@ -115,9 +115,9 @@ public class Viewer extends JPanel {
 
 		// interventions panel
 		markerCalibration = new HashMap<>();
-		markerEvent = new HashMap<>();
+		markerMaintenance = new HashMap<>();
 		markerIncident = new HashMap<>();
-		createInterventionsPanel(panelInterventions);
+		createInterventionsPanel(panelEvents);
 	}
 
 	private JMenuBar createMenuBar() {
@@ -215,63 +215,62 @@ public class Viewer extends JPanel {
 		panelDbConnection.add(labelDbIcon);
 	}
 
-	private void createInterventionsPanel(JPanel interventionsPanel) {
+	private void createInterventionsPanel(JPanel eventsPanel) {
 		BorderLayout interventionsLayout = new BorderLayout();
 		interventionsLayout.setVgap(25);
-		interventionsPanel.setLayout(interventionsLayout);
+		eventsPanel.setLayout(interventionsLayout);
 
 		// create checkboxes
 		JPanel panelCheckBoxes = new JPanel(new GridLayout(0, 1));
-		panelCheckBoxes.add(new JLabel("Show interventions:"));
+		panelCheckBoxes.add(new JLabel("Show events:"));
 		checkBoxCalibration = new JCheckBox("Calibration");
 		checkBoxCalibration.setSelected(true);
 		panelCheckBoxes.add(checkBoxCalibration);
-		checkBoxEvent = new JCheckBox("Event");
-		checkBoxEvent.setSelected(true);
-		panelCheckBoxes.add(checkBoxEvent);
+		checkBoxMaintenace = new JCheckBox("Maintenance");
+		checkBoxMaintenace.setSelected(true);
+		panelCheckBoxes.add(checkBoxMaintenace);
 		checkBoxIncident = new JCheckBox("Incident");
 		checkBoxIncident.setSelected(true);
 		panelCheckBoxes.add(checkBoxIncident);
 
 		ItemListener checkBoxListener = new ListenerCheckBox();
 		checkBoxCalibration.addItemListener(checkBoxListener);
-		checkBoxEvent.addItemListener(checkBoxListener);
+		checkBoxMaintenace.addItemListener(checkBoxListener);
 		checkBoxIncident.addItemListener(checkBoxListener);
 
-		interventionsPanel.add(panelCheckBoxes, BorderLayout.PAGE_START);
+		eventsPanel.add(panelCheckBoxes, BorderLayout.PAGE_START);
 
 		// create interventions tree view
-		DefaultMutableTreeNode nodeInterventions = new DefaultMutableTreeNode("Interventions");
-		treeInterventions = new JTree(nodeInterventions);
+		DefaultMutableTreeNode nodeEvents = new DefaultMutableTreeNode("Events");
+		treeEvents = new JTree(nodeEvents);
 		// mouse listener to create context menus on right click
-		ActionListener removeListener = new ListenerRemoveIntervention();
-		treeInterventions.addMouseListener(new MouseAdapter() {
+		ActionListener removeListener = new ListenerRemoveEvent();
+		treeEvents.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
-				InterventionNode selectedNode = (InterventionNode) treeInterventions.getSelectionPath().getLastPathComponent();
+				EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
 				if(SwingUtilities.isRightMouseButton(e)) {
 					// highlight relevant item
-					int row = treeInterventions.getClosestRowForLocation(e.getX(), e.getY());
-					treeInterventions.setSelectionRow(row);
+					int row = treeEvents.getClosestRowForLocation(e.getX(), e.getY());
+					treeEvents.setSelectionRow(row);
 
 					// show pop-up menu
 					JPopupMenu popupMenu = new JPopupMenu();
 					JMenuItem itemEdit = new JMenuItem("Edit");
-					itemEdit.addActionListener(new ListenerEditIntervention(selectedNode.getIntervention()));
+					itemEdit.addActionListener(new ListenerEditEvent(selectedNode.getEvent()));
 					popupMenu.add(itemEdit);
 					JMenuItem itemRemove = new JMenuItem("Remove");
 					itemRemove.addActionListener(removeListener);
 					popupMenu.add(itemRemove);
 
 					popupMenu.show(e.getComponent(), e.getX(), e.getY());
-				}
-				else if(e.getClickCount() == 2) {
-					new ListenerEditIntervention(selectedNode.getIntervention()).actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, null));
+				} else if(e.getClickCount() == 2) {
+					new ListenerEditEvent(selectedNode.getEvent()).actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, null));
 				}
 			}
 		});
 		//TODO: possibly set alternative icons
-		treeInterventions.setCellRenderer(new DefaultTreeCellRenderer() {
+		treeEvents.setCellRenderer(new DefaultTreeCellRenderer() {
 			@Override
 			public Component getTreeCellRendererComponent(JTree tree,
 														  Object value, boolean selected, boolean expanded,
@@ -282,7 +281,7 @@ public class Viewer extends JPanel {
 						setTextNonSelectionColor(Color.GREEN);
 						setTextSelectionColor(Color.GREEN);
 						break;
-					case "Event":
+					case "Maintenance":
 						setTextNonSelectionColor(Color.BLUE);
 						setTextSelectionColor(Color.BLUE);
 						break;
@@ -299,14 +298,14 @@ public class Viewer extends JPanel {
 			}
 		});
 
-		JScrollPane scrollPaneInterventions = new JScrollPane(treeInterventions);
+		JScrollPane scrollPaneInterventions = new JScrollPane(treeEvents);
 
 		nodeCalibration = new DefaultMutableTreeNode("Calibration");
-		nodeInterventions.add(nodeCalibration);
-		nodeEvent = new DefaultMutableTreeNode("Event");
-		nodeInterventions.add(nodeEvent);
+		nodeEvents.add(nodeCalibration);
+		nodeMaintenance = new DefaultMutableTreeNode("Maintenance");
+		nodeEvents.add(nodeMaintenance);
 		nodeIncident = new DefaultMutableTreeNode("Incident");
-		nodeInterventions.add(nodeIncident);
+		nodeEvents.add(nodeIncident);
 
 		expandInterventionsTree();
 
@@ -325,7 +324,7 @@ public class Viewer extends JPanel {
 		treePanel.add(scrollPaneInterventions, BorderLayout.CENTER);
 		treePanel.add(buttonsPanel, BorderLayout.PAGE_END);
 
-		interventionsPanel.add(treePanel, BorderLayout.CENTER);
+		eventsPanel.add(treePanel, BorderLayout.CENTER);
 	}
 
 	private void closeDbConnection() {
@@ -343,11 +342,11 @@ public class Viewer extends JPanel {
 	}
 
 	private void expandInterventionsTree() {
-		for(int i = 0; i < treeInterventions.getRowCount(); i++)
-			treeInterventions.expandRow(i);
+		for(int i = 0; i < treeEvents.getRowCount(); i++)
+			treeEvents.expandRow(i);
 	}
 
-	private void drawInterventions() {
+	private void drawEvents() {
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 
@@ -355,10 +354,10 @@ public class Viewer extends JPanel {
 				markerCalibration.values().forEach(plot::addDomainMarker);
 			else
 				markerCalibration.values().forEach(plot::removeDomainMarker);
-			if(checkBoxEvent.isSelected())
-				markerEvent.values().forEach(plot::addDomainMarker);
+			if(checkBoxMaintenace.isSelected())
+				markerMaintenance.values().forEach(plot::addDomainMarker);
 			else
-				markerEvent.values().forEach(plot::removeDomainMarker);
+				markerMaintenance.values().forEach(plot::removeDomainMarker);
 			if(checkBoxIncident.isSelected())
 				markerIncident.values().forEach(plot::addDomainMarker);
 			else
@@ -366,44 +365,46 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private void clearInterventions() {
+	private void clearEvents() {
 		// remove from graph
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 			markerCalibration.values().forEach(plot::removeDomainMarker);
-			markerEvent.values().forEach(plot::removeDomainMarker);
+			markerMaintenance.values().forEach(plot::removeDomainMarker);
 			markerIncident.values().forEach(plot::removeDomainMarker);
 		}
 		// remove from interventions panel
 		nodeIncident.removeAllChildren();
-		nodeEvent.removeAllChildren();
+		nodeMaintenance.removeAllChildren();
 		nodeCalibration.removeAllChildren();
-		DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
+		DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
 		treeModel.reload();
 		// remove markers
 		markerIncident.clear();
-		markerEvent.clear();
+		markerMaintenance.clear();
 		markerCalibration.clear();
 	}
 
-	private void sortInterventions(DefaultMutableTreeNode parent) {
-		List<InterventionNode> children = new ArrayList<>(parent.getChildCount());
+	private void sortEvents(DefaultMutableTreeNode parent) {
+		List<EventNode> children = new ArrayList<>(parent.getChildCount());
 		for(int i = 0; i< parent.getChildCount(); i++)
-			children.add((InterventionNode) parent.getChildAt(i));
+			children.add((EventNode) parent.getChildAt(i));
 		Collections.sort(children);
 		parent.removeAllChildren();
 		children.forEach(parent::add);
 	}
 
-	private ValueMarker removeMarker(Event intervention) {
-		if(intervention.isIncident())
-			return markerIncident.remove(intervention.getDate());
-		else if(intervention.isEvent())
-			return markerEvent.remove(intervention.getDate());
-		else if(intervention.isCalibration())
-			return markerCalibration.remove(intervention.getDate());
-		else
-			return null;
+	private ValueMarker removeMarker(Event event) {
+		switch(event.getType()) {
+			case CALIBRATION:
+				return markerCalibration.remove(event.getDate());
+			case MAINTENANCE:
+				return markerMaintenance.remove(event.getDate());
+			case INCIDENT:
+				return markerIncident.remove(event.getDate());
+			default:
+				return null;
+		}
 	}
 
 	private class ListenerConnectToDatabase implements ActionListener {
@@ -566,7 +567,7 @@ public class Viewer extends JPanel {
 							panelGraph.add(chartPanel, BorderLayout.CENTER);
 							panelGraph.validate();
 
-							drawInterventions();
+							drawEvents();
 						}
 
 						frameParent.setCursor(Cursor.getDefaultCursor());
@@ -595,7 +596,7 @@ public class Viewer extends JPanel {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			JFileChooser fileChooser = new JFileChooser();
+			/*JFileChooser fileChooser = new JFileChooser();
 			fileChooser.setFileFilter(new FileFilter() {
 				@Override
 				public boolean accept(File f) {
@@ -604,7 +605,7 @@ public class Viewer extends JPanel {
 
 				@Override
 				public String getDescription() {
-					return "Interventions CSV file";
+					return "Events CSV file";
 				}
 			});
 			int returnVal = fileChooser.showOpenDialog(frameParent);
@@ -614,10 +615,10 @@ public class Viewer extends JPanel {
 					public void run() {
 						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
-						// remove previous interventions
-						clearInterventions();
+						// remove previous events
+						clearEvents();
 
-						// read new interventions
+						// read new events
 						File file = fileChooser.getSelectedFile();
 						try {
 							BufferedReader fileReader = new BufferedReader(new FileReader(file));
@@ -633,7 +634,7 @@ public class Viewer extends JPanel {
 								String comment = lineSplit[5];
 
 								Event intervention = new Event(date, isCalibrationCheck, isCalibration, isEvent, isIncident, comment);
-								InterventionNode node = new InterventionNode(intervention);
+								EventNode node = new EventNode(intervention);
 
 								// add to the correct intervention type
 								if(intervention.isIncident()) {
@@ -642,9 +643,9 @@ public class Viewer extends JPanel {
 									markerIncident.put(intervention.getDate(), marker);
 								}
 								else if(intervention.isEvent()) {
-									nodeEvent.add(node);
+									nodeMaintenance.add(node);
 									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-									markerEvent.put(intervention.getDate(), marker);
+									markerMaintenance.put(intervention.getDate(), marker);
 								}
 								else if(intervention.isCalibration()) {
 									nodeCalibration.add(node);
@@ -654,9 +655,9 @@ public class Viewer extends JPanel {
 							}
 
 							// sort interventions
-							sortInterventions(nodeIncident);
-							sortInterventions(nodeEvent);
-							sortInterventions(nodeCalibration);
+							sortEvents(nodeIncident);
+							sortEvents(nodeMaintenance);
+							sortEvents(nodeCalibration);
 
 						} catch(ParseException | IOException e1) {
 							JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -665,13 +666,13 @@ public class Viewer extends JPanel {
 						// show all interventions in the interventions panel (TODO: might be reconsidered later on)
 						expandInterventionsTree();
 						// show the interventions on the graph
-						drawInterventions();
+						drawEvents();
 
 						frameParent.setCursor(Cursor.getDefaultCursor());
 					}
 				};
 				interventionsLoader.start();
-			}
+			}*/
 		}
 	}
 
@@ -680,7 +681,7 @@ public class Viewer extends JPanel {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
-			if(markerCalibration.size() + markerEvent.size() + markerIncident.size() < 1) {
+			/*if(markerCalibration.size() + markerMaintenance.size() + markerIncident.size() < 1) {
 				JOptionPane.showMessageDialog(frameParent, "No interventions available yet.\nPlease load an interventions file or manually create some interventions first.", "Error", JOptionPane.ERROR_MESSAGE);
 			}
 			else {
@@ -717,20 +718,20 @@ public class Viewer extends JPanel {
 								// header
 								writer.write("Date,Calibration check,Calibration,Event,Incident,Comment\n");
 								// body
-								PriorityQueue<Event> interventions = new PriorityQueue<>(markerCalibration.size() + markerEvent.size() + markerIncident.size());
+								PriorityQueue<Event> interventions = new PriorityQueue<>(markerCalibration.size() + markerMaintenance.size() + markerIncident.size());
 								Enumeration incidents = nodeIncident.children();
 								while(incidents.hasMoreElements()) {
-									Event i = ((InterventionNode) incidents.nextElement()).getIntervention();
+									Event i = ((EventNode) incidents.nextElement()).getEvent();
 									interventions.add(i);
 								}
-								Enumeration events = nodeEvent.children();
+								Enumeration events = nodeMaintenance.children();
 								while(events.hasMoreElements()) {
-									Event i = ((InterventionNode) events.nextElement()).getIntervention();
+									Event i = ((EventNode) events.nextElement()).getEvent();
 									interventions.add(i);
 								}
 								Enumeration calibrations = nodeCalibration.children();
 								while(calibrations.hasMoreElements()) {
-									Event i = ((InterventionNode) calibrations.nextElement()).getIntervention();
+									Event i = ((EventNode) calibrations.nextElement()).getEvent();
 									interventions.add(i);
 								}
 								while(!interventions.isEmpty()) {
@@ -773,7 +774,7 @@ public class Viewer extends JPanel {
 					};
 					interventionsSaver.start();
 				}
-			}
+			}*/
 		}
 	}
 
@@ -781,7 +782,7 @@ public class Viewer extends JPanel {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			// create intervention dialog
+			/*// create intervention dialog
 			InterventionDialog dialog = new InterventionDialog();
 
 			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Add an intervention", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
@@ -798,30 +799,30 @@ public class Viewer extends JPanel {
 				ValueMarker marker = null;
 				boolean toDraw = false;
 				if(intervention.isIncident()) {
-					nodeIncident.add(new InterventionNode(intervention));
-					sortInterventions(nodeIncident);
+					nodeIncident.add(new EventNode(intervention));
+					sortEvents(nodeIncident);
 
 					marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
 					markerIncident.put(intervention.getDate(), marker);
 					toDraw = checkBoxIncident.isSelected();
 				}
 				else if(intervention.isEvent()) {
-					nodeEvent.add(new InterventionNode(intervention));
-					sortInterventions(nodeEvent);
+					nodeMaintenance.add(new EventNode(intervention));
+					sortEvents(nodeMaintenance);
 
 					marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-					markerEvent.put(intervention.getDate(), marker);
-					toDraw = checkBoxEvent.isSelected();
+					markerMaintenance.put(intervention.getDate(), marker);
+					toDraw = checkBoxMaintenace.isSelected();
 				}
 				else if(intervention.isCalibration()) {
-					nodeCalibration.add(new InterventionNode(intervention));
-					sortInterventions(nodeCalibration);
+					nodeCalibration.add(new EventNode(intervention));
+					sortEvents(nodeCalibration);
 
 					marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
 					markerCalibration.put(intervention.getDate(), marker);
 					toDraw = checkBoxCalibration.isSelected();
 				}
-				DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
+				DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
 				treeModel.reload();
 
 				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
@@ -831,22 +832,22 @@ public class Viewer extends JPanel {
 					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 					plot.addDomainMarker(marker);
 				}
-			}
+			}*/
 		}
 	}
 
-	private class ListenerRemoveIntervention implements ActionListener {
+	private class ListenerRemoveEvent implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
-			if(treeInterventions.getSelectionPath().getLastPathComponent() instanceof InterventionNode) {
-				InterventionNode selectedNode = (InterventionNode) treeInterventions.getSelectionPath().getLastPathComponent();
+			if(treeEvents.getSelectionPath().getLastPathComponent() instanceof EventNode) {
+				EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
 				// remove from tree
-				DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
+				DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
 				treeModel.removeNodeFromParent(selectedNode);
 				// remove from graph
-				ValueMarker marker = removeMarker(selectedNode.getIntervention());
+				ValueMarker marker = removeMarker(selectedNode.getEvent());
 				if(chartPanel != null && marker != null) {
 					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 					plot.removeDomainMarker(marker);
@@ -855,17 +856,17 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private class ListenerEditIntervention implements ActionListener {
+	private class ListenerEditEvent implements ActionListener {
 
 		private Event intervention;
 
-		public ListenerEditIntervention(inspector.jmondb.model.Event i) {
+		public ListenerEditEvent(inspector.jmondb.model.Event i) {
 			this.intervention = i;
 		}
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			// create intervention dialog
+			/*// create intervention dialog
 			InterventionDialog dialog = new InterventionDialog(intervention, false);
 
 			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Edit intervention", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
@@ -876,7 +877,7 @@ public class Viewer extends JPanel {
 				if(intervention.isIncident())
 					marker = markerIncident.remove(intervention.getDate());
 				else if(intervention.isEvent())
-					marker = markerEvent.remove(intervention.getDate());
+					marker = markerMaintenance.remove(intervention.getDate());
 				else if(intervention.isCalibration())
 					marker = markerCalibration.remove(intervention.getDate());
 
@@ -887,12 +888,12 @@ public class Viewer extends JPanel {
 
 				// sort the interventions tree
 				if(intervention.isIncident())
-					sortInterventions(nodeIncident);
+					sortEvents(nodeIncident);
 				else if(intervention.isEvent())
-					sortInterventions(nodeEvent);
+					sortEvents(nodeMaintenance);
 				else if(intervention.isCalibration())
-					sortInterventions(nodeCalibration);
-				DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
+					sortEvents(nodeCalibration);
+				DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
 				treeModel.reload();
 				expandInterventionsTree();
 
@@ -902,11 +903,11 @@ public class Viewer extends JPanel {
 					if(intervention.isIncident())
 						markerIncident.put(intervention.getDate(), marker);
 					else if(intervention.isEvent())
-						markerEvent.put(intervention.getDate(), marker);
+						markerMaintenance.put(intervention.getDate(), marker);
 					else if(intervention.isCalibration())
 						markerCalibration.put(intervention.getDate(), marker);
 				}
-			}
+			}*/
 		}
 	}
 
@@ -915,10 +916,11 @@ public class Viewer extends JPanel {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
-			int option = JOptionPane.showConfirmDialog(frameParent, "Attention: this will remove all interventions.\nAny unsaved interventions will be lost!", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+			//TODO
+			int option = JOptionPane.showConfirmDialog(frameParent, "Attention: this will remove all events!", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 
 			if(option == JOptionPane.OK_OPTION)
-				clearInterventions();
+				clearEvents();
 		}
 	}
 
@@ -937,11 +939,11 @@ public class Viewer extends JPanel {
 					else
 						markerCalibration.values().forEach(plot::addDomainMarker);
 				}
-				if(source == checkBoxEvent) {
+				if(source == checkBoxMaintenace) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
-						markerEvent.values().forEach(plot::removeDomainMarker);
+						markerMaintenance.values().forEach(plot::removeDomainMarker);
 					else
-						markerEvent.values().forEach(plot::addDomainMarker);
+						markerMaintenance.values().forEach(plot::addDomainMarker);
 				}
 				if(source == checkBoxIncident) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)

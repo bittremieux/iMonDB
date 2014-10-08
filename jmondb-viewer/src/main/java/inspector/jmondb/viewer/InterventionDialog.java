@@ -79,10 +79,10 @@ public class InterventionDialog extends JPanel {
 		this();
 
 		model.setValue(intervention.getDate());
-		checkBoxCalibrationCheck.setSelected(intervention.isCalibrationCheck());
-		checkBoxCalibration.setSelected(intervention.isCalibration());
-		checkBoxEvent.setSelected(intervention.isEvent());
-		checkBoxIncident.setSelected(intervention.isIncident());
+		//checkBoxCalibrationCheck.setSelected(intervention.isCalibrationCheck());
+		//checkBoxCalibration.setSelected(intervention.isCalibration());
+		//checkBoxEvent.setSelected(intervention.isEvent());
+		//checkBoxIncident.setSelected(intervention.isIncident());
 		textFieldComment.setText(intervention.getDescription());
 	}
 
