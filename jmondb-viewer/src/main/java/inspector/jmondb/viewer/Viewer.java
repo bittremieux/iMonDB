@@ -5,7 +5,6 @@ import inspector.jmondb.model.*;
 import inspector.jmondb.model.Event;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
-import org.apache.commons.io.FilenameUtils;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
@@ -20,7 +19,6 @@ import org.jfree.data.xy.XYSeriesCollection;
 
 import javax.persistence.EntityManagerFactory;
 import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
@@ -30,7 +28,7 @@ import java.awt.geom.Ellipse2D;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.ParseException;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
@@ -40,8 +38,8 @@ public class Viewer extends JPanel {
 	private JFrame frameParent;
 
 	// combo boxes that will be populated when connected to the database
-	private JComboBox<String> comboBoxProject;
-	private JComboBox<String> comboBoxValue;
+	private JComboBox<String> comboBoxInstrument;
+	private JComboBox<PropertyComboBoxItem> comboBoxProperty;
 
 	// graph showing the values over time
 	private JPanel panelGraph;
@@ -137,12 +135,6 @@ public class Viewer extends JPanel {
 		JMenuItem menuItemSaveGraph = new JMenuItem("Save graph as...");
 		menuItemSaveGraph.addActionListener(new ListenerSaveGraph());
 		menuFile.add(menuItemSaveGraph);
-		JMenuItem menuItemLoadInterventions = new JMenuItem("Load interventions");
-		menuItemLoadInterventions.addActionListener(new ListenerLoadInterventions());
-		menuFile.add(menuItemLoadInterventions);
-		JMenuItem menuItemSaveInterventions = new JMenuItem("Save interventions");
-		menuItemSaveInterventions.addActionListener(new ListenerSaveInterventions());
-		menuFile.add(menuItemSaveInterventions);
 
 		menuFile.addSeparator();
 
@@ -165,7 +157,7 @@ public class Viewer extends JPanel {
 		return menuBar;
 	}
 
-	private void arrangePanels(JPanel panelParent, JPanel panelSelection, JPanel panelDbConnection, JPanel panelInterventions) {
+	private void arrangePanels(JPanel panelParent, JPanel panelSelection, JPanel panelDbConnection, JPanel panelEvents) {
 		panelSelection.setBackground(Color.WHITE);
 		panelParent.add(panelSelection, BorderLayout.PAGE_START);
 
@@ -176,8 +168,8 @@ public class Viewer extends JPanel {
 		panelDbConnection.setBackground(Color.WHITE);
 		panelParent.add(panelDbConnection, BorderLayout.PAGE_END);
 
-		panelInterventions.setBackground(Color.WHITE);
-		panelParent.add(panelInterventions, BorderLayout.LINE_END);
+		panelEvents.setBackground(Color.WHITE);
+		panelParent.add(panelEvents, BorderLayout.LINE_END);
 	}
 
 	private void createSelectionPanel(JPanel panelSelection) {
@@ -185,20 +177,23 @@ public class Viewer extends JPanel {
 		buttonConnectToDatabase.addActionListener(new ListenerConnectToDatabase());
 		panelSelection.add(buttonConnectToDatabase);
 
-		JLabel labelProject = new JLabel("Project");
-		panelSelection.add(labelProject);
-		comboBoxProject = new JComboBox<>();
-		comboBoxProject.addActionListener(new ListenerFillProjectValues());
-		comboBoxProject.setPreferredSize(new Dimension(250, 25));
-		comboBoxProject.setMaximumSize(new Dimension(250, 25));
-		panelSelection.add(comboBoxProject);
+		JLabel labelInstrument = new JLabel("Instrument");
+		panelSelection.add(labelInstrument);
+		comboBoxInstrument = new JComboBox<>();
+		comboBoxInstrument.setPreferredSize(new Dimension(250, 25));
+		comboBoxInstrument.setMaximumSize(new Dimension(250, 25));
+		panelSelection.add(comboBoxInstrument);
 
-		JLabel labelValue = new JLabel("Value");
-		panelSelection.add(labelValue);
-		comboBoxValue = new JComboBox<>();
-		comboBoxValue.setPreferredSize(new Dimension(500, 25));
-		comboBoxValue.setMaximumSize(new Dimension(500, 25));
-		panelSelection.add(comboBoxValue);
+		JLabel labelProperty = new JLabel("Property");
+		panelSelection.add(labelProperty);
+		comboBoxProperty = new JComboBox<>();
+		comboBoxProperty.setPreferredSize(new Dimension(450, 25));
+		comboBoxProperty.setMaximumSize(new Dimension(450, 25));
+		panelSelection.add(comboBoxProperty);
+
+		JButton buttonAdvanced = new JButton("+");
+		buttonAdvanced.addActionListener(new ListenerAdvancedSettings());
+		panelSelection.add(buttonAdvanced);
 
 		JButton buttonShowGraph = new JButton("Show graph");
 		buttonShowGraph.addActionListener(new ListenerShowGraph());
@@ -334,8 +329,8 @@ public class Viewer extends JPanel {
 		emf = null;
 		dbReader = null;
 		// remove combo box values
-		comboBoxProject.removeAllItems();
-		comboBoxValue.removeAllItems();
+		comboBoxInstrument.removeAllItems();
+		comboBoxProperty.removeAllItems();
 		// show information
 		labelDbConnection.setText("Not connected");
 		labelDbIcon.setIcon(iconNotConnected);
@@ -431,9 +426,16 @@ public class Viewer extends JPanel {
 									connectionDialog.getDatabase(), connectionDialog.getUserName(), password);
 							dbReader = new IMonDBReader(emf);
 
-							// fill in possible projects in the combo box
-							List<String> projectLabels = dbReader.getFromCustomQuery("SELECT project.label FROM Project project ORDER BY project.label", String.class);
-							projectLabels.forEach(comboBoxProject::addItem);
+							// fill in possible instruments in the combo box
+							comboBoxInstrument.removeAllItems();
+							List<String> instrumentNames = dbReader.getFromCustomQuery("SELECT inst.name FROM Instrument inst ORDER BY inst.name", String.class);
+							instrumentNames.forEach(comboBoxInstrument::addItem);
+
+							// fill in possible properties in the combo box
+							comboBoxProperty.removeAllItems();
+							List<Object[]> values = dbReader.getFromCustomQuery("SELECT prop.name, prop.accession FROM Property prop ORDER BY prop.name", Object[].class);
+							for(Object[] value : values)
+								comboBoxProperty.addItem(new PropertyComboBoxItem((String)value[0], (String)value[1]));
 
 							// show the connection information
 							labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
@@ -459,27 +461,11 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private class ListenerFillProjectValues implements ActionListener {
+	private class ListenerAdvancedSettings implements ActionListener {
 
+		@Override
 		public void actionPerformed(ActionEvent e) {
 
-			Thread projectFiller = new Thread() {
-				public void run() {
-					if(dbReader != null) {
-						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-						comboBoxValue.removeAllItems();
-
-						String projectLabel = (String) comboBoxProject.getSelectedItem();
-						Map<String, String> parameters = ImmutableMap.of("projectLabel", projectLabel);
-						List<String> values = dbReader.getFromCustomQuery("SELECT DISTINCT val.name FROM Value val WHERE val.fromRun.fromProject.label = :projectLabel ORDER BY val.name", String.class, parameters);
-						values.forEach(comboBoxValue::addItem);
-
-						frameParent.setCursor(Cursor.getDefaultCursor());
-					}
-				}
-			};
-			projectFiller.start();
 		}
 	}
 
@@ -492,16 +478,20 @@ public class Viewer extends JPanel {
 					public void run() {
 						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
-						String projectLabel = (String)comboBoxProject.getSelectedItem();
-						String valueName = (String)comboBoxValue.getSelectedItem();
+						String instrumentName = (String) comboBoxInstrument.getSelectedItem();
+						PropertyComboBoxItem property = (PropertyComboBoxItem) comboBoxProperty.getSelectedItem();
 
-						Map<String, String> parameters = ImmutableMap.of("projectLabel", projectLabel, "valueName", valueName);
-						List<Value> values = dbReader.getFromCustomQuery("SELECT val FROM Value val WHERE val.fromRun.fromProject.label = :projectLabel AND val.name = :valueName ORDER BY val.fromRun.sampleDate", Value.class, parameters);
+						// check whether the selected property is numeric
+						Boolean isNumeric = dbReader.getFromCustomQuery("SELECT isNumeric FROM Property prop WHERE accession = :accession", Boolean.class, ImmutableMap.of("accession", property.getAccession())).get(0);
+						if(!isNumeric)
+							JOptionPane.showMessageDialog(frameParent, "Property <" + property.getName() + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
+
+						// load all values for the property and instrument
+						Map<String, String> parameters = ImmutableMap.of("instName", instrumentName, "propAccession", property.getAccession());
+						List<Object[]> values = dbReader.getFromCustomQuery("SELECT val, val.originatingRun.sampleDate FROM Value val WHERE val.originatingRun.instrument.name = :instName AND val.definingProperty.accession = :propAccession ORDER BY val.originatingRun.sampleDate", Object[].class, parameters);
 
 						if(values.size() == 0)
 							JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
-						if(values.size() > 0 && !values.get(0).getDefiningProperty().getNumeric())
-							JOptionPane.showMessageDialog(frameParent, "Value <" + valueName + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
 						else {
 							// add data
 							XYSeries medianSeries = new XYSeries("Median");
@@ -509,12 +499,14 @@ public class Viewer extends JPanel {
 							XYSeries q3Series = new XYSeries("Q3");
 							XYSeries minSeries = new XYSeries("Min");
 							XYSeries maxSeries = new XYSeries("Max");
-							for(Value value : values) {
-								medianSeries.add(value.getOriginatingRun().getSampleDate().getTime(), value.getMedian());
-								q1Series.add(value.getOriginatingRun().getSampleDate().getTime(), value.getQ1());
-								q3Series.add(value.getOriginatingRun().getSampleDate().getTime(), value.getQ3());
-								minSeries.add(value.getOriginatingRun().getSampleDate().getTime(), value.getMin());
-								maxSeries.add(value.getOriginatingRun().getSampleDate().getTime(), value.getMax());
+							for(Object[] objects : values) {
+								Value value = (Value) objects[0];
+								Timestamp time = (Timestamp) objects[1];
+								medianSeries.add(time.getTime(), value.getMedian());
+								q1Series.add(time.getTime(), value.getQ1());
+								q3Series.add(time.getTime(), value.getQ3());
+								minSeries.add(time.getTime(), value.getMin());
+								maxSeries.add(time.getTime(), value.getMax());
 							}
 
 							XYSeriesCollection medianCollection = new XYSeriesCollection(medianSeries);
@@ -558,7 +550,7 @@ public class Viewer extends JPanel {
 							plot.setRenderer(0, medianRenderer);
 							plot.setRenderer(1, q1q3Renderer);
 							plot.setRenderer(2, minMaxRenderer);
-							JFreeChart chart = new JFreeChart(valueName, plot);
+							JFreeChart chart = new JFreeChart(property.getName(), plot);
 							chart.setBackgroundPaint(Color.WHITE);
 							chartPanel = new ChartPanel(chart, false, true, false, true, false);
 							chart.removeLegend();
