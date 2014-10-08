@@ -2,6 +2,7 @@ package inspector.jmondb.collect;
 
 import com.google.common.collect.ImmutableMap;
 import inspector.jmondb.config.ConfigFile;
+import inspector.jmondb.config.MetadataMapper;
 import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
@@ -36,6 +37,7 @@ public class Collector {
 	/** a YAML configuration file */
 	private ConfigFile config;
 
+	//TODO: unify cv handling??
 	private static CV cvMS = new CV("MS", "PSI MS controlled vocabulary", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
 
 	/**
@@ -63,6 +65,7 @@ public class Collector {
 
 			// raw file extractor
 			ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+			MetadataMapper metadataMapper = config.getMetadataMapper();
 
 			// read the general information from the config file
 			Timestamp newestTimestamp = config.getLastDate();
@@ -95,7 +98,7 @@ public class Collector {
 					String instrumentName = config.getInstrumentNameForFile(file);
 
 					logger.trace("Add file <{}> for instrument <{}> to the thread pool", file.getCanonicalPath(), instrumentName);
-					pool.submit(new FileProcessor(dbReader, dbWriter, extractor, file, instrumentName));
+					pool.submit(new FileProcessor(dbReader, dbWriter, extractor, metadataMapper, file, instrumentName));
 					threadsSubmitted++;
 				}
 			} catch(IOException e) {
@@ -132,6 +135,13 @@ public class Collector {
 		}
 	}
 
+	/**
+	 * Loads a {@link ConfigFile}.
+	 *
+	 * If a user-specific config file exists, this one is used. Otherwise the (incomplete) standard config file is used.
+	 *
+	 * @return the loaded {@code ConfigFile}
+	 */
 	private ConfigFile initializeConfigReader() {
 		try {
 			InputStream inputStream;
@@ -146,29 +156,37 @@ public class Collector {
 				logger.info("No user-specific config file found, loading the standard config file");
 				inputStream = Collector.class.getResourceAsStream("/config.yaml");
 			}
-			return new ConfigFile(inputStream);
+
+			ConfigFile configFile = new ConfigFile(inputStream);
+			inputStream.close();
+
+			return configFile;
 
 		} catch(IOException e) {
-			logger.error("Error while reading the config file: {}", e.getMessage());
-			throw new IllegalStateException("Error while reading the config file: " + e.getMessage());
+			logger.error("Error while loading the config file: {}", e.getMessage());
+			throw new IllegalStateException("Error while loading the config file: " + e.getMessage());
 		}
 	}
 
+	/**
+	 * Creates an {@link EntityManagerFactory} to connect to the database based on the information in the config file.
+	 *
+	 * @return an {@code EntityManagerFactory} to connect to the database
+	 */
 	private EntityManagerFactory getEntityManagerFactory() {
 		return IMonDBManagerFactory.createMySQLFactory(config.getDatabaseHost(), config.getDatabasePort(),
 				config.getDatabaseName(), config.getDatabaseUser(), config.getDatabasePassword());
 	}
 
-	private String getRenameMask() {
-		/*String renameMask = config.get("general", "rename_run");
-		if(renameMask == null || renameMask.equals("")) {
-			renameMask = "%p_%dn_%fn";
-			logger.info("No run rename mask specified, using default '{}'", renameMask);
-		}
-		return renameMask;*/
-		return null;
-	}
-
+	/**
+	 * Makes sure that all {@link Instrument}s that are defined in the config file are present in the database.
+	 *
+	 * If a specific {@code Instrument} is not in the database yet, it will be added.
+	 *
+	 * @param reader  the {@link IMonDBReader} used to check whether an {@code Instrument} is already in the database
+	 * @param writer  the {@link IMonDBWriter} used to write a new {@code Instrument} to the database
+	 * @param instruments  a {@code List} of {@code Map}s where each {@code Map} contains information about a single {@code Instrument}
+	 */
 	private void addNewInstruments(IMonDBReader reader, IMonDBWriter writer, List<Map<String, String>> instruments) {
 		for(Map<String, String> instrument : instruments) {
 			// check if the instrument is already in the database

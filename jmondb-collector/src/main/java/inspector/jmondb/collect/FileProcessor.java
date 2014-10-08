@@ -1,6 +1,7 @@
 package inspector.jmondb.collect;
 
 import com.google.common.collect.ImmutableMap;
+import inspector.jmondb.config.MetadataMapper;
 import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
@@ -14,6 +15,11 @@ import java.sql.Timestamp;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+/**
+ * Processes a raw file by extracting the instrument data and storing the resulting {@link Run} in the database.
+ *
+ * Can be executed in its own thread.
+ */
 public class FileProcessor implements Callable<Timestamp> {
 
 	protected static final Logger logger = LogManager.getLogger(FileProcessor.class);
@@ -21,6 +27,7 @@ public class FileProcessor implements Callable<Timestamp> {
 	private IMonDBReader dbReader;
 	private IMonDBWriter dbWriter;
 	private ThermoRawFileExtractor extractor;
+	private MetadataMapper metadataMapper;
 	private File file;
 	private String instrumentName;
 
@@ -31,10 +38,22 @@ public class FileProcessor implements Callable<Timestamp> {
 	 * @param dbWriter  The {@link IMonDBWriter} used to write the new {@link Run} to the database
 	 * @param file  The raw file that will be processed
 	 */
-	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, File file, String instrumentName) {
+
+	/**
+	 * Processes a file by extracting the instrument data from it and storing the resulting run in the database.
+	 *
+	 * @param dbReader  the {@link IMonDBReader} used to verify the current file is not present in the database yet
+	 * @param dbWriter  the {@link IMonDBWriter} used to write the new {@link Run} to the database
+	 * @param extractor  the {@link ThermoRawFileExtractor} used to extract the instrument data from the raw file
+	 * @param metadataMapper  the {@link MetadataMapper} used to obtain metadata based on the config file
+	 * @param file  the raw file that will be processed
+	 * @param instrumentName  the (unique) name of the instrument on which the run was performed
+	 */
+	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, MetadataMapper metadataMapper, File file, String instrumentName) {
 		this.dbReader = dbReader;
 		this.dbWriter = dbWriter;
 		this.extractor = extractor;
+		this.metadataMapper = metadataMapper;
 		this.file = file;
 		this.instrumentName = instrumentName;
 	}
@@ -52,6 +71,9 @@ public class FileProcessor implements Callable<Timestamp> {
 
 		if(!exists) {
 			Run run = extractor.extractInstrumentData(file.getAbsolutePath(), runName, instrumentName);
+
+			// extract metadata
+			metadataMapper.applyMetadata(run, file);
 
 			// write the run to the database
 			dbWriter.writeRun(run);

@@ -42,21 +42,9 @@ public class ConfigFile {
 
 		yaml = new Yaml(options);
 
-		load(inputStream);
-	}
-
-	private void load(InputStream inputStream) {
-		try {
-			rootMap = (Map<String, Object>) yaml.load(inputStream);
-		}
-		finally {
-			try {
-				inputStream.close();
-			} catch(IOException e) {
-				logger.error("Error while closing the config file input stream: {}", e.getMessage());
-				throw new IllegalStateException("Error while closing the config file input stream: " + e.getMessage());
-			}
-		}
+		@SuppressWarnings("unchecked")
+		Map<String, Object> map = (Map<String, Object>) yaml.load(inputStream);
+		rootMap = map;
 	}
 
 	/**
@@ -73,14 +61,19 @@ public class ConfigFile {
 	}
 
 	public String getDatabaseHost() {
-		return ((Map<String, String>) rootMap.get("sql")).get("host");
+		@SuppressWarnings("unchecked")
+		String result = ((Map<String, String>) rootMap.get("sql")).get("host");
+		return result;
 	}
 
 	public String getDatabasePort() {
-		return Integer.toString(((Map<String, Integer>) rootMap.get("sql")).get("port"));
+		@SuppressWarnings("unchecked")
+		String result = Integer.toString(((Map<String, Integer>) rootMap.get("sql")).get("port"));
+		return result;
 	}
 
 	public String getDatabaseName() {
+		@SuppressWarnings("unchecked")
 		String name = ((Map<String, String>) rootMap.get("sql")).get("database");
 
 		if(name == null) {
@@ -92,6 +85,7 @@ public class ConfigFile {
 	}
 
 	public String getDatabaseUser() {
+		@SuppressWarnings("unchecked")
 		String user = ((Map<String, String>) rootMap.get("sql")).get("user");
 
 		if(user == null) {
@@ -103,10 +97,13 @@ public class ConfigFile {
 	}
 
 	public String getDatabasePassword() {
-		return ((Map<String, String>) rootMap.get("sql")).get("password");
+		@SuppressWarnings("unchecked")
+		String result = ((Map<String, String>) rootMap.get("sql")).get("password");
+		return result;
 	}
 
 	public File getStartDirectory() {
+		@SuppressWarnings("unchecked")
 		String dirStr = ((Map<String, String>) rootMap.get("general")).get("dir");
 
 		if(dirStr == null) {
@@ -125,6 +122,7 @@ public class ConfigFile {
 	}
 
 	public Timestamp getLastDate() {
+		@SuppressWarnings("unchecked")
 		String dateStr = ((Map<String, String>) rootMap.get("general")).get("last_date");
 
 		if(dateStr == null) {
@@ -142,10 +140,13 @@ public class ConfigFile {
 	}
 
 	public void setLastDate(Timestamp date) {
-		((Map<String, String>) rootMap.get("general")).put("last_date", DATE_FORMAT.format(date));
+		@SuppressWarnings("unchecked")
+		Map<String, String> generalMap = (Map<String, String>) rootMap.get("general");
+		generalMap.put("last_date", DATE_FORMAT.format(date));
 	}
 
 	public String getMatchFile() {
+		@SuppressWarnings("unchecked")
 		String regexStr = ((Map<String, String>) rootMap.get("general")).get("match_file");
 
 		if(regexStr == null) {
@@ -157,6 +158,7 @@ public class ConfigFile {
 	}
 
 	public int getNumberOfThreads() {
+		@SuppressWarnings("unchecked")
 		Integer numThreads = ((Map<String, Integer>) rootMap.get("general")).get("num_threads");
 
 		if(numThreads == null || numThreads <= 0) {
@@ -168,7 +170,9 @@ public class ConfigFile {
 	}
 
 	public List<Map<String, String>> getInstruments() {
-		return (List<Map<String, String>>) rootMap.get("instruments");
+		@SuppressWarnings("unchecked")
+		List<Map<String, String>> result =(List<Map<String, String>>) rootMap.get("instruments");
+		return result;
 	}
 
 	public String getInstrumentNameForFile(File file) {
@@ -181,6 +185,7 @@ public class ConfigFile {
 			throw new IllegalArgumentException("Error while evaluating the file path: " + e.getMessage());
 		}
 
+		@SuppressWarnings("unchecked")
 		List<Map<String, String>> instruments = (List<Map<String, String>>) rootMap.get("instruments");
 		for(Map<String, String> instrument : instruments) {
 			if((instrument.get("regex-source").equals("name") && fileName.matches(instrument.get("regex")))
@@ -190,5 +195,11 @@ public class ConfigFile {
 
 		logger.info("No instrument found for file <{}>, please check the config file", fileName);
 		return "Unknown instrument";
+	}
+
+	public MetadataMapper getMetadataMapper() {
+		@SuppressWarnings("unchecked")
+		MetadataMapper result = new MetadataMapper((List<Map<String, String>>) rootMap.get("metadata"));
+		return result;
 	}
 }
