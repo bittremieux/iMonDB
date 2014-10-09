@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.persistence.*;
+import java.sql.Timestamp;
 import java.util.*;
 
 /**
@@ -435,6 +436,43 @@ public class IMonDBWriter {
 		else {
 			logger.error("Unable to store <null> cv");
 			throw new NullPointerException("Unable to persist <null> cv");
+		}
+	}
+
+	public void removeEvent(String instrumentName, Timestamp eventDate) {
+		if(instrumentName != null && eventDate != null) {
+			logger.info("Remove event <{}> for instrument <{}>", eventDate, instrumentName);
+
+			EntityManager entityManager = createEntityManager();
+
+			try {
+				// get the event
+				TypedQuery<Event> query = entityManager.createQuery("SELECT e FROM Event e WHERE e.date = :date AND e.instrument.name = :name", Event.class);
+				query.setParameter("date", eventDate);
+				query.setParameter("name", instrumentName);
+				Event event = query.getSingleResult();
+
+				// remove the event
+				entityManager.getTransaction().begin();
+				entityManager.remove(event);
+				entityManager.getTransaction().commit();
+
+			} catch(NoResultException e) {
+				logger.debug("Event <{}> for instrument <{}> not found in the database", eventDate, instrumentName);
+				throw new IllegalArgumentException("Event <" + eventDate + "> for instrument <" + instrumentName + "> not found in the database");
+			} catch(RollbackException e) {
+				logger.error("Unable to remove event <{}> for instrument <{}>: {}", eventDate, instrumentName, e.getMessage());
+				throw new IllegalArgumentException("Unable to store remove event <" + eventDate + ">");
+			} finally {
+				entityManager.close();
+			}
+		}
+		else {
+			if(instrumentName == null)
+				logger.error("Unable to remove event with <null> instrument name");
+			if(eventDate == null)
+				logger.error("Unable to remove event with <null> date");
+			throw new NullPointerException("Unable to remove <null> event");
 		}
 	}
 }

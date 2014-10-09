@@ -820,15 +820,28 @@ public class Viewer extends JPanel {
 		public void actionPerformed(ActionEvent e) {
 
 			if(treeEvents.getSelectionPath().getLastPathComponent() instanceof EventNode) {
-				EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
-				// remove from tree
-				DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
-				treeModel.removeNodeFromParent(selectedNode);
-				// remove from graph
-				ValueMarker marker = removeMarker(selectedNode.getEvent());
-				if(chartPanel != null && marker != null) {
-					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
-					plot.removeDomainMarker(marker);
+
+				int option = JOptionPane.showConfirmDialog(frameParent, "Attention: The event will be removed from the database as well.", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+
+				if(option == JOptionPane.OK_OPTION) {
+					try {
+						EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
+
+						// remove from the database
+						dbWriter.removeEvent((String) comboBoxInstrument.getSelectedItem(), selectedNode.getEvent().getDate());
+
+						// remove from tree
+						DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
+						treeModel.removeNodeFromParent(selectedNode);
+						// remove from graph
+						ValueMarker marker = removeMarker(selectedNode.getEvent());
+						if(chartPanel != null && marker != null) {
+							XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+							plot.removeDomainMarker(marker);
+						}
+					} catch(Exception e1) {
+						JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+					}
 				}
 			}
 		}
