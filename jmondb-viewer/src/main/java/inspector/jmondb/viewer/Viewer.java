@@ -433,7 +433,7 @@ public class Viewer extends JPanel {
 
 							// fill in possible properties in the combo box
 							comboBoxProperty.removeAllItems();
-							List<Object[]> values = dbReader.getFromCustomQuery("SELECT prop.name, prop.accession FROM Property prop ORDER BY prop.name", Object[].class);
+							List<Object[]> values = dbReader.getFromCustomQuery("SELECT prop.name, prop.accession FROM Property prop WHERE prop.isNumeric IS TRUE ORDER BY prop.name", Object[].class);
 							for(Object[] value : values)
 								comboBoxProperty.addItem(new PropertyComboBoxItem((String)value[0], (String)value[1]));
 
