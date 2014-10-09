@@ -1,6 +1,7 @@
 package inspector.jmondb.viewer;
 
 import com.google.common.collect.ImmutableMap;
+import inspector.jmondb.io.IMonDBWriter;
 import inspector.jmondb.model.*;
 import inspector.jmondb.model.Event;
 import inspector.jmondb.io.IMonDBManagerFactory;
@@ -68,6 +69,7 @@ public class Viewer extends JPanel {
 	// connection to the iMonDB
 	private EntityManagerFactory emf;
 	private IMonDBReader dbReader;
+	private IMonDBWriter dbWriter;
 
 	public static void main(String[] args) {
 
@@ -115,7 +117,7 @@ public class Viewer extends JPanel {
 		markerCalibration = new HashMap<>();
 		markerMaintenance = new HashMap<>();
 		markerIncident = new HashMap<>();
-		createInterventionsPanel(panelEvents);
+		createEventsPanel(panelEvents);
 	}
 
 	private JMenuBar createMenuBar() {
@@ -211,7 +213,7 @@ public class Viewer extends JPanel {
 		panelDbConnection.add(labelDbIcon);
 	}
 
-	private void createInterventionsPanel(JPanel eventsPanel) {
+	private void createEventsPanel(JPanel eventsPanel) {
 		BorderLayout eventsLayout = new BorderLayout();
 		eventsLayout.setVgap(25);
 		eventsPanel.setLayout(eventsLayout);
@@ -244,24 +246,26 @@ public class Viewer extends JPanel {
 		treeEvents.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
-				EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
-				if(SwingUtilities.isRightMouseButton(e)) {
-					// highlight relevant item
-					int row = treeEvents.getClosestRowForLocation(e.getX(), e.getY());
-					treeEvents.setSelectionRow(row);
+				if(treeEvents.getSelectionPath() != null) {
+					EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
+					if(SwingUtilities.isRightMouseButton(e)) {
+						// highlight relevant item
+						int row = treeEvents.getClosestRowForLocation(e.getX(), e.getY());
+						treeEvents.setSelectionRow(row);
 
-					// show pop-up menu
-					JPopupMenu popupMenu = new JPopupMenu();
-					JMenuItem itemEdit = new JMenuItem("Edit");
-					itemEdit.addActionListener(new ListenerEditEvent(selectedNode.getEvent()));
-					popupMenu.add(itemEdit);
-					JMenuItem itemRemove = new JMenuItem("Remove");
-					itemRemove.addActionListener(removeListener);
-					popupMenu.add(itemRemove);
+						// show pop-up menu
+						JPopupMenu popupMenu = new JPopupMenu();
+						JMenuItem itemEdit = new JMenuItem("Edit");
+						itemEdit.addActionListener(new ListenerEditEvent(selectedNode.getEvent()));
+						popupMenu.add(itemEdit);
+						JMenuItem itemRemove = new JMenuItem("Remove");
+						itemRemove.addActionListener(removeListener);
+						popupMenu.add(itemRemove);
 
-					popupMenu.show(e.getComponent(), e.getX(), e.getY());
-				} else if(e.getClickCount() == 2) {
-					new ListenerEditEvent(selectedNode.getEvent()).actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, null));
+						popupMenu.show(e.getComponent(), e.getX(), e.getY());
+					} else if(e.getClickCount() == 2) {
+						new ListenerEditEvent(selectedNode.getEvent()).actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, null));
+					}
 				}
 			}
 		});
@@ -303,11 +307,11 @@ public class Viewer extends JPanel {
 		nodeIncident = new DefaultMutableTreeNode("Incident");
 		nodeEvents.add(nodeIncident);
 
-		expandInterventionsTree();
+		expandEventsTree();
 
 		JPanel buttonsPanel = new JPanel(new GridLayout(0, 3));
 		JButton buttonAdd = new JButton("Add");
-		buttonAdd.addActionListener(new ListenerAddIntervention());
+		buttonAdd.addActionListener(new ListenerAddEvent());
 		buttonsPanel.add(buttonAdd);
 		JButton buttonRemove = new JButton("Remove");
 		buttonRemove.addActionListener(removeListener);
@@ -329,6 +333,7 @@ public class Viewer extends JPanel {
 			emf.close();
 		emf = null;
 		dbReader = null;
+		dbWriter = null;
 		// remove combo box values
 		comboBoxInstrument.removeAllItems();
 		comboBoxProperty.removeAllItems();
@@ -337,7 +342,7 @@ public class Viewer extends JPanel {
 		labelDbIcon.setIcon(iconNotConnected);
 	}
 
-	private void expandInterventionsTree() {
+	private void expandEventsTree() {
 		for(int i = 0; i < treeEvents.getRowCount(); i++)
 			treeEvents.expandRow(i);
 	}
@@ -426,6 +431,7 @@ public class Viewer extends JPanel {
 							emf = IMonDBManagerFactory.createMySQLFactory(connectionDialog.getHost(), connectionDialog.getPort(),
 									connectionDialog.getDatabase(), connectionDialog.getUserName(), password);
 							dbReader = new IMonDBReader(emf);
+							dbWriter = new IMonDBWriter(emf);
 
 							// fill in possible instruments in the combo box
 							comboBoxInstrument.removeAllItems();
@@ -500,7 +506,7 @@ public class Viewer extends JPanel {
 						}
 					}
 					// show all interventions in the interventions panel (TODO: might be reconsidered later on)
-					expandInterventionsTree();
+					expandEventsTree();
 					// show the interventions on the graph
 					drawEvents();
 				}
@@ -734,61 +740,77 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private class ListenerAddIntervention implements ActionListener {
+	private class ListenerAddEvent implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			/*// create intervention dialog
-			InterventionDialog dialog = new InterventionDialog();
 
-			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Add an intervention", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+			if(dbWriter == null) {
+				JOptionPane.showMessageDialog(frameParent, "Please connect to a database before creating a new event.", "Warning", JOptionPane.WARNING_MESSAGE);
+			}
+			else {
+				// create event dialog
+				EventDialog dialog = new EventDialog(comboBoxInstrument);
 
-			if(option == JOptionPane.OK_OPTION) {
-				// create new intervention
-				Event intervention;
-				if(dialog.getComment().equals(""))
-					intervention = new Event(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident());
-				else
-					intervention = new Event(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident(), dialog.getComment());
+				int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Add an event", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
-				// add to the interventions list and create a marker
-				ValueMarker marker = null;
-				boolean toDraw = false;
-				if(intervention.isIncident()) {
-					nodeIncident.add(new EventNode(intervention));
-					sortEvents(nodeIncident);
+				if(option == JOptionPane.OK_OPTION) {
+					try {
+						// create new event
+						Instrument instrument = dbReader.getInstrument(dialog.getInstrumentName(), true);
+						Event event = new Event(instrument, dialog.getDate(), dialog.getType(), dialog.getDescription(), dialog.getPictureAsByteArray());
 
-					marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
-					markerIncident.put(intervention.getDate(), marker);
-					toDraw = checkBoxIncident.isSelected();
+						// write the event to the database
+						dbWriter.writeOrUpdateEvent(event);
+
+						// add to the events list and create a marker
+						ValueMarker marker = null;
+						boolean toDraw = false;
+						switch(event.getType()) {
+							case CALIBRATION:
+								nodeCalibration.add(new EventNode(event));
+								sortEvents(nodeCalibration);
+
+								marker = new ValueMarker(event.getDate().getTime(), Color.GREEN, new BasicStroke(1));
+								markerCalibration.put(event.getDate(), marker);
+								toDraw = checkBoxCalibration.isSelected();
+								break;
+							case MAINTENANCE:
+								nodeMaintenance.add(new EventNode(event));
+								sortEvents(nodeMaintenance);
+
+								marker = new ValueMarker(event.getDate().getTime(), Color.BLUE, new BasicStroke(1));
+								markerMaintenance.put(event.getDate(), marker);
+								toDraw = checkBoxMaintenace.isSelected();
+								break;
+							case INCIDENT:
+								nodeIncident.add(new EventNode(event));
+								sortEvents(nodeIncident);
+
+								marker = new ValueMarker(event.getDate().getTime(), Color.RED, new BasicStroke(1));
+								markerIncident.put(event.getDate(), marker);
+								toDraw = checkBoxIncident.isSelected();
+								break;
+							default:
+								break;
+						}
+						DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
+						treeModel.reload();
+
+						// show all events in the events panel
+						expandEventsTree();
+						// draw the event on the graph
+						if(toDraw && chartPanel != null) {
+							XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+							plot.addDomainMarker(marker);
+						}
+					} catch(IOException e1) {
+						JOptionPane.showMessageDialog(frameParent, "Error while reading the selected picture file", "Error", JOptionPane.ERROR_MESSAGE);
+					} catch(NullPointerException npe) {
+						JOptionPane.showMessageDialog(frameParent, npe.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+					}
 				}
-				else if(intervention.isEvent()) {
-					nodeMaintenance.add(new EventNode(intervention));
-					sortEvents(nodeMaintenance);
-
-					marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-					markerMaintenance.put(intervention.getDate(), marker);
-					toDraw = checkBoxMaintenace.isSelected();
-				}
-				else if(intervention.isCalibration()) {
-					nodeCalibration.add(new EventNode(intervention));
-					sortEvents(nodeCalibration);
-
-					marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
-					markerCalibration.put(intervention.getDate(), marker);
-					toDraw = checkBoxCalibration.isSelected();
-				}
-				DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
-				treeModel.reload();
-
-				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
-				expandInterventionsTree();
-				// draw the interventions on the graph
-				if(toDraw && chartPanel != null) {
-					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
-					plot.addDomainMarker(marker);
-				}
-			}*/
+			}
 		}
 	}
 
@@ -839,8 +861,8 @@ public class Viewer extends JPanel {
 
 				// update the intervention
 				intervention.setDate(dialog.getDate());
-				if(!dialog.getComment().equals(""))
-					intervention.setDescription(dialog.getComment());
+				if(!dialog.getDescription().equals(""))
+					intervention.setDescription(dialog.getDescription());
 
 				// sort the interventions tree
 				if(intervention.isIncident())
@@ -851,7 +873,7 @@ public class Viewer extends JPanel {
 					sortEvents(nodeCalibration);
 				DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
 				treeModel.reload();
-				expandInterventionsTree();
+				expandEventsTree();
 
 				// update the marker
 				if(marker != null) {
