@@ -12,6 +12,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.*;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -94,6 +96,22 @@ public class EventDialog extends JPanel {
 		add(panelFileSelection);
 
 		pictureField = new JLabel();
+		pictureField.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if(e.getClickCount() == 2 && picture != null) {
+					// show larger image
+					JLabel labelPicture = new JLabel();
+					labelPicture.setHorizontalAlignment(SwingConstants.CENTER);
+					labelPicture.setVerticalAlignment(SwingConstants.CENTER);
+					Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration().getBounds();
+					Icon icon = byteArrayToScaledIcon(picture, screenSize.width, screenSize.height-200);
+					labelPicture.setIcon(icon);
+
+					JOptionPane.showMessageDialog(null, labelPicture, "Event picture", JOptionPane.PLAIN_MESSAGE, null);
+				}
+			}
+		});
 		pictureField.setHorizontalAlignment(SwingConstants.CENTER);
 		pictureField.setVerticalAlignment(SwingConstants.CENTER);
 		pictureField.setPreferredSize(new Dimension(MAX_WIDTH, MAX_HEIGHT));
@@ -131,7 +149,7 @@ public class EventDialog extends JPanel {
 		textFieldDescription.setText(event.getDescription());
 		if(event.getPicture() != null) {
 			picture = event.getPicture();
-			pictureField.setIcon(byteArrayToScaledIcon(picture));
+			pictureField.setIcon(byteArrayToScaledIcon(picture, MAX_WIDTH, MAX_HEIGHT));
 		}
 	}
 
@@ -170,10 +188,10 @@ public class EventDialog extends JPanel {
 		return picture;
 	}
 
-	private ImageIcon byteArrayToScaledIcon(byte[] arr) {
+	private ImageIcon byteArrayToScaledIcon(byte[] arr, int bound_width, int bound_height) {
 		try {
 			Image img = ImageIO.read(new ByteArrayInputStream(arr));
-			Dimension scaledDimension = getScaledDimension(img.getWidth(null), img.getHeight(null), MAX_WIDTH, MAX_HEIGHT);
+			Dimension scaledDimension = getScaledDimension(img.getWidth(null), img.getHeight(null), bound_width, bound_height);
 			img = img.getScaledInstance((int)scaledDimension.getWidth(), (int)scaledDimension.getHeight(), Image.SCALE_SMOOTH);
 
 			return new ImageIcon(img);
@@ -222,7 +240,7 @@ public class EventDialog extends JPanel {
 				} catch(IOException e1) {
 					JOptionPane.showMessageDialog(null, "Selected picture file not found", "Error", JOptionPane.ERROR_MESSAGE);
 				}
-				pictureField.setIcon(byteArrayToScaledIcon(picture));
+				pictureField.setIcon(byteArrayToScaledIcon(picture, MAX_WIDTH, MAX_HEIGHT));
 			}
 
 		}
