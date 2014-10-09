@@ -763,12 +763,13 @@ public class Viewer extends JPanel {
 			if(option == JOptionPane.OK_OPTION) {
 				// update the changed information
 				// only the description and the picture can be changed
-				boolean noWrite = event.getDescription().equals(dialog.getDescription()) &&
-						Arrays.equals(event.getPicture(), dialog.getPictureAsByteArray());
+				boolean toWrite = (event.getDescription() == null && dialog.getDescription() != null) ||
+						(event.getDescription() != null && !event.getDescription().equals(dialog.getDescription())) ||
+						!Arrays.equals(event.getPicture(), dialog.getPictureAsByteArray());
 				event.setDescription(dialog.getDescription());
 				event.setPicture(dialog.getPictureAsByteArray());
 
-				if(!noWrite)
+				if(toWrite)
 					dbWriter.writeOrUpdateEvent(event);
 			}
 		}
