@@ -32,28 +32,25 @@ public class EventDialog extends JPanel {
 	private JLabel pictureField;
 
 	private static int MAX_HEIGHT = 100;
-	private int MAX_WIDTH = 100;
+	private static int MAX_WIDTH = 150;
 
 	public EventDialog(JComboBox<String> instruments) {
-		setLayout(new GridLayout(5, 1));
+		setLayout(new SpringLayout());
 
 		// instrument name
-		JPanel panelInstrument = new JPanel(new GridLayout(1, 2));
 		JLabel labelInstrument = new JLabel("Instrument name: ");
-		panelInstrument.add(labelInstrument);
+		add(labelInstrument);
 		comboBoxInstrument = new JComboBox<>();
 		// add all instrument names
 		for(int i = 0; i < instruments.getItemCount(); i++)
 			comboBoxInstrument.addItem(instruments.getItemAt(i));
 		// select the previously selected instrument
 		comboBoxInstrument.setSelectedIndex(instruments.getSelectedIndex());
-		panelInstrument.add(comboBoxInstrument);
-		add(panelInstrument);
+		add(comboBoxInstrument);
 
 		// date
-		JPanel panelDate = new JPanel(new GridLayout(1, 2));
 		JLabel labelDate = new JLabel("Date:");
-		panelDate.add(labelDate);
+		add(labelDate);
 		model = new UtilDateModel();
 		JDatePanelImpl datePanel = new JDatePanelImpl(model);
 		datePicker = new JDatePickerImpl(datePanel, new JFormattedTextField.AbstractFormatter() {
@@ -73,40 +70,51 @@ public class EventDialog extends JPanel {
 					return "";
 			}
 		});
-		panelDate.add(datePicker);
-		add(panelDate);
+		add(datePicker);
 
 		// event type
-		JPanel panelType = new JPanel(new GridLayout(1, 2));
 		JLabel labelType = new JLabel("Event type:");
-		panelType.add(labelType);
+		add(labelType);
 		comboBoxType = new JComboBox<>();
 		for(EventType type : EventType.values())
 			comboBoxType.addItem(type);
-		panelType.add(comboBoxType);
-		add(panelType);
+		add(comboBoxType);
 
 		// description
-		JPanel panelDescription = new JPanel(new GridLayout(1, 2));
 		JLabel labelDescription = new JLabel("Description: ");
-		panelDescription.add(labelDescription);
+		add(labelDescription);
 		textFieldDescription = new JTextField();
-		panelDescription.add(textFieldDescription);
-		add(panelDescription);
+		add(textFieldDescription);
 
 		// picture attachment
-		JPanel panelPicture = new JPanel(new GridLayout(1, 2));
 		JLabel labelPicture = new JLabel("Picture: ");
-		panelPicture.add(labelPicture);
-		JPanel panelFileSelection = new JPanel(new BorderLayout());
-		panelPicture.add(panelFileSelection);
+		add(labelPicture);
+		JPanel panelFileSelection = new JPanel(new GridBagLayout());
+		GridBagConstraints gbc = new GridBagConstraints();
+		add(panelFileSelection);
+
 		pictureField = new JLabel();
+		pictureField.setHorizontalAlignment(SwingConstants.CENTER);
+		pictureField.setVerticalAlignment(SwingConstants.CENTER);
 		pictureField.setPreferredSize(new Dimension(MAX_WIDTH, MAX_HEIGHT));
-		panelFileSelection.add(pictureField, BorderLayout.CENTER);
-		JButton buttonLoadFile = new JButton(new ImageIcon(Viewer.class.getResource("/images/open.gif"), "load picture"));
-		buttonLoadFile.addActionListener(new ListenerLoadFile());
-		panelFileSelection.add(buttonLoadFile, BorderLayout.LINE_END);
-		add(panelPicture);
+		gbc.gridx = 0;
+		gbc.fill = GridBagConstraints.BOTH;
+		panelFileSelection.add(pictureField, gbc);
+
+		JPanel panelButtons = new JPanel(new GridLayout(2, 1));
+		gbc.gridx = 1;
+		gbc.fill = GridBagConstraints.NONE;
+		panelFileSelection.add(panelButtons, gbc);
+
+		JButton buttonAdd = new JButton(new ImageIcon(Viewer.class.getResource("/images/add.gif"), "add picture"));
+		buttonAdd.addActionListener(new ListenerAddPicture());
+		panelButtons.add(buttonAdd);
+
+		JButton buttonDelete = new JButton(new ImageIcon(Viewer.class.getResource("/images/remove.gif"), "delete picture"));
+		buttonDelete.addActionListener(new ListenerRemovePicture());
+		panelButtons.add(buttonDelete);
+
+		SpringUtilities.makeCompactGrid(this, 5, 2, 6, 6, 6, 6);
 	}
 
 	public EventDialog(JComboBox<String> instruments, Event event) {
@@ -117,7 +125,7 @@ public class EventDialog extends JPanel {
 		comboBoxInstrument.setEnabled(false);
 		model.setValue(new Date(event.getDate().getTime()));
 		model.setSelected(true);
-		datePicker.remove(1);	// ugly hack to remove the button
+		datePicker.remove(1);	// ugly hack to disable the button
 		comboBoxType.setSelectedItem(event.getType());
 		comboBoxType.setEnabled(false);
 		textFieldDescription.setText(event.getDescription());
@@ -162,7 +170,44 @@ public class EventDialog extends JPanel {
 		return picture;
 	}
 
-	private class ListenerLoadFile implements ActionListener {
+	private ImageIcon byteArrayToScaledIcon(byte[] arr) {
+		try {
+			Image img = ImageIO.read(new ByteArrayInputStream(arr));
+			Dimension scaledDimension = getScaledDimension(img.getWidth(null), img.getHeight(null), MAX_WIDTH, MAX_HEIGHT);
+			img = img.getScaledInstance((int)scaledDimension.getWidth(), (int)scaledDimension.getHeight(), Image.SCALE_SMOOTH);
+
+			return new ImageIcon(img);
+		} catch(IOException e1) {
+			JOptionPane.showMessageDialog(null, "Error while reading the selected picture file", "Error", JOptionPane.ERROR_MESSAGE);
+		}
+		return null;
+	}
+
+	private Dimension getScaledDimension(int original_width, int original_height, int bound_width, int bound_height) {
+
+		int new_width = original_width;
+		int new_height = original_height;
+
+		// first check if we need to scale width
+		if (original_width > bound_width) {
+			//scale width to fit
+			new_width = bound_width;
+			//scale height to maintain aspect ratio
+			new_height = (new_width * original_height) / original_width;
+		}
+
+		// then check if we need to scale even with the new height
+		if (new_height > bound_height) {
+			//scale height to fit instead
+			new_height = bound_height;
+			//scale width to maintain aspect ratio
+			new_width = (new_height * original_width) / original_height;
+		}
+
+		return new Dimension(new_width, new_height);
+	}
+
+	private class ListenerAddPicture implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -183,16 +228,12 @@ public class EventDialog extends JPanel {
 		}
 	}
 
-	private ImageIcon byteArrayToScaledIcon(byte[] arr) {
-		try {
-			Image img = ImageIO.read(new ByteArrayInputStream(arr));
-			if(img.getWidth(null) > MAX_WIDTH || img.getHeight(null) > MAX_HEIGHT)
-				img = img.getScaledInstance(MAX_WIDTH, MAX_HEIGHT, Image.SCALE_SMOOTH);
+	private class ListenerRemovePicture implements ActionListener {
 
-			return new ImageIcon(img);
-		} catch(IOException e1) {
-			JOptionPane.showMessageDialog(null, "Error while reading the selected picture file", "Error", JOptionPane.ERROR_MESSAGE);
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			pictureField.setIcon(null);
+			picture = null;
 		}
-		return null;
 	}
 }
