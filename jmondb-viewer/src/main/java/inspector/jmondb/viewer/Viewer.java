@@ -180,6 +180,7 @@ public class Viewer extends JPanel {
 		JLabel labelInstrument = new JLabel("Instrument");
 		panelSelection.add(labelInstrument);
 		comboBoxInstrument = new JComboBox<>();
+		comboBoxInstrument.addActionListener(new ListenerLoadInstrumentEvents());
 		comboBoxInstrument.setPreferredSize(new Dimension(250, 25));
 		comboBoxInstrument.setMaximumSize(new Dimension(250, 25));
 		panelSelection.add(comboBoxInstrument);
@@ -211,9 +212,9 @@ public class Viewer extends JPanel {
 	}
 
 	private void createInterventionsPanel(JPanel eventsPanel) {
-		BorderLayout interventionsLayout = new BorderLayout();
-		interventionsLayout.setVgap(25);
-		eventsPanel.setLayout(interventionsLayout);
+		BorderLayout eventsLayout = new BorderLayout();
+		eventsLayout.setVgap(25);
+		eventsPanel.setLayout(eventsLayout);
 
 		// create checkboxes
 		JPanel panelCheckBoxes = new JPanel(new GridLayout(0, 1));
@@ -368,7 +369,7 @@ public class Viewer extends JPanel {
 			markerMaintenance.values().forEach(plot::removeDomainMarker);
 			markerIncident.values().forEach(plot::removeDomainMarker);
 		}
-		// remove from interventions panel
+		// remove from events panel
 		nodeIncident.removeAllChildren();
 		nodeMaintenance.removeAllChildren();
 		nodeCalibration.removeAllChildren();
@@ -458,6 +459,53 @@ public class Viewer extends JPanel {
 
 		public void actionPerformed(ActionEvent e) {
 			closeDbConnection();
+		}
+	}
+
+	private class ListenerLoadInstrumentEvents implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			Thread eventLoader = new Thread() {
+				public void run() {
+					if(dbReader != null) {
+						// remove old events
+						clearEvents();
+
+						// add new events
+						String instrumentName = (String) comboBoxInstrument.getSelectedItem();
+						Map<String, String> parameters = ImmutableMap.of("name", instrumentName);
+						List<Event> events = dbReader.getFromCustomQuery("SELECT event FROM Event event WHERE event.instrument.name = :name ORDER BY event.date", Event.class, parameters);
+
+						for(Event event : events) {
+							EventNode node = new EventNode(event);
+
+							// add to the correct event type
+							switch(event.getType()) {
+								case CALIBRATION:
+									nodeCalibration.add(node);
+									markerCalibration.put(event.getDate(), new ValueMarker(event.getDate().getTime(), Color.GREEN, new BasicStroke(1)));
+									break;
+								case MAINTENANCE:
+									nodeMaintenance.add(node);
+									markerMaintenance.put(event.getDate(), new ValueMarker(event.getDate().getTime(), Color.BLUE, new BasicStroke(1)));
+									break;
+								case INCIDENT:
+									nodeIncident.add(node);
+									markerIncident.put(event.getDate(), new ValueMarker(event.getDate().getTime(), Color.RED, new BasicStroke(1)));
+									break;
+								default:
+									break;
+							}
+						}
+					}
+					// show all interventions in the interventions panel (TODO: might be reconsidered later on)
+					expandInterventionsTree();
+					// show the interventions on the graph
+					drawEvents();
+				}
+			};
+			eventLoader.start();
 		}
 	}
 
@@ -581,90 +629,6 @@ public class Viewer extends JPanel {
 				}
 			else
 				JOptionPane.showMessageDialog(frameParent, "No graph available yet.", "Warning", JOptionPane.WARNING_MESSAGE);
-		}
-	}
-
-	private class ListenerLoadInterventions implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			/*JFileChooser fileChooser = new JFileChooser();
-			fileChooser.setFileFilter(new FileFilter() {
-				@Override
-				public boolean accept(File f) {
-					return FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("csv");
-				}
-
-				@Override
-				public String getDescription() {
-					return "Events CSV file";
-				}
-			});
-			int returnVal = fileChooser.showOpenDialog(frameParent);
-			if(returnVal == JFileChooser.APPROVE_OPTION) {
-
-				Thread interventionsLoader = new Thread() {
-					public void run() {
-						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-						// remove previous events
-						clearEvents();
-
-						// read new events
-						File file = fileChooser.getSelectedFile();
-						try {
-							BufferedReader fileReader = new BufferedReader(new FileReader(file));
-							SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-							String line = fileReader.readLine();	// skip header line
-							while((line = fileReader.readLine()) != null) {
-								String[] lineSplit = line.split(",", -1);
-								Date date = sdf.parse(lineSplit[0]);
-								boolean isCalibrationCheck = lineSplit[1].equals("1");
-								boolean isCalibration = lineSplit[2].equals("1");
-								boolean isEvent = lineSplit[3].equals("1");
-								boolean isIncident = lineSplit[4].equals("1");
-								String comment = lineSplit[5];
-
-								Event intervention = new Event(date, isCalibrationCheck, isCalibration, isEvent, isIncident, comment);
-								EventNode node = new EventNode(intervention);
-
-								// add to the correct intervention type
-								if(intervention.isIncident()) {
-									nodeIncident.add(node);
-									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
-									markerIncident.put(intervention.getDate(), marker);
-								}
-								else if(intervention.isEvent()) {
-									nodeMaintenance.add(node);
-									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-									markerMaintenance.put(intervention.getDate(), marker);
-								}
-								else if(intervention.isCalibration()) {
-									nodeCalibration.add(node);
-									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
-									markerCalibration.put(intervention.getDate(), marker);
-								}
-							}
-
-							// sort interventions
-							sortEvents(nodeIncident);
-							sortEvents(nodeMaintenance);
-							sortEvents(nodeCalibration);
-
-						} catch(ParseException | IOException e1) {
-							JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-						}
-
-						// show all interventions in the interventions panel (TODO: might be reconsidered later on)
-						expandInterventionsTree();
-						// show the interventions on the graph
-						drawEvents();
-
-						frameParent.setCursor(Cursor.getDefaultCursor());
-					}
-				};
-				interventionsLoader.start();
-			}*/
 		}
 	}
 
