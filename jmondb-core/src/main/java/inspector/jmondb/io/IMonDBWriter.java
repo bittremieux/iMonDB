@@ -174,7 +174,7 @@ public class IMonDBWriter {
 				eventQuery.setMaxResults(1);	// restrict to a single result
 				List<Long> eventResult = eventQuery.getResultList();
 				if(eventResult.size() > 0) {
-					logger.debug("Existing event <{}> which occurred on instrument <{}>: assign id <{}>", event.getDate(),  event.getInstrument().getName(), eventResult.get(0));
+					logger.debug("Existing event <{}> which occurred on instrument <{}>: assign id <{}>", event.getDate(), event.getInstrument().getName(), eventResult.get(0));
 					event.setId(eventResult.get(0));
 				}
 
@@ -462,7 +462,7 @@ public class IMonDBWriter {
 				throw new IllegalArgumentException("Event <" + eventDate + "> for instrument <" + instrumentName + "> not found in the database");
 			} catch(RollbackException e) {
 				logger.error("Unable to remove event <{}> for instrument <{}>: {}", eventDate, instrumentName, e.getMessage());
-				throw new IllegalArgumentException("Unable to store remove event <" + eventDate + ">");
+				throw new IllegalArgumentException("Unable to remove event <" + eventDate + ">");
 			} finally {
 				entityManager.close();
 			}

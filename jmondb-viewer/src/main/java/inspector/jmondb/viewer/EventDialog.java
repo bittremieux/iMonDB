@@ -5,30 +5,34 @@ import net.sourceforge.jdatepicker.impl.JDatePanelImpl;
 import net.sourceforge.jdatepicker.impl.JDatePickerImpl;
 import net.sourceforge.jdatepicker.impl.UtilDateModel;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.*;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import inspector.jmondb.model.Event;
+import org.apache.commons.io.IOUtils;
 
 public class EventDialog extends JPanel {
 
 	private JComboBox<String> comboBoxInstrument;
+	private UtilDateModel model;
 	private JDatePickerImpl datePicker;
 	private JComboBox<EventType> comboBoxType;
 	private JTextField textFieldDescription;
-	private File picture;
-	private JLabel pictureName;
+	private byte[] picture;
+	private JLabel pictureField;
+
+	private static int MAX_HEIGHT = 100;
+	private int MAX_WIDTH = 100;
 
 	public EventDialog(JComboBox<String> instruments) {
 		setLayout(new GridLayout(5, 1));
@@ -50,7 +54,7 @@ public class EventDialog extends JPanel {
 		JPanel panelDate = new JPanel(new GridLayout(1, 2));
 		JLabel labelDate = new JLabel("Date:");
 		panelDate.add(labelDate);
-		UtilDateModel model = new UtilDateModel();
+		model = new UtilDateModel();
 		JDatePanelImpl datePanel = new JDatePanelImpl(model);
 		datePicker = new JDatePickerImpl(datePanel, new JFormattedTextField.AbstractFormatter() {
 			SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
@@ -96,12 +100,31 @@ public class EventDialog extends JPanel {
 		panelPicture.add(labelPicture);
 		JPanel panelFileSelection = new JPanel(new BorderLayout());
 		panelPicture.add(panelFileSelection);
-		pictureName = new JLabel();
-		panelFileSelection.add(pictureName, BorderLayout.CENTER);
+		pictureField = new JLabel();
+		pictureField.setPreferredSize(new Dimension(MAX_WIDTH, MAX_HEIGHT));
+		panelFileSelection.add(pictureField, BorderLayout.CENTER);
 		JButton buttonLoadFile = new JButton(new ImageIcon(Viewer.class.getResource("/images/open.gif"), "load picture"));
 		buttonLoadFile.addActionListener(new ListenerLoadFile());
 		panelFileSelection.add(buttonLoadFile, BorderLayout.LINE_END);
 		add(panelPicture);
+	}
+
+	public EventDialog(JComboBox<String> instruments, Event event) {
+		this(instruments);
+
+		// copy information of given event
+		comboBoxInstrument.setSelectedItem(event.getInstrument().getName());
+		comboBoxInstrument.setEnabled(false);
+		model.setValue(new Date(event.getDate().getTime()));
+		model.setSelected(true);
+		datePicker.remove(1);	// ugly hack to remove the button
+		comboBoxType.setSelectedItem(event.getType());
+		comboBoxType.setEnabled(false);
+		textFieldDescription.setText(event.getDescription());
+		if(event.getPicture() != null) {
+			picture = event.getPicture();
+			pictureField.setIcon(byteArrayToScaledIcon(picture));
+		}
 	}
 
 	public String getInstrumentName() {
@@ -135,11 +158,8 @@ public class EventDialog extends JPanel {
 			return null;
 	}
 
-	public byte[] getPictureAsByteArray() throws IOException {
-		if(picture != null)
-			return Files.readAllBytes(Paths.get(picture.getPath()));
-		else
-			return null;
+	public byte[] getPictureAsByteArray() {
+		return picture;
 	}
 
 	private class ListenerLoadFile implements ActionListener {
@@ -152,11 +172,27 @@ public class EventDialog extends JPanel {
 
 			int returnVal = fileChooser.showOpenDialog(null);
 			if(returnVal == JFileChooser.APPROVE_OPTION) {
-
-				picture = fileChooser.getSelectedFile();
-				pictureName.setText(picture.getName());
+				try {
+					picture = IOUtils.toByteArray(new FileInputStream(fileChooser.getSelectedFile()));
+				} catch(IOException e1) {
+					JOptionPane.showMessageDialog(null, "Selected picture file not found", "Error", JOptionPane.ERROR_MESSAGE);
+				}
+				pictureField.setIcon(byteArrayToScaledIcon(picture));
 			}
 
 		}
+	}
+
+	private ImageIcon byteArrayToScaledIcon(byte[] arr) {
+		try {
+			Image img = ImageIO.read(new ByteArrayInputStream(arr));
+			if(img.getWidth(null) > MAX_WIDTH || img.getHeight(null) > MAX_HEIGHT)
+				img = img.getScaledInstance(MAX_WIDTH, MAX_HEIGHT, Image.SCALE_SMOOTH);
+
+			return new ImageIcon(img);
+		} catch(IOException e1) {
+			JOptionPane.showMessageDialog(null, "Error while reading the selected picture file", "Error", JOptionPane.ERROR_MESSAGE);
+		}
+		return null;
 	}
 }

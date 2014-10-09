@@ -246,7 +246,8 @@ public class Viewer extends JPanel {
 		treeEvents.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
-				if(treeEvents.getSelectionPath() != null) {
+				if(treeEvents.getSelectionPath() != null &&
+						treeEvents.getSelectionPath().getLastPathComponent() instanceof EventNode) {
 					EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
 					if(SwingUtilities.isRightMouseButton(e)) {
 						// highlight relevant item
@@ -337,6 +338,8 @@ public class Viewer extends JPanel {
 		// remove combo box values
 		comboBoxInstrument.removeAllItems();
 		comboBoxProperty.removeAllItems();
+		// remove events
+		clearEvents();
 		// show information
 		labelDbConnection.setText("Not connected");
 		labelDbIcon.setIcon(iconNotConnected);
@@ -638,108 +641,6 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private class ListenerSaveInterventions implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-
-			/*if(markerCalibration.size() + markerMaintenance.size() + markerIncident.size() < 1) {
-				JOptionPane.showMessageDialog(frameParent, "No interventions available yet.\nPlease load an interventions file or manually create some interventions first.", "Error", JOptionPane.ERROR_MESSAGE);
-			}
-			else {
-
-				JFileChooser fileChooser = new JFileChooser();
-				fileChooser.setFileFilter(new FileFilter() {
-					@Override
-					public boolean accept(File f) {
-						return FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("csv");
-					}
-
-					@Override
-					public String getDescription() {
-						return "Interventions CSV file";
-					}
-				});
-				int returnVal = fileChooser.showSaveDialog(frameParent);
-				if(returnVal == JFileChooser.APPROVE_OPTION) {
-
-					Thread interventionsSaver = new Thread() {
-						public void run() {
-							frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-							// save interventions to a new file
-							File file = fileChooser.getSelectedFile();
-							// add extension if missing
-							if(FilenameUtils.getExtension(file.getName()).equals(""))
-								file = new File(file.getAbsolutePath() + ".csv");
-
-							try {
-								FileWriter writer = new FileWriter(file);
-								SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-
-								// header
-								writer.write("Date,Calibration check,Calibration,Event,Incident,Comment\n");
-								// body
-								PriorityQueue<Event> interventions = new PriorityQueue<>(markerCalibration.size() + markerMaintenance.size() + markerIncident.size());
-								Enumeration incidents = nodeIncident.children();
-								while(incidents.hasMoreElements()) {
-									Event i = ((EventNode) incidents.nextElement()).getEvent();
-									interventions.add(i);
-								}
-								Enumeration events = nodeMaintenance.children();
-								while(events.hasMoreElements()) {
-									Event i = ((EventNode) events.nextElement()).getEvent();
-									interventions.add(i);
-								}
-								Enumeration calibrations = nodeCalibration.children();
-								while(calibrations.hasMoreElements()) {
-									Event i = ((EventNode) calibrations.nextElement()).getEvent();
-									interventions.add(i);
-								}
-								while(!interventions.isEmpty()) {
-									// date
-									Event i = interventions.poll();
-									writer.append(sdf.format(i.getDate())).append(",");
-									// calibration check
-									if(i.isCalibrationCheck())
-										writer.append("1,");
-									else
-										writer.append(",");
-									// calibration
-									if(i.isCalibration())
-										writer.append("1,");
-									else
-										writer.append(",");
-									// event
-									if(i.isEvent())
-										writer.append("1,");
-									else
-										writer.append(",");
-									// incident
-									if(i.isIncident())
-										writer.append("1,");
-									else
-										writer.append(",");
-									// comment
-									writer.append(i.getDescription()).append("\n");
-								}
-
-								writer.flush();
-								writer.close();
-
-							} catch(IOException e1) {
-								JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-							}
-
-							frameParent.setCursor(Cursor.getDefaultCursor());
-						}
-					};
-					interventionsSaver.start();
-				}
-			}*/
-		}
-	}
-
 	private class ListenerAddEvent implements ActionListener {
 
 		@Override
@@ -804,8 +705,6 @@ public class Viewer extends JPanel {
 							XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 							plot.addDomainMarker(marker);
 						}
-					} catch(IOException e1) {
-						JOptionPane.showMessageDialog(frameParent, "Error while reading the selected picture file", "Error", JOptionPane.ERROR_MESSAGE);
 					} catch(NullPointerException npe) {
 						JOptionPane.showMessageDialog(frameParent, npe.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 					}
@@ -824,9 +723,8 @@ public class Viewer extends JPanel {
 				int option = JOptionPane.showConfirmDialog(frameParent, "Attention: The event will be removed from the database as well.", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 
 				if(option == JOptionPane.OK_OPTION) {
+					EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
 					try {
-						EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
-
 						// remove from the database
 						dbWriter.removeEvent((String) comboBoxInstrument.getSelectedItem(), selectedNode.getEvent().getDate());
 
@@ -839,8 +737,8 @@ public class Viewer extends JPanel {
 							XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 							plot.removeDomainMarker(marker);
 						}
-					} catch(Exception e1) {
-						JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+					} catch(Exception ex) {
+						JOptionPane.showMessageDialog(frameParent, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 					}
 				}
 			}
@@ -849,56 +747,30 @@ public class Viewer extends JPanel {
 
 	private class ListenerEditEvent implements ActionListener {
 
-		private Event intervention;
+		private Event event;
 
-		public ListenerEditEvent(inspector.jmondb.model.Event i) {
-			this.intervention = i;
+		public ListenerEditEvent(Event event) {
+			this.event = event;
 		}
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			/*// create intervention dialog
-			InterventionDialog dialog = new InterventionDialog(intervention, false);
+			// create event dialog
+			EventDialog dialog = new EventDialog(comboBoxInstrument, event);
 
-			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Edit intervention", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Edit event", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
 			if(option == JOptionPane.OK_OPTION) {
-				// retrieve the old marker
-				ValueMarker marker = null;
-				if(intervention.isIncident())
-					marker = markerIncident.remove(intervention.getDate());
-				else if(intervention.isEvent())
-					marker = markerMaintenance.remove(intervention.getDate());
-				else if(intervention.isCalibration())
-					marker = markerCalibration.remove(intervention.getDate());
+				// update the changed information
+				// only the description and the picture can be changed
+				boolean noWrite = event.getDescription().equals(dialog.getDescription()) &&
+						Arrays.equals(event.getPicture(), dialog.getPictureAsByteArray());
+				event.setDescription(dialog.getDescription());
+				event.setPicture(dialog.getPictureAsByteArray());
 
-				// update the intervention
-				intervention.setDate(dialog.getDate());
-				if(!dialog.getDescription().equals(""))
-					intervention.setDescription(dialog.getDescription());
-
-				// sort the interventions tree
-				if(intervention.isIncident())
-					sortEvents(nodeIncident);
-				else if(intervention.isEvent())
-					sortEvents(nodeMaintenance);
-				else if(intervention.isCalibration())
-					sortEvents(nodeCalibration);
-				DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
-				treeModel.reload();
-				expandEventsTree();
-
-				// update the marker
-				if(marker != null) {
-					marker.setValue(intervention.getDate().getTime());
-					if(intervention.isIncident())
-						markerIncident.put(intervention.getDate(), marker);
-					else if(intervention.isEvent())
-						markerMaintenance.put(intervention.getDate(), marker);
-					else if(intervention.isCalibration())
-						markerCalibration.put(intervention.getDate(), marker);
-				}
-			}*/
+				if(!noWrite)
+					dbWriter.writeOrUpdateEvent(event);
+			}
 		}
 	}
 

@@ -1,7 +1,6 @@
 package inspector.jmondb.jpa;
 
 import inspector.jmondb.model.EventType;
-import inspector.jmondb.model.InstrumentModel;
 
 import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
