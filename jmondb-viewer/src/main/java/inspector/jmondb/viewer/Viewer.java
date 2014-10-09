@@ -318,7 +318,7 @@ public class Viewer extends JPanel {
 		buttonRemove.addActionListener(removeListener);
 		buttonsPanel.add(buttonRemove);
 		JButton buttonClear = new JButton("Clear");
-		buttonClear.addActionListener(new ListenerClearInterventions());
+		buttonClear.addActionListener(new ListenerClearEvents());
 		buttonsPanel.add(buttonClear);
 
 		JPanel treePanel = new JPanel(new BorderLayout());
@@ -339,7 +339,7 @@ public class Viewer extends JPanel {
 		comboBoxInstrument.removeAllItems();
 		comboBoxProperty.removeAllItems();
 		// remove events
-		clearEvents();
+		clearEventVisualization();
 		// show information
 		labelDbConnection.setText("Not connected");
 		labelDbIcon.setIcon(iconNotConnected);
@@ -369,7 +369,7 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private void clearEvents() {
+	private void clearEventVisualization() {
 		// remove from graph
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
@@ -479,7 +479,7 @@ public class Viewer extends JPanel {
 				public void run() {
 					if(dbReader != null) {
 						// remove old events
-						clearEvents();
+						clearEventVisualization();
 
 						// add new events
 						String instrumentName = (String) comboBoxInstrument.getSelectedItem();
@@ -774,16 +774,31 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private class ListenerClearInterventions implements ActionListener {
+	private class ListenerClearEvents implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
-			//TODO
-			int option = JOptionPane.showConfirmDialog(frameParent, "Attention: this will remove all events!", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+			int option = JOptionPane.showConfirmDialog(frameParent, "Attention: this will remove all events from the database!", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 
-			if(option == JOptionPane.OK_OPTION)
-				clearEvents();
+			if(option == JOptionPane.OK_OPTION) {
+				// remove the events from the database
+				for(int i = 0; i < nodeCalibration.getChildCount(); i++) {
+					Event event = ((EventNode) nodeCalibration.getChildAt(i)).getEvent();
+					dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+				}
+				for(int i = 0; i < nodeMaintenance.getChildCount(); i++) {
+					Event event = ((EventNode) nodeMaintenance.getChildAt(i)).getEvent();
+					dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+				}
+				for(int i = 0; i < nodeIncident.getChildCount(); i++) {
+					Event event = ((EventNode) nodeIncident.getChildAt(i)).getEvent();
+					dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+				}
+
+				// remove the events from the viewer
+				clearEventVisualization();
+			}
 		}
 	}
 
