@@ -378,6 +378,7 @@ public class Viewer extends JPanel {
 			markerIncident.values().forEach(plot::removeDomainMarker);
 		}
 		// remove from events panel
+		treeEvents.clearSelection();
 		nodeIncident.removeAllChildren();
 		nodeMaintenance.removeAllChildren();
 		nodeCalibration.removeAllChildren();
@@ -659,7 +660,7 @@ public class Viewer extends JPanel {
 					try {
 						// create new event
 						Instrument instrument = dbReader.getInstrument(dialog.getInstrumentName(), true);
-						Event event = new Event(instrument, dialog.getDate(), dialog.getType(), dialog.getDescription(), dialog.getPictureAsByteArray());
+						Event event = new Event(instrument, dialog.getDate(), dialog.getType(), dialog.getDescription(), dialog.getPicture());
 
 						// write the event to the database
 						dbWriter.writeOrUpdateEvent(event);
@@ -718,7 +719,8 @@ public class Viewer extends JPanel {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
-			if(treeEvents.getSelectionPath().getLastPathComponent() instanceof EventNode) {
+			if(treeEvents.getSelectionPath() != null &&
+					treeEvents.getSelectionPath().getLastPathComponent() instanceof EventNode) {
 
 				int option = JOptionPane.showConfirmDialog(frameParent, "Attention: The event will be removed from the database as well.", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 
@@ -765,9 +767,9 @@ public class Viewer extends JPanel {
 				// only the description and the picture can be changed
 				boolean toWrite = (event.getDescription() == null && dialog.getDescription() != null) ||
 						(event.getDescription() != null && !event.getDescription().equals(dialog.getDescription())) ||
-						!Arrays.equals(event.getPicture(), dialog.getPictureAsByteArray());
+						!Arrays.equals(event.getPicture(), dialog.getPicture());
 				event.setDescription(dialog.getDescription());
-				event.setPicture(dialog.getPictureAsByteArray());
+				event.setPicture(dialog.getPicture());
 
 				if(toWrite)
 					dbWriter.writeOrUpdateEvent(event);
@@ -780,25 +782,27 @@ public class Viewer extends JPanel {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
-			int option = JOptionPane.showConfirmDialog(frameParent, "Attention: this will remove all events from the database!", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+			if(dbWriter != null) {
+				int option = JOptionPane.showConfirmDialog(frameParent, "Attention: This will remove all events from the database!", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 
-			if(option == JOptionPane.OK_OPTION) {
-				// remove the events from the database
-				for(int i = 0; i < nodeCalibration.getChildCount(); i++) {
-					Event event = ((EventNode) nodeCalibration.getChildAt(i)).getEvent();
-					dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
-				}
-				for(int i = 0; i < nodeMaintenance.getChildCount(); i++) {
-					Event event = ((EventNode) nodeMaintenance.getChildAt(i)).getEvent();
-					dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
-				}
-				for(int i = 0; i < nodeIncident.getChildCount(); i++) {
-					Event event = ((EventNode) nodeIncident.getChildAt(i)).getEvent();
-					dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
-				}
+				if(option == JOptionPane.OK_OPTION) {
+					// remove the events from the database
+					for(int i = 0; i < nodeCalibration.getChildCount(); i++) {
+						Event event = ((EventNode) nodeCalibration.getChildAt(i)).getEvent();
+						dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+					}
+					for(int i = 0; i < nodeMaintenance.getChildCount(); i++) {
+						Event event = ((EventNode) nodeMaintenance.getChildAt(i)).getEvent();
+						dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+					}
+					for(int i = 0; i < nodeIncident.getChildCount(); i++) {
+						Event event = ((EventNode) nodeIncident.getChildAt(i)).getEvent();
+						dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+					}
 
-				// remove the events from the viewer
-				clearEventVisualization();
+					// remove the events from the viewer
+					clearEventVisualization();
+				}
 			}
 		}
 	}
