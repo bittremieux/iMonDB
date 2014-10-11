@@ -31,7 +31,6 @@ public class EventNode extends DefaultMutableTreeNode implements Comparable<Even
 
 	@Override
 	public int compareTo(EventNode o) {
-		//TODO
 		return getEvent().getDate().compareTo(o.getEvent().getDate());
 	}
 }

@@ -2,7 +2,6 @@ package inspector.jmondb.viewer;
 
 import inspector.jmondb.model.EventType;
 import net.sourceforge.jdatepicker.impl.JDatePanelImpl;
-import net.sourceforge.jdatepicker.impl.JDatePickerImpl;
 import net.sourceforge.jdatepicker.impl.UtilDateModel;
 
 import javax.imageio.ImageIO;
@@ -30,7 +29,7 @@ public class EventDialog extends JPanel {
 	private JComboBox<String> comboBoxInstrument;
 	// event date
 	private UtilDateModel model;
-	private JDatePickerImpl datePicker;
+	private JDatePickerDisableImpl datePicker;
 	// event type
 	private JComboBox<EventType> comboBoxType;
 	// description text
@@ -64,7 +63,7 @@ public class EventDialog extends JPanel {
 		model = new UtilDateModel();
 		JDatePanelImpl datePanel = new JDatePanelImpl(model);
 		//TODO: override datePicker so the button can be disabled
-		datePicker = new JDatePickerImpl(datePanel, new JFormattedTextField.AbstractFormatter() {
+		datePicker = new JDatePickerDisableImpl(datePanel, new JFormattedTextField.AbstractFormatter() {
 			SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 			@Override
 			public Object stringToValue(String text) throws ParseException {
@@ -159,7 +158,7 @@ public class EventDialog extends JPanel {
 		comboBoxInstrument.setEnabled(false);
 		model.setValue(new Date(event.getDate().getTime()));
 		model.setSelected(true);
-		datePicker.remove(1);	// ugly hack to disable the button
+		datePicker.setButtonEnabled(false);
 		comboBoxType.setSelectedItem(event.getType());
 		comboBoxType.setEnabled(false);
 		textDescription.setText(event.getDescription());
