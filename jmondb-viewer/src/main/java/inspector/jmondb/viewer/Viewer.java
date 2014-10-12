@@ -52,7 +52,7 @@ public class Viewer extends JPanel {
 	private static ImageIcon iconNotConnected = new ImageIcon(Viewer.class.getResource("/images/nok.png"), "not connected");
 	private static ImageIcon iconConnected = new ImageIcon(Viewer.class.getResource("/images/ok.png"), "connected");
 
-	// interventions information
+	// events information
 	private DefaultMutableTreeNode nodeCalibration;
 	private HashMap<Date, ValueMarker> markerCalibration;
 	private DefaultMutableTreeNode nodeMaintenance;
@@ -113,7 +113,7 @@ public class Viewer extends JPanel {
 		// database connection panel
 		createDbConnectionPanel(panelDbConnection);
 
-		// interventions panel
+		// events panel
 		markerCalibration = new HashMap<>();
 		markerMaintenance = new HashMap<>();
 		markerIncident = new HashMap<>();
@@ -194,9 +194,13 @@ public class Viewer extends JPanel {
 		comboBoxProperty.setMaximumSize(new Dimension(450, 25));
 		panelSelection.add(comboBoxProperty);
 
-		JButton buttonAdvanced = new JButton("+");
+		JButton buttonAdvanced = new JButton(new ImageIcon(getClass().getResource("/images/search.png"), "advanced search settings"));
+		buttonAdvanced.setToolTipText("advanced search settings");
 		buttonAdvanced.addActionListener(new ListenerAdvancedSettings());
 		panelSelection.add(buttonAdvanced);
+
+		System.out.println(buttonAdvanced.getPreferredSize());
+		System.out.println(comboBoxProperty.getPreferredSize());
 
 		JButton buttonShowGraph = new JButton("Show graph");
 		buttonShowGraph.addActionListener(new ListenerShowGraph());
@@ -238,7 +242,7 @@ public class Viewer extends JPanel {
 
 		eventsPanel.add(panelCheckBoxes, BorderLayout.PAGE_START);
 
-		// create interventions tree view
+		// create events tree view
 		DefaultMutableTreeNode nodeEvents = new DefaultMutableTreeNode("Events");
 		treeEvents = new JTree(nodeEvents);
 		// mouse listener to create context menus on right click
@@ -299,7 +303,7 @@ public class Viewer extends JPanel {
 			}
 		});
 
-		JScrollPane scrollPaneInterventions = new JScrollPane(treeEvents);
+		JScrollPane scrollPaneEvents = new JScrollPane(treeEvents);
 
 		nodeCalibration = new DefaultMutableTreeNode("Calibration");
 		nodeEvents.add(nodeCalibration);
@@ -322,7 +326,7 @@ public class Viewer extends JPanel {
 		buttonsPanel.add(buttonClear);
 
 		JPanel treePanel = new JPanel(new BorderLayout());
-		treePanel.add(scrollPaneInterventions, BorderLayout.CENTER);
+		treePanel.add(scrollPaneEvents, BorderLayout.CENTER);
 		treePanel.add(buttonsPanel, BorderLayout.PAGE_END);
 
 		eventsPanel.add(treePanel, BorderLayout.CENTER);
@@ -509,9 +513,9 @@ public class Viewer extends JPanel {
 							}
 						}
 					}
-					// show all interventions in the interventions panel (TODO: might be reconsidered later on)
+					// show all events in the events panel (TODO: might be reconsidered later on)
 					expandEventsTree();
-					// show the interventions on the graph
+					// show the events on the graph
 					drawEvents();
 				}
 			};
@@ -523,7 +527,20 @@ public class Viewer extends JPanel {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
+			if(dbReader != null) {
+				// get all unique metadata names for the selected instrument
+				List<Metadata> metadata = dbReader.getFromCustomQuery("SELECT md FROM Metadata md WHERE md.run.instrument.name = :instName", Metadata.class, ImmutableMap.of("instName", (String) comboBoxInstrument.getSelectedItem()));
 
+				// create dialog
+				SearchDialog dialog = new SearchDialog(metadata);
+
+				int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Advanced search settings", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+				if(option == JOptionPane.OK_OPTION) {
+
+
+				}
+			}
 		}
 	}
 
@@ -815,7 +832,7 @@ public class Viewer extends JPanel {
 				XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 
 				Object source = e.getItemSelectable();
-				// show or hide the specific interventions
+				// show or hide the specific events
 				if(source == checkBoxCalibration) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
 						markerCalibration.values().forEach(plot::removeDomainMarker);

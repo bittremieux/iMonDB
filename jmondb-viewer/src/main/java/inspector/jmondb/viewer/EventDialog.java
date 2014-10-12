@@ -139,11 +139,11 @@ public class EventDialog extends JPanel {
 		gbc.fill = GridBagConstraints.NONE;
 		panelFileSelection.add(panelButtons, gbc);
 
-		JButton buttonAdd = new JButton(new ImageIcon(Viewer.class.getResource("/images/add.gif"), "add picture"));
+		JButton buttonAdd = new JButton(new ImageIcon(getClass().getResource("/images/folder.png"), "add picture"));
 		buttonAdd.addActionListener(new ListenerAddPicture());
 		panelButtons.add(buttonAdd);
 
-		JButton buttonDelete = new JButton(new ImageIcon(Viewer.class.getResource("/images/remove.gif"), "delete picture"));
+		JButton buttonDelete = new JButton(new ImageIcon(getClass().getResource("/images/garbage.png"), "delete picture"));
 		buttonDelete.addActionListener(new ListenerRemovePicture());
 		panelButtons.add(buttonDelete);
 
