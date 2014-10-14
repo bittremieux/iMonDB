@@ -97,9 +97,11 @@ public class Collector {
 					// retrieve the instrument name from the file name and path based on the configuration
 					String instrumentName = config.getInstrumentNameForFile(file);
 
-					logger.trace("Add file <{}> for instrument <{}> to the thread pool", file.getCanonicalPath(), instrumentName);
-					pool.submit(new FileProcessor(dbReader, dbWriter, extractor, metadataMapper, file, instrumentName));
-					threadsSubmitted++;
+					if(instrumentName != null) {
+						logger.trace("Add file <{}> for instrument <{}> to the thread pool", file.getCanonicalPath(), instrumentName);
+						pool.submit(new FileProcessor(dbReader, dbWriter, extractor, metadataMapper, file, instrumentName));
+						threadsSubmitted++;
+					}
 				}
 			} catch(IOException e) {
 				logger.error("IO error: {}", e.getMessage());

@@ -194,7 +194,7 @@ public class ConfigFile {
 		}
 
 		logger.info("No instrument found for file <{}>, please check the config file", fileName);
-		return "Unknown instrument";
+		return null;
 	}
 
 	public MetadataMapper getMetadataMapper() {
