@@ -277,12 +277,17 @@ public class Viewer extends JPanel {
 				}
 			}
 		});
-		//TODO: possibly set alternative icons
+		ImageIcon eventIcon = new ImageIcon(Viewer.class.getResource("/images/event.png"));
+		ImageIcon calibrationIcon = new ImageIcon(Viewer.class.getResource("/images/calibration.png"));
+		ImageIcon maintenanceIcon = new ImageIcon(Viewer.class.getResource("/images/maintenance.png"));
+		ImageIcon incidentIcon = new ImageIcon(Viewer.class.getResource("/images/incident.png"));
 		treeEvents.setCellRenderer(new DefaultTreeCellRenderer() {
 			@Override
 			public Component getTreeCellRendererComponent(JTree tree,
 														  Object value, boolean selected, boolean expanded,
 														  boolean isLeaf, int row, boolean focused) {
+				// because of some weird bug the text color has to be set before calling super
+				// and the icons have to be set after calling super
 				String s = value.toString();
 				switch(s) {
 					case "Calibration":
@@ -302,7 +307,33 @@ public class Viewer extends JPanel {
 						setTextSelectionColor(Color.WHITE);
 						break;
 				}
-				return super.getTreeCellRendererComponent(tree, value, selected, expanded, isLeaf, row, focused);
+				super.getTreeCellRendererComponent(tree, value, selected, expanded, isLeaf, row, focused);
+				switch(s) {
+					case "Events":
+						setIcon(eventIcon);
+						setClosedIcon(eventIcon);
+						setOpenIcon(eventIcon);
+						break;
+					case "Calibration":
+						setIcon(calibrationIcon);
+						setClosedIcon(calibrationIcon);
+						setOpenIcon(calibrationIcon);
+						break;
+					case "Maintenance":
+						setIcon(maintenanceIcon);
+						setClosedIcon(maintenanceIcon);
+						setOpenIcon(maintenanceIcon);
+						break;
+					case "Incident":
+						setIcon(incidentIcon);
+						setClosedIcon(incidentIcon);
+						setOpenIcon(incidentIcon);
+						break;
+					default:
+						break;
+				}
+
+				return this;
 			}
 		});
 
