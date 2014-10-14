@@ -27,8 +27,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Ellipse2D;
 import java.io.*;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -73,6 +71,23 @@ public class Viewer extends JPanel {
 
 	public static void main(String[] args) {
 
+		try {
+			// Nimbus look and feel
+			for(UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+				if("Nimbus".equals(info.getName())) {
+					UIManager.setLookAndFeel(info.getClassName());
+					break;
+				}
+			}
+		} catch (Exception e) {
+			// if Nimbus is not available, fall back to cross-platform
+			try {
+				UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+			} catch (Exception ignored) {
+			}
+		}
+
+		// start viewer
 		SwingUtilities.invokeLater(() -> {
 			Viewer viewer = new Viewer();
 			viewer.display();
@@ -89,13 +104,8 @@ public class Viewer extends JPanel {
 
 	public Viewer() {
 		frameParent = new JFrame("iMonDB Viewer");
-		frameParent.setBackground(Color.WHITE);
-
-		UIManager.put("OptionPane.background", Color.white);
-		UIManager.put("Panel.background", Color.white);
 
 		JPanel panelParent = new JPanel(new BorderLayout());
-		panelParent.setBackground(Color.WHITE);
 		frameParent.setContentPane(panelParent);
 
 		// create menu bar
@@ -160,17 +170,13 @@ public class Viewer extends JPanel {
 	}
 
 	private void arrangePanels(JPanel panelParent, JPanel panelSelection, JPanel panelDbConnection, JPanel panelEvents) {
-		panelSelection.setBackground(Color.WHITE);
 		panelParent.add(panelSelection, BorderLayout.PAGE_START);
 
 		panelGraph = new JPanel(new BorderLayout());
-		panelGraph.setBackground(Color.WHITE);
 		panelParent.add(panelGraph, BorderLayout.CENTER);
 
-		panelDbConnection.setBackground(Color.WHITE);
 		panelParent.add(panelDbConnection, BorderLayout.PAGE_END);
 
-		panelEvents.setBackground(Color.WHITE);
 		panelParent.add(panelEvents, BorderLayout.LINE_END);
 	}
 
@@ -198,9 +204,6 @@ public class Viewer extends JPanel {
 		buttonAdvanced.setToolTipText("advanced search settings");
 		buttonAdvanced.addActionListener(new ListenerAdvancedSettings());
 		panelSelection.add(buttonAdvanced);
-
-		System.out.println(buttonAdvanced.getPreferredSize());
-		System.out.println(comboBoxProperty.getPreferredSize());
 
 		JButton buttonShowGraph = new JButton("Show graph");
 		buttonShowGraph.addActionListener(new ListenerShowGraph());
@@ -866,37 +869,8 @@ public class Viewer extends JPanel {
 	private class ListenerAbout implements ActionListener {
 
 		public void actionPerformed(ActionEvent e) {
-			try {
-				URI uri = new URI("https://bitbucket.org/proteinspector/jmondb");
-				class OpenUrlAction implements ActionListener {
-					public void actionPerformed(ActionEvent e) {
-						if(Desktop.isDesktopSupported()) {
-							try {
-								Desktop.getDesktop().browse(uri);
-							} catch(IOException e2) {
-								JOptionPane.showMessageDialog(frameParent, e2.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-							}
-						} else {
-							JOptionPane.showMessageDialog(frameParent, "Could not open the website", "Error", JOptionPane.ERROR_MESSAGE);
-						}
-					}
-				}
-
-				JButton button = new JButton();
-				button.setText("<html>For more information, please visit our <font color=\"#000099\"><u>website</u></font>.</html>");
-				button.setHorizontalAlignment(SwingConstants.LEFT);
-				button.setBorderPainted(false);
-				button.setOpaque(false);
-				button.setBackground(Color.WHITE);
-
-				button.setToolTipText(uri.toString());
-				button.addActionListener(new OpenUrlAction());
-
-				JOptionPane.showMessageDialog(frameParent, button, "About", JOptionPane.INFORMATION_MESSAGE);
-
-			} catch(URISyntaxException e1) {
-				JOptionPane.showMessageDialog(frameParent, "Could not open the website", "Error", JOptionPane.ERROR_MESSAGE);
-			}
+			JLabelLink linkAbout = new JLabelLink("For more information, please visit our", "website", "https://bitbucket.org/proteinspector/jmondb", ".");
+			JOptionPane.showMessageDialog(frameParent, linkAbout, "About", JOptionPane.INFORMATION_MESSAGE);
 		}
 	}
 }
