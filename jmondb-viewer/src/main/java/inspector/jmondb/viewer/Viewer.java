@@ -64,6 +64,9 @@ public class Viewer extends JPanel {
 	private JCheckBox checkBoxMaintenace;
 	private JCheckBox checkBoxIncident;
 
+	// advanced search settings
+	private SearchDialog advancedSearchDialog;
+
 	// connection to the iMonDB
 	private EntityManagerFactory emf;
 	private IMonDBReader dbReader;
@@ -189,6 +192,7 @@ public class Viewer extends JPanel {
 		panelSelection.add(labelInstrument);
 		comboBoxInstrument = new JComboBox<>();
 		comboBoxInstrument.addActionListener(new ListenerLoadInstrumentEvents());
+		comboBoxInstrument.addActionListener(new ListenerCreateAdvancedSearchDialog());
 		comboBoxInstrument.setPreferredSize(new Dimension(250, 25));
 		comboBoxInstrument.setMaximumSize(new Dimension(250, 25));
 		panelSelection.add(comboBoxInstrument);
@@ -481,10 +485,7 @@ public class Viewer extends JPanel {
 							instrumentNames.forEach(comboBoxInstrument::addItem);
 
 							// fill in possible properties in the combo box
-							comboBoxProperty.removeAllItems();
-							List<Object[]> values = dbReader.getFromCustomQuery("SELECT prop.name, prop.accession FROM Property prop WHERE prop.isNumeric IS TRUE ORDER BY prop.name", Object[].class);
-							for(Object[] value : values)
-								comboBoxProperty.addItem(new PropertyComboBoxItem((String)value[0], (String)value[1]));
+							setProperties();
 
 							// show the connection information
 							labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
@@ -501,6 +502,19 @@ public class Viewer extends JPanel {
 				dbConnector.start();
 			}
 		}
+	}
+
+	private void setProperties() {
+		comboBoxProperty.removeAllItems();
+		List<Object[]> values;
+		if(advancedSearchDialog != null && advancedSearchDialog.getFilterString() != null) {
+			Map<String, String> param = ImmutableMap.of("filter", "%" + advancedSearchDialog.getFilterString() + "%");
+			values = dbReader.getFromCustomQuery("SELECT prop.name, prop.accession FROM Property prop WHERE prop.isNumeric IS TRUE AND prop.name LIKE :filter ORDER BY prop.name", Object[].class, param);
+		}
+		else
+			values = dbReader.getFromCustomQuery("SELECT prop.name, prop.accession FROM Property prop WHERE prop.isNumeric IS TRUE ORDER BY prop.name", Object[].class);
+		for(Object[] value : values)
+			comboBoxProperty.addItem(new PropertyComboBoxItem((String)value[0], (String)value[1]));
 	}
 
 	private class ListenerDisconnectFromDatabase implements ActionListener {
@@ -557,22 +571,42 @@ public class Viewer extends JPanel {
 		}
 	}
 
+	private class ListenerCreateAdvancedSearchDialog implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			// get all unique metadata names for the selected instrument
+			List<Metadata> metadata = dbReader.getFromCustomQuery("SELECT md FROM Metadata md WHERE md.run.instrument.name = :instName", Metadata.class, ImmutableMap.of("instName", (String) comboBoxInstrument.getSelectedItem()));
+
+			// create dialog
+			advancedSearchDialog = new SearchDialog(metadata);
+		}
+	}
+
 	private class ListenerAdvancedSettings implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			if(dbReader != null) {
-				// get all unique metadata names for the selected instrument
-				List<Metadata> metadata = dbReader.getFromCustomQuery("SELECT md FROM Metadata md WHERE md.run.instrument.name = :instName", Metadata.class, ImmutableMap.of("instName", (String) comboBoxInstrument.getSelectedItem()));
+				String oldFilter = advancedSearchDialog.getFilterString();
 
-				// create dialog
-				SearchDialog dialog = new SearchDialog(metadata);
+				String[] options = new String[] { "OK", "Cancel", "Reset" };
+				int option = JOptionPane.showOptionDialog(frameParent, advancedSearchDialog, "Advanced search settings", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
 
-				int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Advanced search settings", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-
-				if(option == JOptionPane.OK_OPTION) {
-
-
+				if(option == JOptionPane.YES_OPTION) {
+					// apply advanced settings
+					// property filtering
+					if((oldFilter == null && advancedSearchDialog.getFilterString() != null) ||
+							(oldFilter != null && !oldFilter.equals(advancedSearchDialog.getFilterString()))) {
+						setProperties();
+					}
+					// metadata only has to be applied when querying to show the graph
+				}
+				else if(option == JOptionPane.CANCEL_OPTION) {
+					// remove advanced settings
+					advancedSearchDialog.reset();
+					if(oldFilter != null)
+						setProperties();
 				}
 			}
 		}
@@ -596,8 +630,32 @@ public class Viewer extends JPanel {
 							JOptionPane.showMessageDialog(frameParent, "Property <" + property.getName() + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
 
 						// load all values for the property and instrument
-						Map<String, String> parameters = ImmutableMap.of("instName", instrumentName, "propAccession", property.getAccession());
-						List<Object[]> values = dbReader.getFromCustomQuery("SELECT val, val.originatingRun.sampleDate FROM Value val WHERE val.originatingRun.instrument.name = :instName AND val.definingProperty.accession = :propAccession ORDER BY val.originatingRun.sampleDate", Object[].class, parameters);
+						StringBuilder querySelectFrom = new StringBuilder("SELECT val, val.originatingRun.sampleDate FROM Value val");
+						StringBuilder queryWhere = new StringBuilder("WHERE val.originatingRun.instrument.name = :instName AND val.definingProperty.accession = :propAccession");
+						Map<String, String> parameters = new HashMap<>();
+						parameters.put("instName", instrumentName);
+						parameters.put("propAccession", property.getAccession());
+
+						// set advanced search settings
+						for(int i = 0; i < advancedSearchDialog.getMetadataCount(); i++) {
+							querySelectFrom.append(" JOIN val.originatingRun.metadata md").append(i);
+
+							if(i == 0)
+								queryWhere.append(" AND (");
+							else if(i > 0)
+								queryWhere.append(" ").append(advancedSearchDialog.getMetadataCombination(i));
+							queryWhere.append(" md").append(i).append(".name = :md").append(i).append("Name AND md")
+									.append(i).append(".value ").append(advancedSearchDialog.getMetadataOperator(i))
+									.append(" :md").append(i).append("Value");
+							if(i == advancedSearchDialog.getMetadataCount() - 1)
+								queryWhere.append(")");
+
+							parameters.put("md" + i + "Name", advancedSearchDialog.getMetadataName(i));
+							parameters.put("md" + i + "Value", advancedSearchDialog.getMetadataValue(i));
+						}
+						String query = querySelectFrom.toString() + " " + queryWhere.toString() + " ORDER BY val.originatingRun.sampleDate";
+
+						List<Object[]> values = dbReader.getFromCustomQuery(query, Object[].class, parameters);
 
 						if(values.size() == 0)
 							JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
@@ -660,7 +718,6 @@ public class Viewer extends JPanel {
 							plot.setRenderer(1, q1q3Renderer);
 							plot.setRenderer(2, minMaxRenderer);
 							JFreeChart chart = new JFreeChart(property.getName(), plot);
-							chart.setBackgroundPaint(Color.WHITE);
 							chartPanel = new ChartPanel(chart, false, true, false, true, false);
 							chart.removeLegend();
 
