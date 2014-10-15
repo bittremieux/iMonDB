@@ -1,0 +1,69 @@
+# This section contains the information needed to connect to the iMonDB MySQL database.
+sql:
+    # The MySQL host.
+    # Optional. Default: localhost.
+    host: localhost
+    # The MySQL port.
+    # Optional. Default: 3306.
+    port: 3306
+    # The iMonDB database name.
+    # Required. Recommended: iMonDB.
+    database: iMonDB
+    # The MySQL user name.
+    # Required.
+    user:
+    # The password for the given user.
+    # Optional. Default: none.
+    password:
+
+# This section contains information on which raw files to process, and allows the user to control some of the processing behaviour.
+general:
+    # The start directory containing child directories (or raw files directly) that will be processed.
+    # Required. Example: /path/to/start/directory
+    dir:
+    # The date of the most recent run in the raw files. Only files with a modification date after this date will be processed.
+    # Optional. Default: January 1, 1970, 00:00:00 GMT. Format: yyyy-MM-dd'T'HH:mm:ss.SSSZ  
+    last_date:
+    # A regular expression used to match the file name of the raw files that need to be processed. Matching is case insensitive.
+    # Required.
+    match_file: ^.*\.raw$
+    # The number of worker threads used for collecting the raw files and processing them.
+    # Optional. Default: 1.
+    num_threads: 1
+
+# All machines for which raw files will be processed need to be defined here.
+# A machine has a user-specified name, and the type is determined by an accession number in the PSI-MS controlled vocabulary.
+instruments:
+      # The user-specified name for the machine.
+      # Required.
+    - name:
+      # An accession number on the PSI-MS controlled vocabulary determining the type of instrument.
+      # Required.
+      type:
+      # A regular expression that will be used to recognize raw files that belong to this instrument.
+      # Required.
+      regex:
+      # The resource on which the above regular expression will be applied. Possible options are:
+      #   - name: signifying the (base) file name
+      #   - path: signifying the full file path without the (base) file name
+      # Attention: the specified regular expression needs to match the whole resource.
+      # Required.
+      regex-source:
+
+# This section contains information on how to obtain metadata from a raw file.
+metadata:
+      # The name of the metadata item.
+      # Required.
+    - name:
+      # The value of the metadata item.
+      # Required.
+      value:
+      # A regular expression that will be used to recognize raw files that belong to this instrument.
+      # Required.
+      regex:
+      # The resource on which the above regular expression will be applied. Possible options are:
+      #   - name: signifying the (base) file name
+      #   - path: signifying the full file path without the (base) file name
+      # Attention: the specified regular expression needs to match the whole resource.
+      # Required.
+      regex-source:
