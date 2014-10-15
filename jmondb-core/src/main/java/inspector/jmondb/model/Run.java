@@ -35,13 +35,14 @@ public class Run {
 	private Timestamp sampleDate;
 
 	/** additional {@link Metadata} describing the run */
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy= "run")
-	@MapKey(name="id")
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.EAGER, mappedBy="run")
+	@MapKey(name="name")
 	private Map<String, Metadata> metadata;
 
 	/** all {@link Value}s for the run */
-	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy= "originatingRun")
-	@MapKey(name="id")
+	@OneToMany(cascade=CascadeType.ALL, fetch=FetchType.LAZY, mappedBy="originatingRun")
+	@MapKeyJoinColumn(name="l_imon_property_id", referencedColumnName="id")
+	@MapKeyClass(Property.class)
 	private Map<Property, Value> runValues;
 
 	/** inverse part of the bi-directional relationship with {@link Instrument} */

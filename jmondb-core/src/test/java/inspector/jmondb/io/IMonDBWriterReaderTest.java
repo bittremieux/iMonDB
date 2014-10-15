@@ -198,6 +198,11 @@ public class IMonDBWriterReaderTest {
 			Value value = valIt.next();
 			assertEquals(value, runOld.getValue(value.getDefiningProperty()));
 		}
+		// check map keys in both directions
+		for(Iterator<Value> valIt = runOld.getValueIterator(); valIt.hasNext(); ) {
+			Value value = valIt.next();
+			assertEquals(value, runNew.getValue(value.getDefiningProperty()));
+		}
 	}
 
 	@Test(expected = IllegalArgumentException.class)
