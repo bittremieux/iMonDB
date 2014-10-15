@@ -577,7 +577,11 @@ public class ThermoRawFileExtractor {
 			}
 
 			//TODO: correctly set the accession number once we have a valid cvIMon
-			String name = cell.getRowKey() + " - " + cell.getColumnKey();
+			String name;
+			if(!cell.getRowKey().isEmpty())
+				name = cell.getRowKey() + " - " + cell.getColumnKey();
+			else
+				name = cell.getColumnKey();
 			String accession = name;
 			Property property = new Property(name, valueType, accession, cvIMon, isNumeric);
 			// values are automatically added to the run and the property
