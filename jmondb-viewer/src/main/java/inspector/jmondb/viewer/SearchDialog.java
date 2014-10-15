@@ -45,6 +45,8 @@ public class SearchDialog extends JPanel {
 		JLabel labelAdd = new JLabel("Specify additional metadata search settings");
 		addMetadataPanel.add(labelAdd);
 		JButton buttonAdd = new JButton(new ImageIcon(getClass().getResource("/images/add.png")));
+		if(metadata.size() == 0)
+			buttonAdd.setEnabled(false);
 		buttonAdd.addActionListener(new AddSettingsPanelListener());
 		addMetadataPanel.add(buttonAdd);
 		centerPanel.add(addMetadataPanel, BorderLayout.PAGE_START);
@@ -142,6 +144,7 @@ public class SearchDialog extends JPanel {
 			JButton button = (JButton) e.getSource();
 			settingsPanel.remove(button.getParent());
 			// check if a combination panel needs to be removed as well
+			if(settingsPanel.getComponentCount() > 0) {
 				// first
 				if("combinationPanel".equals(settingsPanel.getComponent(0).getName()))
 					settingsPanel.remove(0);
@@ -160,6 +163,7 @@ public class SearchDialog extends JPanel {
 					} else
 						prevIsCombination = false;
 				}
+			}
 
 			settingsPanel.validate();
 			settingsPanel.repaint();

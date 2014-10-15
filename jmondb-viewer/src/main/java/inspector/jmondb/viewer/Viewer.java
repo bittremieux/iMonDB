@@ -577,8 +577,9 @@ public class Viewer extends JPanel {
 			// get all unique metadata names for the selected instrument
 			List<Metadata> metadata = dbReader.getFromCustomQuery("SELECT md FROM Metadata md WHERE md.run.instrument.name = :instName", Metadata.class, ImmutableMap.of("instName", (String) comboBoxInstrument.getSelectedItem()));
 
-			// create dialog
+			// create dialog (this implicitly resets it as well)
 			advancedSearchDialog = new SearchDialog(metadata);
+			setProperties();
 		}
 	}
 
