@@ -57,10 +57,12 @@ int main(int argc, const char* argv[])
                 
                     std::cout << label << '\t' << value << std::endl;
                 }
+
+                std::cout << "--END_OF_SCAN_" << scan << std::endl;
             }
             catch(thermo::RawEgg& e)
             {
-				std::cerr << "Error: " << e.what() << std::endl;
+				//std::cerr << "Error: " << e.what() << std::endl;
                 break;
             }
         }        

@@ -50,10 +50,12 @@ int main(int argc, const char* argv[])
                 
                 for(int i = 0; i < tuneData->size(); ++i)
                     std::cout << tuneData->label(i) << '\t' << tuneData->value(i) << std::endl;
+
+                std::cout << "--END_OF_SEGMENT_" << segment << std::endl;
             }
             catch(thermo::RawEgg& e)
             {
-				std::cerr << "Error: " << e.what() << std::endl;
+				//std::cerr << "Error: " << e.what() << std::endl;
                 break;
             }
         }        

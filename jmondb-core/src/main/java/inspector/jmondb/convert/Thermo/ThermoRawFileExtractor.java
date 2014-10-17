@@ -386,31 +386,37 @@ public class ThermoRawFileExtractor {
 
 			// read all the individual values
 			String line;
-			String header = "";
+			String header = "";	// null header not allowed for insertion in the Table
 			while((line = reader.readLine()) != null) {
 				String[] values = line.split("\t");
 				// header
-				if(values.length == 1 && values[0].length() > 0) {
-					switch(model) {
-						case THERMO_LTQ_ORBITRAP:
-						case THERMO_ORBITRAP_XL:
-						case THERMO_LTQ_VELOS:
-						case THERMO_ORBITRAP_VELOS:
-							header = headerOrbitrap(values[0]);
-							break;
-						case THERMO_TSQ_VANTAGE:
-							header = headerTsqVantage(values[0], header);
-							break;
-						case THERMO_Q_EXACTIVE:
-							header = headerQExactive(values[0]);
-							break;
-						case THERMO_ORBITRAP_FUSION:
-							header = headerOrbitrapFusion(values[0], header);
-							break;
-						case UNKNOWN_MODEL:
-						default:
-							header = values[0];
-							break;
+				if(values.length == 1) {
+					if(values[0].isEmpty() || values[0].startsWith("--END_OF_")) {
+						// reset header
+						header = "";
+					}
+					else {
+						switch(model) {
+							case THERMO_LTQ_ORBITRAP:
+							case THERMO_ORBITRAP_XL:
+							case THERMO_LTQ_VELOS:
+							case THERMO_ORBITRAP_VELOS:
+								header = headerOrbitrap(values[0]);
+								break;
+							case THERMO_TSQ_VANTAGE:
+								header = headerTsqVantage(values[0], header);
+								break;
+							case THERMO_Q_EXACTIVE:
+								header = headerQExactive(values[0]);
+								break;
+							case THERMO_ORBITRAP_FUSION:
+								header = headerOrbitrapFusion(values[0], header);
+								break;
+							case UNKNOWN_MODEL:
+							default:
+								header = values[0];
+								break;
+						}
 					}
 				}
 				// value
@@ -518,15 +524,10 @@ public class ThermoRawFileExtractor {
 		}
 		// filter out all the entries that have a (partially!) matching short name
 		//TODO: this is hardly very efficient, can we come up with something better?
-		for(Iterator<Table.Cell<String, String, ArrayList<String>>> it = data.cellSet().iterator(); it.hasNext(); ) {
-			Table.Cell<String, String, ArrayList<String>> cell = it.next();
-			boolean toRemove = false;
-			for(int i = 0; i < filterShort.length && !toRemove; i++) {
-				toRemove = cell.getColumnKey().contains(filterShort[i]);
-			if(toRemove)
-				it.remove();
-			}
-		}
+		for(Iterator<Table.Cell<String, String, ArrayList<String>>> it = data.cellSet().iterator(); it.hasNext(); )
+			for(String filterItem : filterShort)
+				if(it.next().getColumnKey().contains(filterItem))
+					it.remove();
 	}
 
 	/**
