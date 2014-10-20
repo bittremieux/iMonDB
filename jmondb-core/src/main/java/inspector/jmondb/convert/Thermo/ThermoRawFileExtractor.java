@@ -388,61 +388,19 @@ public class ThermoRawFileExtractor {
 			String line;
 			String header = "";	// null header not allowed for insertion in the Table
 			while((line = reader.readLine()) != null) {
-				String[] values = line.split("\t");
-				// header
-				if(values.length == 1) {
-					if(values[0].isEmpty() || values[0].startsWith("--END_OF_")) {
-						// reset header
-						header = "";
-					}
-					else {
-						switch(model) {
-							case THERMO_LTQ_ORBITRAP:
-							case THERMO_ORBITRAP_XL:
-							case THERMO_LTQ_VELOS:
-							case THERMO_ORBITRAP_VELOS:
-								header = headerOrbitrap(values[0]);
-								break;
-							case THERMO_TSQ_VANTAGE:
-								header = headerTsqVantage(values[0], header);
-								break;
-							case THERMO_Q_EXACTIVE:
-								header = headerQExactive(values[0]);
-								break;
-							case THERMO_ORBITRAP_FUSION:
-								header = headerOrbitrapFusion(values[0], header);
-								break;
-							case UNKNOWN_MODEL:
-							default:
-								header = values[0];
-								break;
-						}
-					}
+				if(isSeparator(line)) {
+					// reset header
+					header = "";
 				}
-				// value
-				else if(values.length == 2) {
-					String[] nameValue;
-					switch(model) {
-						case THERMO_LTQ_ORBITRAP:
-						case THERMO_ORBITRAP_XL:
-						case THERMO_LTQ_VELOS:
-						case THERMO_ORBITRAP_VELOS:
-							nameValue = valueOrbitrap(values);
-							break;
-						case THERMO_TSQ_VANTAGE:
-							nameValue = valueTsqVantage(values);
-							break;
-						case THERMO_Q_EXACTIVE:
-						case THERMO_ORBITRAP_FUSION:
-							nameValue = valueQExactiveFusion(values);
-							break;
-						case UNKNOWN_MODEL:
-						default:
-							nameValue = values;
-							break;
-					}
+				else if(isHeader(line, model)) {
+					// get the header
+					header = getHeader(line, header, model);
+				}
+				else {
+					// extract the value
+					String[] nameValue = getNameAndValue(line, model);
 
-					// save value
+					// save the value
 					if(!data.contains(header, nameValue[0]))
 						data.put(header, nameValue[0], new ArrayList<>());
 					data.get(header, nameValue[0]).add(nameValue[1]);
@@ -454,6 +412,73 @@ public class ThermoRawFileExtractor {
 		} catch(IOException e) {
 			logger.error("Error while reading the instrument data: {}", e);
 			throw new IllegalStateException("Error while reading the instrument data: " + e);
+		}
+	}
+
+	private boolean isSeparator(String line) {
+		return line.trim().isEmpty() || line.startsWith("--END_OF_");
+	}
+
+	private boolean isHeader(String line, InstrumentModel model) {
+		String[] lineSplit = line.split("\t");
+
+		if(lineSplit.length > 1)
+			return false;
+		else {
+			switch(model) {
+				case THERMO_LTQ_ORBITRAP:
+				case THERMO_ORBITRAP_XL:
+				case THERMO_LTQ_VELOS:
+				case THERMO_ORBITRAP_VELOS:
+					return isHeaderOrbitrap(lineSplit[0]);
+				case THERMO_TSQ_VANTAGE:
+					return isHeaderTsqVantage(lineSplit[0]);
+				case THERMO_Q_EXACTIVE:
+					return isHeaderQExactive(lineSplit[0]);
+				case THERMO_ORBITRAP_FUSION:
+					return isHeaderOrbitrapFusion(lineSplit[0]);
+				case UNKNOWN_MODEL:
+				default:
+					return false;
+			}
+		}
+	}
+
+	private boolean isHeaderOrbitrap(String line) {
+		return !line.contains(":");
+	}
+
+	@SuppressWarnings("unused")
+	private boolean isHeaderTsqVantage(String line) {
+		return true;
+	}
+
+	private boolean isHeaderQExactive(String line) {
+		return line.contains("===");
+	}
+
+	private boolean isHeaderOrbitrapFusion(String line) {
+		return !line.contains(":");
+	}
+
+	private String getHeader(String line, String oldHeader, InstrumentModel model) throws UnsupportedEncodingException {
+		line = line.trim();
+
+		switch(model) {
+			case THERMO_LTQ_ORBITRAP:
+			case THERMO_ORBITRAP_XL:
+			case THERMO_LTQ_VELOS:
+			case THERMO_ORBITRAP_VELOS:
+				return headerOrbitrap(line);
+			case THERMO_TSQ_VANTAGE:
+				return headerTsqVantage(line, oldHeader);
+			case THERMO_Q_EXACTIVE:
+				return headerQExactive(line);
+			case THERMO_ORBITRAP_FUSION:
+				return headerOrbitrapFusion(line, oldHeader);
+			case UNKNOWN_MODEL:
+			default:
+				return line;
 		}
 	}
 
@@ -486,23 +511,44 @@ public class ThermoRawFileExtractor {
 			return new String(newHeader.trim().getBytes("ascii"));
 	}
 
+	private String[] getNameAndValue(String line, InstrumentModel model) throws UnsupportedEncodingException {
+		String[] values = line.split("\t");
+
+		switch(model) {
+			case THERMO_LTQ_ORBITRAP:
+			case THERMO_ORBITRAP_XL:
+			case THERMO_LTQ_VELOS:
+			case THERMO_ORBITRAP_VELOS:
+				return valueOrbitrap(values);
+			case THERMO_TSQ_VANTAGE:
+				return valueTsqVantage(values);
+			case THERMO_Q_EXACTIVE:
+			case THERMO_ORBITRAP_FUSION:
+				return valueQExactiveFusion(values);
+			case UNKNOWN_MODEL:
+			default:
+				return values;
+		}
+	}
+
 	private String[] valueOrbitrap(String[] line) throws UnsupportedEncodingException {
 		String name = line[0].trim();
 		name = name.substring(0, name.lastIndexOf(':'));
-		String value = line[1].trim();
+		String value = line.length > 1 ? line[1].trim() : "";
 
 		return new String[] { new String(name.getBytes("ascii")), value };
 	}
 
 	private String[] valueTsqVantage(String[] line) throws UnsupportedEncodingException {
-		return new String[] { new String(line[0].getBytes("ascii")), line[1] };
+		String value = line.length > 1 ? line[1].trim() : "";
+		return new String[] { new String(line[0].getBytes("ascii")), value };
 	}
 
 	private String[] valueQExactiveFusion(String[] line) throws UnsupportedEncodingException {
 		String name = line[0].trim();
 		if(name.contains(":"))
 			name = name.substring(0, name.lastIndexOf(':'));
-		String value = line[1].trim();
+		String value = line.length > 1 ? line[1].trim() : "";
 
 		return new String[] { new String(name.getBytes("ascii")), value };
 	}
@@ -524,10 +570,15 @@ public class ThermoRawFileExtractor {
 		}
 		// filter out all the entries that have a (partially!) matching short name
 		//TODO: this is hardly very efficient, can we come up with something better?
-		for(Iterator<Table.Cell<String, String, ArrayList<String>>> it = data.cellSet().iterator(); it.hasNext(); )
-			for(String filterItem : filterShort)
-				if(it.next().getColumnKey().contains(filterItem))
+		for(Iterator<Table.Cell<String, String, ArrayList<String>>> it = data.cellSet().iterator(); it.hasNext(); ) {
+			Table.Cell<String, String, ArrayList<String>> cell = it.next();
+			boolean toRemove = false;
+			for(int i = 0; i < filterShort.length && !toRemove; i++) {
+				toRemove = cell.getColumnKey().contains(filterShort[i]);
+				if(toRemove)
 					it.remove();
+			}
+		}
 	}
 
 	/**
@@ -554,39 +605,45 @@ public class ThermoRawFileExtractor {
 
 			DescriptiveStatistics stats = new DescriptiveStatistics(cell.getValue().size());
 			Frequency freq = new Frequency();
+			boolean isEmpty = true;
 			for(int i = 0; i < cell.getValue().size(); i++) {
 				String s = cell.getValue().get(i);
-				if(s != null && !s.equals("")) {
+				if(s != null) {
 					freq.addValue(s);
-					try {
-						stats.addValue(Double.parseDouble(s));
-					} catch(NumberFormatException nfe) {
-						isNumeric = false;
-					}
+					isEmpty &= s.isEmpty();
+					if(isNumeric && !s.isEmpty())
+						try {
+							stats.addValue(Double.parseDouble(s));
+						} catch(NumberFormatException nfe) {
+							isNumeric = false;
+						}
 				}
 			}
-			n = (int) freq.getSumFreq();
-			nDiff = freq.getUniqueCount();
-			if(isNumeric) {
-				min = stats.getMin();
-				max = stats.getMax();
-				mean = stats.getMean();
-				median = stats.getPercentile(50);
-				sd = stats.getStandardDeviation();
-				q1 = stats.getPercentile(25);
-				q3 = stats.getPercentile(75);
-			}
+			// add a new value if it has at least one non-empty observation
+			if(!isEmpty) {
+				n = (int) freq.getSumFreq();
+				nDiff = freq.getUniqueCount();
+				if(isNumeric) {
+					min = stats.getMin();
+					max = stats.getMax();
+					mean = stats.getMean();
+					median = stats.getPercentile(50);
+					sd = stats.getStandardDeviation();
+					q1 = stats.getPercentile(25);
+					q3 = stats.getPercentile(75);
+				}
 
-			//TODO: correctly set the accession number once we have a valid cvIMon
-			String name;
-			if(!cell.getRowKey().isEmpty())
-				name = cell.getRowKey() + " - " + cell.getColumnKey();
-			else
-				name = cell.getColumnKey();
-			String accession = name;
-			Property property = new Property(name, valueType, accession, cvIMon, isNumeric);
-			// values are automatically added to the run and the property
-			new Value(firstValue, n, nDiff, min, max, mean, median, sd, q1, q3, property, run);
+				//TODO: correctly set the accession number once we have a valid cvIMon
+				String name;
+				if(!cell.getRowKey().isEmpty())
+					name = cell.getRowKey() + " - " + cell.getColumnKey();
+				else
+					name = cell.getColumnKey();
+				String accession = name;
+				Property property = new Property(name, valueType, accession, cvIMon, isNumeric);
+				// values are automatically added to the run and the property
+				new Value(firstValue, n, nDiff, min, max, mean, median, sd, q1, q3, property, run);
+			}
 		}
 	}
 }
