@@ -56,8 +56,8 @@ public class ThermoRawFileExtractor {
 		exclusionProperties = initializeExclusionProperties();
 
 		// make sure the extractor exe's are available outside the jar
-		FILE_COPY_LOCK.lock();
 		try {
+			FILE_COPY_LOCK.lock();
 			if(!new File("./Thermo/ThermoMetaData.exe").exists() ||
 					!new File("./Thermo/ThermoStatusLog.exe").exists() ||
 					!new File("./Thermo/ThermoTuneMethod.exe").exists()) {

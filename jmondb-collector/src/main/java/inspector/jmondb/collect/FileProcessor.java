@@ -82,8 +82,8 @@ public class FileProcessor implements Callable<Timestamp> {
 				metadataMapper.applyMetadata(run, file);
 
 			// write the run to the database
-			DATABASE_LOCK.lock();
 			try {
+				DATABASE_LOCK.lock();
 				dbWriter.writeRun(run);
 			}
 			finally {
