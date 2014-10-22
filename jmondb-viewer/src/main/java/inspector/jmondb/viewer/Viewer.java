@@ -375,6 +375,8 @@ public class Viewer extends JPanel {
 		comboBoxProperty.removeAllItems();
 		// remove events
 		clearEventVisualization();
+		// remove advanced search settings
+		advancedSearchDialog = null;
 		// show information
 		labelDbConnection.setText("Not connected");
 		labelDbIcon.setIcon(iconNotConnected);
@@ -477,6 +479,8 @@ public class Viewer extends JPanel {
 							List<String> instrumentNames = dbReader.getFromCustomQuery("SELECT inst.name FROM Instrument inst ORDER BY inst.name", String.class);
 							instrumentNames.forEach(comboBoxInstrument::addItem);
 
+							// create advanced search settings
+							createAdvancedSearchDialog();
 							// fill in possible properties in the combo box
 							setProperties();
 
@@ -493,6 +497,17 @@ public class Viewer extends JPanel {
 				};
 				dbConnector.start();
 			}
+		}
+	}
+
+	private void createAdvancedSearchDialog() {
+		if(dbReader != null && comboBoxInstrument.getSelectedIndex() != -1) {
+			// get all unique metadata names for the selected instrument
+			List<Metadata> metadata = dbReader.getFromCustomQuery("SELECT md FROM Metadata md WHERE md.run.instrument.name = :instName", Metadata.class, ImmutableMap.of("instName", (String) comboBoxInstrument.getSelectedItem()));
+
+			// create dialog (this implicitly resets it as well)
+			advancedSearchDialog = new SearchDialog(metadata);
+			setProperties();
 		}
 	}
 
@@ -567,12 +582,7 @@ public class Viewer extends JPanel {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			// get all unique metadata names for the selected instrument
-			List<Metadata> metadata = dbReader.getFromCustomQuery("SELECT md FROM Metadata md WHERE md.run.instrument.name = :instName", Metadata.class, ImmutableMap.of("instName", (String) comboBoxInstrument.getSelectedItem()));
-
-			// create dialog (this implicitly resets it as well)
-			advancedSearchDialog = new SearchDialog(metadata);
-			setProperties();
+			createAdvancedSearchDialog();
 		}
 	}
 
@@ -580,7 +590,7 @@ public class Viewer extends JPanel {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			if(dbReader != null) {
+			if(dbReader != null && advancedSearchDialog != null) {
 				String oldFilter = advancedSearchDialog.getFilterString();
 
 				String[] options = new String[] { "OK", "Cancel", "Reset" };
