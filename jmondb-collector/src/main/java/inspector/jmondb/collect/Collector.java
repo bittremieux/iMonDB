@@ -111,6 +111,7 @@ public class Collector {
 			// process all the submitted threads and retrieve the sample dates
 			for(int i = 0; i < threadsSubmitted; i++) {
 				try {
+					logger.info("Processing file {} out of a total of {} queued files", (i+1), threadsSubmitted);
 					Timestamp runTimestamp = pool.take().get();
 					newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
 				} catch(Exception e) {	// catch all possible exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
