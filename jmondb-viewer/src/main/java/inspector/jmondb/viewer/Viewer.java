@@ -6,6 +6,7 @@ import inspector.jmondb.model.*;
 import inspector.jmondb.model.Event;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
+import org.apache.commons.lang.StringUtils;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.ValueMarker;
@@ -192,7 +193,8 @@ public class Viewer extends JPanel {
 
 		JLabel labelProperty = new JLabel("Property");
 		panelSelection.add(labelProperty);
-		comboBoxProperty = new JComboBox<>();
+		ComboBoxModel<PropertyComboBoxItem> sortedComboBoxModel = new SortedComboBoxModel<>();
+		comboBoxProperty = new JComboBox<>(sortedComboBoxModel);
 		comboBoxProperty.setPreferredSize(new Dimension(450, 25));
 		comboBoxProperty.setMaximumSize(new Dimension(450, 25));
 		panelSelection.add(comboBoxProperty);
@@ -513,15 +515,21 @@ public class Viewer extends JPanel {
 
 	private void setProperties() {
 		comboBoxProperty.removeAllItems();
-		List<Object[]> values;
-		if(advancedSearchDialog != null && advancedSearchDialog.getFilterString() != null) {
-			Map<String, String> param = ImmutableMap.of("filter", "%" + advancedSearchDialog.getFilterString() + "%");
-			values = dbReader.getFromCustomQuery("SELECT prop.name, prop.accession FROM Property prop WHERE prop.isNumeric IS TRUE AND prop.name LIKE :filter ORDER BY prop.name", Object[].class, param);
+
+		// load the instrument and all it's properties
+		Instrument instrument = dbReader.getInstrument((String) comboBoxInstrument.getSelectedItem(), false, true);
+
+		for(Iterator<Property> it = instrument.getPropertyIterator(); it.hasNext(); ) {
+			Property property = it.next();
+
+			if(property.getNumeric()) {
+				if(advancedSearchDialog != null && advancedSearchDialog.getFilterString() != null) {
+					if(StringUtils.containsIgnoreCase(property.getName(), advancedSearchDialog.getFilterString()))
+						comboBoxProperty.addItem(new PropertyComboBoxItem(property.getName(), property.getAccession()));
+				} else
+					comboBoxProperty.addItem(new PropertyComboBoxItem(property.getName(), property.getAccession()));
+			}
 		}
-		else
-			values = dbReader.getFromCustomQuery("SELECT prop.name, prop.accession FROM Property prop WHERE prop.isNumeric IS TRUE ORDER BY prop.name", Object[].class);
-		for(Object[] value : values)
-			comboBoxProperty.addItem(new PropertyComboBoxItem((String)value[0], (String)value[1]));
 	}
 
 	private class ListenerDisconnectFromDatabase implements ActionListener {
@@ -729,7 +737,7 @@ public class Viewer extends JPanel {
 				if(option == JOptionPane.OK_OPTION) {
 					try {
 						// create new event
-						Instrument instrument = dbReader.getInstrument(dialog.getInstrumentName(), true);
+						Instrument instrument = dbReader.getInstrument(dialog.getInstrumentName(), true, false);
 						Event event = new Event(instrument, dialog.getDate(), dialog.getType(), dialog.getDescription(), dialog.getPicture());
 
 						// write the event to the database

@@ -1,6 +1,6 @@
 package inspector.jmondb.viewer;
 
-public class PropertyComboBoxItem {
+public class PropertyComboBoxItem implements Comparable<PropertyComboBoxItem> {
 
 	private String name;
 	private String accession;
@@ -21,5 +21,10 @@ public class PropertyComboBoxItem {
 	@Override
 	public String toString() {
 		return name + " (" + accession + ")";
+	}
+
+	@Override
+	public int compareTo(PropertyComboBoxItem o) {
+		return getName().compareTo(o.getName());
 	}
 }
