@@ -80,6 +80,14 @@ public class IMonDBWriter {
 
 				// make sure a pre-existing cv is updated
 				assignDuplicateCvId(instrument.getCv(), entityManager);
+				// make sure the pre-existing properties and corresponding cv's are retained
+				HashMap<String, Property> properties = new HashMap<>();
+				for(Iterator<Property> it = instrument.getPropertyIterator(); it.hasNext(); ) {
+					Property prop = it.next();
+					properties.put(prop.getAccession(), prop);
+				}
+				if(properties.size() > 0)
+					assignDuplicatePropertyCvId(properties, entityManager);
 
 				// store this instrument
 				entityManager.getTransaction().begin();
@@ -260,7 +268,8 @@ public class IMonDBWriter {
 					Property prop = it.next().getDefiningProperty();
 					properties.put(prop.getAccession(), prop);
 				}
-				assignDuplicatePropertyCvId(properties, entityManager);
+				if(properties.size() > 0)
+					assignDuplicatePropertyCvId(properties, entityManager);
 
 				// store the new run
 				entityManager.getTransaction().begin();

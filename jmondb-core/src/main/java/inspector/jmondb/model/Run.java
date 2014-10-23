@@ -46,7 +46,7 @@ public class Run {
 	private Map<Property, Value> runValues;
 
 	/** inverse part of the bi-directional relationship with {@link Instrument} */
-	@ManyToOne(fetch=FetchType.LAZY)
+	@ManyToOne(cascade={CascadeType.PERSIST, CascadeType.MERGE}, fetch=FetchType.LAZY)
 	@JoinColumn(name="l_imon_instrument_id", nullable=false, referencedColumnName="id")
 	private Instrument instrument;
 
@@ -166,8 +166,12 @@ public class Run {
 	 * @param value  the {@code Value} that is added to this {@code Run}, not {@code null}
 	 */
 	void addValue(Value value) {
-		if(value != null)
+		if(value != null) {
+			// add the value to the run
 			runValues.put(value.getDefiningProperty(), value);
+			// add the value's defining property to the instrument
+			instrument.assignProperty(value.getDefiningProperty());
+		}
 		else {
 			logger.error("Can't add a <null> value to the run");
 			throw new NullPointerException("Can't add a <null> value to the run");

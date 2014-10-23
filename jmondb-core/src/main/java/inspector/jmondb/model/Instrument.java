@@ -50,6 +50,13 @@ public class Instrument {
 	@SortNatural
 	private SortedMap<Timestamp, Run> runsPerformedOnInstrument;
 
+	@ManyToMany(cascade={CascadeType.PERSIST, CascadeType.MERGE}, fetch=FetchType.LAZY)
+	@JoinTable(name="imon_instrument_properties",
+			joinColumns={@JoinColumn(name="l_imon_instrument_id", referencedColumnName="id")},
+			inverseJoinColumns={@JoinColumn(name="l_imon_property_id", referencedColumnName="id")})
+	@MapKey(name="accession")
+	private Map<String, Property> properties;
+
 	/**
 	 * Default constructor required by JPA.
 	 * Protected access modification enforces class immutability.
@@ -57,6 +64,7 @@ public class Instrument {
 	protected Instrument() {
 		events = new TreeMap<>();
 		runsPerformedOnInstrument = new TreeMap<>();
+		properties = new HashMap<>();
 	}
 
 	/**
@@ -193,7 +201,7 @@ public class Instrument {
 	 * Returns the {@link Event} for this {@code Instrument} that occurred at the given time.
 	 *
 	 * @param time  the {@link Timestamp} date when the {@code Event} was occurred
-	 * @return the {@code Event} that was occurred on this {@code Instrument} at the given time
+	 * @return the {@code Event} that occurred on this {@code Instrument} at the given time
 	 */
 	public Event getEvent(Timestamp time) {
 		if(time != null)
@@ -252,6 +260,46 @@ public class Instrument {
 		else {
 			logger.error("Can't add a <null> event to the instrument");
 			throw new NullPointerException("Can't add a <null> event to the instrument");
+		}
+	}
+
+	/**
+	 * Returns the {@link Property} with the given accession that was assigned to this {@code Instrument}.
+	 *
+	 * @param accession  the accession of the requested {@code Property}
+	 * @return the {@code Property} with the given accession that was assigned to this {@code Instrument}
+	 */
+	public Property getProperty(String accession) {
+		if(accession != null)
+			return properties.get(accession);
+		else
+			return null;
+	}
+
+	/**
+	 * Returns an {@link Iterator} over all {@link Property}s that are assigned to this {@code Instrument}.
+	 *
+	 * @return an {@link Iterator} over all {@link Property}s that are assigned to this {@code Instrument}
+	 */
+	public Iterator<Property> getPropertyIterator() {
+		return properties.values().iterator();
+	}
+
+	/**
+	 * Assigns the given {@link Property} to this {@code Instrument}.
+	 *
+	 * If the {@code Instrument} previously contained a {@code Property} with the same accession, the old {@code Property} is replaced.
+	 *
+	 * A {@code Property} is automatically assigned to an {@code Instrument} if a {@link Value} that is defined by the {@code Property} is added to a {@link Run} that was performed on the {@code Instrument}.
+	 *
+	 * @param property  the {@code Property} that is assigned to this {@code Instrument}, not {@code null}
+	 */
+	void assignProperty(Property property) {
+		if(property != null)
+			properties.put(property.getAccession(), property);
+		else {
+			logger.error("Can't assign a <null> property to the instrument");
+			throw new NullPointerException("Can't assign a <null> property to the instrument");
 		}
 	}
 

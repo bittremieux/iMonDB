@@ -60,7 +60,7 @@ public class IMonDBReader {
 	 * @return the {@code Instrument} specified by the given name if it is present in the database, else {@code null}
 	 */
 	public Instrument getInstrument(String name) {
-		return getInstrument(name, false);
+		return getInstrument(name, false, false);
 	}
 
 	/**
@@ -70,10 +70,11 @@ public class IMonDBReader {
 	 * The {@link Run}s that were performed on the {@code Instrument} are never automatically retrieved.
 	 *
 	 * @param name  the name of the requested {@code Instrument}
-	 * @param includeEvents  flag that indicated whether the {@code Event}s that occurred on the {@code Instrument} need to be retrieved as well
+	 * @param includeEvents  flag that indicates whether the {@code Event}s that occurred on the {@code Instrument} need to be retrieved as well
+	 * @param includeProperties  flag that indicates whether the {@code Property}s that are assigned to the {@code Instrument} need to be retrieved as well
 	 * @return the {@code Instrument} specified by the given name if it is present in the database, else {@code null}
 	 */
-	public Instrument getInstrument(String name, boolean includeEvents) {
+	public Instrument getInstrument(String name, boolean includeEvents, boolean includeProperties) {
 		logger.info("Retrieve instrument <{}>", name);
 
 		EntityManager entityManager = createEntityManager();
@@ -92,6 +93,14 @@ public class IMonDBReader {
 				for(Iterator<Event> it = instrument.getEventIterator(); it.hasNext(); ) {
 					Event event = it.next();
 					logger.trace("Event <{}> retrieved", event.getDate());
+				}
+			}
+			// explicitly load all properties if requested (lazy loading)
+			if(includeProperties) {
+				logger.debug("Load all properties assigned to instrument <{}>", name);
+				for(Iterator<Property> it = instrument.getPropertyIterator(); it.hasNext(); ) {
+					Property property = it.next();
+					logger.trace("Property <{}> retrieved", property.getName());
 				}
 			}
 

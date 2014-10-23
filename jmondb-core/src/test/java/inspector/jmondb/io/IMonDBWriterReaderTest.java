@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class IMonDBWriterReaderTest {
 
@@ -76,6 +77,7 @@ public class IMonDBWriterReaderTest {
 		em.createNativeQuery("TRUNCATE TABLE imon_metadata").executeUpdate();
 		em.createNativeQuery("TRUNCATE TABLE imon_run").executeUpdate();
 		em.createNativeQuery("TRUNCATE TABLE imon_event").executeUpdate();
+		em.createNativeQuery("TRUNCATE TABLE imon_instrument_properties").executeUpdate();
 		em.createNativeQuery("TRUNCATE TABLE imon_instrument").executeUpdate();
 		em.createNativeQuery("TRUNCATE TABLE imon_cv").executeUpdate();
 		em.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
@@ -96,8 +98,15 @@ public class IMonDBWriterReaderTest {
 		instruments.forEach(writer::writeInstrument);
 
 		IMonDBReader reader = new IMonDBReader(emf);
-		for(Instrument inst : instruments)
-			assertNotNull(reader.getInstrument(inst.getName()));
+		for(Instrument inst : instruments) {
+			Instrument instRead = reader.getInstrument(inst.getName(), false, true);
+			assertNotNull(instRead);
+			// verify that the properties are the same
+			for(Iterator<Property> it = instRead.getPropertyIterator(); it.hasNext(); ) {
+				Property prop = it.next();
+				assertEquals(inst.getProperty(prop.getAccession()), prop);
+			}
+		}
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -129,7 +138,7 @@ public class IMonDBWriterReaderTest {
 			writer.writeOrUpdateEvent(eventIt.next());
 
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getInstrument(instruments.get(0).getName(), false).getEventIterator().hasNext();
+		reader.getInstrument(instruments.get(0).getName(), false, false).getEventIterator().hasNext();
 	}
 
 	@Test
@@ -141,7 +150,7 @@ public class IMonDBWriterReaderTest {
 			writer.writeOrUpdateEvent(eventIt.next());
 
 		IMonDBReader reader = new IMonDBReader(emf);
-		Instrument instr = reader.getInstrument(instruments.get(0).getName(), true);
+		Instrument instr = reader.getInstrument(instruments.get(0).getName(), true, false);
 		for(Iterator<Event> eventIt = instruments.get(0).getEventIterator(); eventIt.hasNext(); ) {
 			Event event = eventIt.next();
 			assertEquals(event, instr.getEvent(event.getDate()));
@@ -161,7 +170,7 @@ public class IMonDBWriterReaderTest {
 		writer.writeOrUpdateEvent(eventNew);
 
 		IMonDBReader reader = new IMonDBReader(emf);
-		Instrument instr = reader.getInstrument(instruments.get(0).getName(), true);
+		Instrument instr = reader.getInstrument(instruments.get(0).getName(), true, false);
 		assertNotEquals(eventOld.getDescription(), instr.getEvent(eventOld.getDate()).getDescription());
 		assertEquals(eventNew.getDescription(), instr.getEvent(eventOld.getDate()).getDescription());
 	}
