@@ -59,7 +59,7 @@ public class IMonDBWriterReaderTest {
 			lastTime = new Timestamp(1264978800000L);
 			for(int e = 0; e < 13; e++) {
 				EventType type = Math.random() < 0.3 ? EventType.CALIBRATION : Math.random() > 0.6 ? EventType.MAINTENANCE : EventType.INCIDENT;
-				new Event(instrument, lastTime, type, "event_" + e);
+				new Event(instrument, lastTime, type, "problem " + e, "solution " + e, "extra " + e);
 				lastTime = new Timestamp(lastTime.getTime() + 172800000L * (e+1));
 			}
 		}
@@ -166,13 +166,17 @@ public class IMonDBWriterReaderTest {
 			writer.writeOrUpdateEvent(eventIt.next());
 
 		Event eventOld = instruments.get(0).getEventIterator().next();
-		Event eventNew = new Event(instruments.get(0), eventOld.getDate(), EventType.INCIDENT, "this is a new event");
+		Event eventNew = new Event(instruments.get(0), eventOld.getDate(), EventType.INCIDENT, "a new problem", "a new solution", "some extra text");
 		writer.writeOrUpdateEvent(eventNew);
 
 		IMonDBReader reader = new IMonDBReader(emf);
 		Instrument instr = reader.getInstrument(instruments.get(0).getName(), true, false);
-		assertNotEquals(eventOld.getDescription(), instr.getEvent(eventOld.getDate()).getDescription());
-		assertEquals(eventNew.getDescription(), instr.getEvent(eventOld.getDate()).getDescription());
+		assertNotEquals(eventOld.getProblem(), instr.getEvent(eventOld.getDate()).getProblem());
+		assertEquals(eventNew.getProblem(), instr.getEvent(eventOld.getDate()).getProblem());
+		assertNotEquals(eventOld.getSolution(), instr.getEvent(eventOld.getDate()).getSolution());
+		assertEquals(eventNew.getSolution(), instr.getEvent(eventOld.getDate()).getSolution());
+		assertNotEquals(eventOld.getExtra(), instr.getEvent(eventOld.getDate()).getExtra());
+		assertEquals(eventNew.getExtra(), instr.getEvent(eventOld.getDate()).getExtra());
 	}
 
 	@Test(expected = NullPointerException.class)

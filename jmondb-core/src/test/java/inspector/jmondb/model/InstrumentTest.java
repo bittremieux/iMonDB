@@ -180,7 +180,7 @@ public class InstrumentTest {
 		Event oldEvent = instrument.getEvent(time);
 		assertNotNull(oldEvent);
 
-		new Event(instrument, time, EventType.CALIBRATION, "this is a new event");
+		new Event(instrument, time, EventType.CALIBRATION, "my problem", "my solution", null);
 
 		assertNotEquals(oldEvent, instrument.getEvent(time));
 	}

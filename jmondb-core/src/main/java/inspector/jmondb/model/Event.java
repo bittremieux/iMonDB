@@ -1,9 +1,12 @@
 package inspector.jmondb.model;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.persistence.*;
+import java.io.File;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 
@@ -35,14 +38,23 @@ public class Event {
 	/** the {@link EventType} */
 	@Column(name="type", nullable=false)
 	private EventType type;
-	/** a description of the event */
-	@Column(name="description", length=255)
-	private String description;
+	/** a description of the observed problem */
+	@Column(name="problem", columnDefinition="TEXT")
+	private String problem;
+	/** a description of the solution undertaken to solve the problem */
+	@Column(name="solution", columnDefinition="TEXT")
+	private String solution;
+	/** additional custom information pertaining to the event */
+	@Column(name="extra", columnDefinition="TEXT")
+	private String extra;
 
-	/** a picture detailing the event */
+	/** the attachment file name */
+	@Column(name="attachment_name", length=255)
+	private String attachmentFileName;
+	/** the binary content of the attachment */
 	@Lob
-	@Column(name="picture")
-	private byte[] picture;
+	@Column(name="attachment")
+	private byte[] attachmentBytes;
 
 	/**
 	 * Default constructor required by JPA.
@@ -68,28 +80,18 @@ public class Event {
 	/**
 	 * Creates an {@link Event}.
 	 *
-	 * @param instrument  the {@link Instrument} on which the event occurred
-	 * @param date  the date on which the event occurred
-	 * @param type  the {@link EventType}
-	 * @param description  description of the event
+	 * @param instrument  the {@link Instrument} on which the event occurred, not {@code null}
+	 * @param date  the date on which the event occurred, not {@code null}
+	 * @param type  the {@link EventType}, not {@code null}
+	 * @param problem  a description of the observed problem
+	 * @param solution  a description of the solution undertaken to solve the problem
+	 * @param extra  additional custom information pertaining to the event
 	 */
-	public Event(Instrument instrument, Timestamp date, EventType type, String description) {
+	public Event(Instrument instrument, Timestamp date, EventType type, String problem, String solution, String extra) {
 		this(instrument, date, type);
-		setDescription(description);
-	}
-
-	/**
-	 * Creates an {@link Event}.
-	 *
-	 * @param instrument  the {@link Instrument} on which the event occurred
-	 * @param date  the date on which the event occurred
-	 * @param type  the {@link EventType}
-	 * @param description  description of the event
-	 * @param picture  a picture detailing the event
-	 */
-	public Event(Instrument instrument, Timestamp date, EventType type, String description, byte[] picture) {
-		this(instrument, date, type, description);
-		setPicture(picture);
+		setProblem(problem);
+		setSolution(solution);
+		setExtra(extra);
 	}
 
 	public Long getId() {
@@ -141,20 +143,62 @@ public class Event {
 		}
 	}
 
-	public String getDescription() {
-		return description;
+	public String getProblem() {
+		return problem;
 	}
 
-	public void setDescription(String description) {
-		this.description = description;
+	public void setProblem(String problem) {
+		this.problem = problem;
 	}
 
-	public byte[] getPicture() {
-		return picture;
+	public String getSolution() {
+		return solution;
 	}
 
-	public void setPicture(byte[] picture) {
-		this.picture = picture;
+	public void setSolution(String solution) {
+		this.solution = solution;
+	}
+
+	public String getExtra() {
+		return extra;
+	}
+
+	public void setExtra(String extra) {
+		this.extra = extra;
+	}
+
+	public String getAttachmentName() {
+		return attachmentFileName;
+	}
+
+	public byte[] getAttachmentContent() {
+		return attachmentBytes;
+	}
+
+	public void setAttachmentName(String name) {
+		attachmentFileName = name;
+	}
+
+	public void setAttachmentContent(byte[] content) {
+		attachmentBytes = content;
+	}
+
+	public void setAttachment(File attachment) {
+		// add the file content if the file is valid
+		if(attachment != null) {
+			try {
+				setAttachmentName(attachment.getName());
+				setAttachmentContent(FileUtils.readFileToByteArray(attachment));
+			} catch(IOException e) {
+				logger.warn("Unable to set file <{}> as an attachment", attachmentFileName);
+				throw new IllegalArgumentException("Unable to set file <" + attachmentFileName +  "> as an attachment");
+			}
+		}
+		else {
+			// reset file content
+			attachmentFileName = null;
+			attachmentBytes = null;
+		}
 	}
 
 	@Override
