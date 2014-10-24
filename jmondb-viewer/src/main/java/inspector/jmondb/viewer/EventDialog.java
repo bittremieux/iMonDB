@@ -8,6 +8,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.*;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -16,6 +18,7 @@ import java.util.Calendar;
 import java.util.Date;
 import inspector.jmondb.model.Event;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tika.Tika;
@@ -142,6 +145,31 @@ public class EventDialog extends JPanel {
 		JLabel labelAttachment = new JLabel("Attachment: ", JLabel.TRAILING);
 		panelBottom.add(labelAttachment);
 		labelAttachmentName = new JLabel("No attachment added", new ImageIcon(getClass().getResource("/images/no-file.png")), SwingConstants.CENTER);
+		labelAttachmentName.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if(e.getClickCount() == 2 && attachmentContent != null) {
+					Thread fileOpener = new Thread() {
+						public void run() {
+							try {
+								// store the attachment in a temporary file
+								String prefix = FilenameUtils.getBaseName(getAttachmentName()) + "_";
+								String suffix = "." + FilenameUtils.getExtension(getAttachmentName());
+								File temp = File.createTempFile(prefix, suffix);
+								temp.deleteOnExit();
+								FileUtils.writeByteArrayToFile(temp, attachmentContent);
+
+								// open the attachment in the default application
+								Desktop.getDesktop().open(temp);
+							} catch(IOException e1) {
+								logger.warn("Error while saving attachment <{}> to a temporary file", getAttachmentName());
+							}
+						}
+					};
+					fileOpener.start();
+				}
+			}
+		});
 		panelBottom.add(labelAttachmentName);
 
 		JButton buttonAdd = new JButton(new ImageIcon(getClass().getResource("/images/folder.png")));
