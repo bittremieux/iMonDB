@@ -4,16 +4,10 @@ import inspector.jmondb.model.EventType;
 import net.sourceforge.jdatepicker.impl.JDatePanelImpl;
 import net.sourceforge.jdatepicker.impl.UtilDateModel;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.text.DefaultStyledDocument;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.*;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -21,9 +15,14 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import inspector.jmondb.model.Event;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.tika.Tika;
 
 public class EventDialog extends JPanel {
+
+	private static final Logger logger = LogManager.getLogger(EventDialog.class);
 
 	// instrument name
 	private JComboBox<String> comboBoxInstrument;
@@ -32,37 +31,45 @@ public class EventDialog extends JPanel {
 	private JDatePickerDisableImpl datePicker;
 	// event type
 	private JComboBox<EventType> comboBoxType;
-	// description text
-	private JTextArea textDescription;
-	// description picture
-	private JLabel thumbnailField;
-	private byte[] picture;
-	private static int MAX_THUMBNAIL_HEIGHT = 100;
-	private static int MAX_THUMBNAIL_WIDTH = 150;
-	private Icon iconThumbnail;
-	private Icon iconFullSize;
+	// textual information
+	private JTextArea textProblem;
+	private JTextArea textSolution;
+	private JTextArea textExtra;
+	// attachment information
+	private JLabel labelAttachmentName;
+	private byte[] attachmentContent;
 
 	public EventDialog(JComboBox<String> instruments) {
-		setLayout(new SpringLayout());
+		setLayout(new BorderLayout());
+
+		JPanel panelTop = new JPanel(new FlowLayout( FlowLayout.CENTER, 25, 5));
+		add(panelTop, BorderLayout.PAGE_START);
+		JPanel panelCenter = new JPanel();
+		add(panelCenter, BorderLayout.CENTER);
+		JPanel panelBottom = new JPanel();
+		add(panelBottom, BorderLayout.PAGE_END);
 
 		// instrument name
-		JLabel labelInstrument = new JLabel("Instrument name: ", JLabel.TRAILING);
-		add(labelInstrument);
+		JPanel panelInstrument = new JPanel(new BorderLayout());
+		JLabel labelInstrument = new JLabel("Instrument name", JLabel.CENTER);
+		panelInstrument.add(labelInstrument, BorderLayout.PAGE_START);
 		comboBoxInstrument = new JComboBox<>();
+		comboBoxInstrument.setPreferredSize(new Dimension(200, 25));
 		// add all instrument names
 		// this has to be a different combobox because we don't want our choices here to influence the general application
 		for(int i = 0; i < instruments.getItemCount(); i++)
 			comboBoxInstrument.addItem(instruments.getItemAt(i));
 		// select the previously selected instrument
 		comboBoxInstrument.setSelectedIndex(instruments.getSelectedIndex());
-		add(comboBoxInstrument);
+		panelInstrument.add(comboBoxInstrument, BorderLayout.CENTER);
+		panelTop.add(panelInstrument);
 
 		// date
-		JLabel labelDate = new JLabel("Date: ", JLabel.TRAILING);
-		add(labelDate);
+		JPanel panelDate = new JPanel(new BorderLayout());
+		JLabel labelDate = new JLabel("Date", JLabel.CENTER);
+		panelDate.add(labelDate, BorderLayout.PAGE_START);
 		model = new UtilDateModel();
 		JDatePanelImpl datePanel = new JDatePanelImpl(model);
-		//TODO: override datePicker so the button can be disabled
 		datePicker = new JDatePickerDisableImpl(datePanel, new JFormattedTextField.AbstractFormatter() {
 			SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 			@Override
@@ -80,74 +87,74 @@ public class EventDialog extends JPanel {
 					return "";
 			}
 		});
-		add(datePicker);
+		panelDate.add(datePicker, BorderLayout.CENTER);
+		panelTop.add(panelDate);
 
 		// event type
-		JLabel labelType = new JLabel("Event type: ", JLabel.TRAILING);
-		add(labelType);
+		JPanel panelType = new JPanel(new BorderLayout());
+		JLabel labelType = new JLabel("Event type", JLabel.CENTER);
+		panelType.add(labelType, BorderLayout.PAGE_START);
 		comboBoxType = new JComboBox<>();
+		comboBoxType.setPreferredSize(new Dimension(200, 25));
 		for(EventType type : EventType.values())
 			comboBoxType.addItem(type);
-		add(comboBoxType);
+		panelType.add(comboBoxType, BorderLayout.CENTER);
+		panelTop.add(panelType);
 
-		// description
-		JLabel labelDescription = new JLabel("Description: ", JLabel.TRAILING);
-		add(labelDescription);
-		textDescription = new JTextArea();
-		textDescription.setLineWrap(true);
-		textDescription.setWrapStyleWord(true);
-		DefaultStyledDocument doc = new DefaultStyledDocument();
-		doc.setDocumentFilter(new DocumentSizeFilter(255));
-		textDescription.setDocument(doc);
+		// input text fields
+		JPanel panelProblem = new JPanel(new BorderLayout());
+		JLabel labelProblem = new JLabel("Problem", JLabel.CENTER);
+		panelProblem.add(labelProblem, BorderLayout.PAGE_START);
+		textProblem = new JTextArea();
+		textProblem.setLineWrap(true);
+		textProblem.setWrapStyleWord(true);
+		JScrollPane problemScrollPane = new JScrollPane(textProblem);
+		problemScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		problemScrollPane.setPreferredSize(new Dimension(300, 200));
+		panelProblem.add(problemScrollPane, BorderLayout.CENTER);
+		panelCenter.add(panelProblem);
 
-		JScrollPane descriptionScrollPane = new JScrollPane(textDescription);
-		descriptionScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-		descriptionScrollPane.setPreferredSize(new Dimension(100, 100));
-		add(descriptionScrollPane);
+		JPanel panelSolution = new JPanel(new BorderLayout());
+		JLabel labelSolution = new JLabel("Solution", JLabel.CENTER);
+		panelSolution.add(labelSolution, BorderLayout.PAGE_START);
+		textSolution = new JTextArea();
+		textSolution.setLineWrap(true);
+		textSolution.setWrapStyleWord(true);
+		JScrollPane solutionScrollPane = new JScrollPane(textSolution);
+		solutionScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		solutionScrollPane.setPreferredSize(new Dimension(300, 200));
+		panelSolution.add(solutionScrollPane, BorderLayout.CENTER);
+		panelCenter.add(panelSolution);
 
-		// picture attachment
-		JLabel labelPicture = new JLabel("Picture: ", JLabel.TRAILING);
-		add(labelPicture);
-		JPanel panelFileSelection = new JPanel(new GridBagLayout());
-		add(panelFileSelection);
-		GridBagConstraints gbc = new GridBagConstraints();
+		JPanel panelExtra = new JPanel(new BorderLayout());
+		JLabel labelExtra = new JLabel("Additional information", JLabel.CENTER);
+		panelExtra.add(labelExtra, BorderLayout.PAGE_START);
+		textExtra = new JTextArea();
+		textExtra.setLineWrap(true);
+		textExtra.setWrapStyleWord(true);
+		JScrollPane extraScrollPane = new JScrollPane(textExtra);
+		extraScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		extraScrollPane.setPreferredSize(new Dimension(300, 200));
+		panelExtra.add(extraScrollPane, BorderLayout.CENTER);
+		panelCenter.add(panelExtra);
 
-		thumbnailField = new JLabel();
-		thumbnailField.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				if(e.getClickCount() == 2 && picture != null) {
-					// show larger image in a pop-up
-					JLabel labelPicture = new JLabel();
-					labelPicture.setHorizontalAlignment(SwingConstants.CENTER);
-					labelPicture.setVerticalAlignment(SwingConstants.CENTER);
-					labelPicture.setIcon(iconFullSize);
+		// attachment information
+		JLabel labelAttachment = new JLabel("Attachment: ", JLabel.TRAILING);
+		panelBottom.add(labelAttachment);
+		labelAttachmentName = new JLabel("No attachment added", new ImageIcon(getClass().getResource("/images/no-file.png")), SwingConstants.CENTER);
+		panelBottom.add(labelAttachmentName);
 
-					JOptionPane.showMessageDialog(null, labelPicture, "Event picture", JOptionPane.PLAIN_MESSAGE, null);
-				}
-			}
-		});
-		thumbnailField.setHorizontalAlignment(SwingConstants.CENTER);
-		thumbnailField.setVerticalAlignment(SwingConstants.CENTER);
-		thumbnailField.setPreferredSize(new Dimension(MAX_THUMBNAIL_WIDTH, MAX_THUMBNAIL_HEIGHT));
-		gbc.gridx = 0;
-		gbc.fill = GridBagConstraints.BOTH;
-		panelFileSelection.add(thumbnailField, gbc);
+		JButton buttonAdd = new JButton(new ImageIcon(getClass().getResource("/images/folder.png")));
+		buttonAdd.addActionListener(new ListenerAddAttachment());
+		panelBottom.add(buttonAdd);
 
-		JPanel panelButtons = new JPanel(new GridLayout(2, 1));
-		gbc.gridx = 1;
-		gbc.fill = GridBagConstraints.NONE;
-		panelFileSelection.add(panelButtons, gbc);
+		JButton buttonDelete = new JButton(new ImageIcon(getClass().getResource("/images/garbage.png")));
+		buttonDelete.addActionListener(new ListenerRemoveAttachment());
+		panelBottom.add(buttonDelete);
 
-		JButton buttonAdd = new JButton(new ImageIcon(getClass().getResource("/images/folder.png"), "add picture"));
-		buttonAdd.addActionListener(new ListenerAddPicture());
-		panelButtons.add(buttonAdd);
-
-		JButton buttonDelete = new JButton(new ImageIcon(getClass().getResource("/images/garbage.png"), "delete picture"));
-		buttonDelete.addActionListener(new ListenerRemovePicture());
-		panelButtons.add(buttonDelete);
-
-		SpringUtilities.makeCompactGrid(this, 5, 2, 6, 6, 6, 6);
+		JButton buttonSave = new JButton(new ImageIcon(getClass().getResource("/images/save.png")));
+		buttonSave.addActionListener(new ListenerSaveAttachment());
+		panelBottom.add(buttonSave);
 	}
 
 	public EventDialog(JComboBox<String> instruments, Event event) {
@@ -161,62 +168,14 @@ public class EventDialog extends JPanel {
 		datePicker.setButtonEnabled(false);
 		comboBoxType.setSelectedItem(event.getType());
 		comboBoxType.setEnabled(false);
-		textDescription.setText(event.getDescription());
-		if(event.getPicture() != null) {
-			picture = event.getPicture();
-			setIcons();
+		textProblem.setText(event.getProblem());
+		textSolution.setText(event.getSolution());
+		textExtra.setText(event.getExtra());
+		if(event.getAttachmentName() != null && event.getAttachmentContent() != null) {
+			labelAttachmentName.setText(event.getAttachmentName());
+			attachmentContent = event.getAttachmentContent();
+			setAttachmentIconFileType();
 		}
-	}
-
-	private void setIcons() {
-		Thread pictureGenerator = new Thread() {
-			public void run() {
-				setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-				iconThumbnail = byteArrayToScaledIcon(picture, MAX_THUMBNAIL_WIDTH, MAX_THUMBNAIL_HEIGHT);
-				Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration().getBounds();
-				iconFullSize = byteArrayToScaledIcon(picture, screenSize.width, screenSize.height-200);
-
-				thumbnailField.setIcon(iconThumbnail);
-
-				setCursor(Cursor.getDefaultCursor());
-			}
-		};
-		pictureGenerator.start();
-	}
-
-	private ImageIcon byteArrayToScaledIcon(byte[] array, int maxWidth, int maxHeight) {
-		try {
-			Image img = ImageIO.read(new ByteArrayInputStream(array));
-			Dimension scaledDimension = getScaledDimension(img.getWidth(null), img.getHeight(null), maxWidth, maxHeight);
-			img = img.getScaledInstance((int) scaledDimension.getWidth(), (int) scaledDimension.getHeight(), Image.SCALE_SMOOTH);
-
-			return new ImageIcon(img);
-		} catch(IOException e1) {
-			JOptionPane.showMessageDialog(this, "Error while reading the selected picture file", "Error", JOptionPane.ERROR_MESSAGE);
-		}
-		return null;
-	}
-
-	private Dimension getScaledDimension(int original_width, int original_height, int bound_width, int bound_height) {
-		int new_width = original_width;
-		int new_height = original_height;
-		// first check if we need to scale width
-		if(original_width > bound_width) {
-			// scale width to fit
-			new_width = bound_width;
-			// scale height to maintain aspect ratio
-			new_height = (new_width * original_height) / original_width;
-		}
-		// then check if we need to scale even with the new height
-		if(new_height > bound_height) {
-			// scale height to fit instead
-			new_height = bound_height;
-			// scale width to maintain aspect ratio
-			new_width = (new_height * original_width) / original_height;
-		}
-
-		return new Dimension(new_width, new_height);
 	}
 
 	public String getInstrumentName() {
@@ -242,46 +201,131 @@ public class EventDialog extends JPanel {
 		return (EventType) comboBoxType.getSelectedItem();
 	}
 
-	public String getDescription() {
-		String text = textDescription.getText();
+	public String getProblem() {
+		String text = textProblem.getText();
 		if(!text.equals(""))
 			return text;
 		else
 			return null;
 	}
 
-	public byte[] getPicture() {
-		return picture;
+	public String getSolution() {
+		String text = textSolution.getText();
+		if(!text.equals(""))
+			return text;
+		else
+			return null;
 	}
 
-	private class ListenerAddPicture implements ActionListener {
+	public String getExtra() {
+		String text = textExtra.getText();
+		if(!text.equals(""))
+			return text;
+		else
+			return null;
+	}
+
+	public String getAttachmentName() {
+		String text = labelAttachmentName.getText();
+		if(!"No attachment added".equals(text))
+			return text;
+		else
+			return null;
+	}
+
+	public byte[] getAttachmentContent() {
+		return attachmentContent;
+	}
+
+	private void setAttachmentIconFileType() {
+		if(attachmentContent != null) {
+			String type = new Tika().detect(attachmentContent);
+
+			if(type.contains("audio"))
+				labelAttachmentName.setIcon(new ImageIcon(getClass().getResource("/images/audio.png")));
+			else if(type.contains("image"))
+				labelAttachmentName.setIcon(new ImageIcon(getClass().getResource("/images/image.png")));
+			else if(type.contains("text"))
+				labelAttachmentName.setIcon(new ImageIcon(getClass().getResource("/images/text.png")));
+			else if(type.contains("video"))
+				labelAttachmentName.setIcon(new ImageIcon(getClass().getResource("/images/video.png")));
+			else
+				labelAttachmentName.setIcon(new ImageIcon(getClass().getResource("/images/general-file.png")));
+		}
+		else
+			labelAttachmentName.setIcon(new ImageIcon(getClass().getResource("/images/no-file.png")));
+	}
+
+	private class ListenerAddAttachment implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			JFileChooser fileChooser = new JFileChooser();
-			FileFilter filter = new FileNameExtensionFilter("Image file", "jpg", "jpeg", "png");
-			fileChooser.setFileFilter(filter);
 
 			int returnVal = fileChooser.showOpenDialog(null);
 			if(returnVal == JFileChooser.APPROVE_OPTION) {
-				try {
-					picture = IOUtils.toByteArray(new FileInputStream(fileChooser.getSelectedFile()));
-					setIcons();
-				} catch(IOException e1) {
-					JOptionPane.showMessageDialog(null, "Selected picture file not found", "Error", JOptionPane.ERROR_MESSAGE);
-				}
+				File attachment = fileChooser.getSelectedFile();
+				// file name
+				labelAttachmentName.setText(attachment.getName());
+
+				logger.trace("Add file <{}> as attachment", attachment.getName());
+
+				// file content
+				Thread attachmentReader = new Thread() {
+					public void run() {
+						try {
+							attachmentContent = FileUtils.readFileToByteArray(attachment);
+							// set the icon according to the file type
+							setAttachmentIconFileType();
+						} catch(IOException e1) {
+							logger.warn("Error while adding attachment <{}>: {}", attachment.getName(), e1.getMessage());
+						}
+					}
+				};
+				attachmentReader.start();
 			}
 		}
 	}
 
-	private class ListenerRemovePicture implements ActionListener {
+	private class ListenerRemoveAttachment implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			thumbnailField.setIcon(null);
-			picture = null;
-			iconThumbnail = null;
-			iconFullSize = null;
+			if(attachmentContent != null) {
+				logger.trace("Remove attachment <{}>", getAttachmentName());
+
+				labelAttachmentName.setText("No attachment added");
+				labelAttachmentName.setIcon(new ImageIcon(getClass().getResource("/images/no-file.png")));
+
+				attachmentContent =  null;
+			}
+		}
+	}
+
+	private class ListenerSaveAttachment implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			if(attachmentContent != null) {
+				// show save dialog
+				JFileChooser fileChooser = new JFileChooser();
+				fileChooser.setSelectedFile(new File(getAttachmentName()));
+
+				int returnVal = fileChooser.showSaveDialog(null);
+				if(returnVal == JFileChooser.APPROVE_OPTION) {
+					// save the attachment to the selected file
+					try {
+						logger.trace("Save the attachment to file <{}>", fileChooser.getSelectedFile().getPath());
+						FileUtils.writeByteArrayToFile(fileChooser.getSelectedFile(), attachmentContent);
+					} catch(IOException e1) {
+						logger.error("Error while saving the attachment to file <{}>: {}", fileChooser.getSelectedFile().getPath(), e1.getMessage());
+						JOptionPane.showMessageDialog(null, "Could not save the attachment", "Error", JOptionPane.ERROR_MESSAGE);
+					}
+				}
+			}
+			else {
+				logger.trace("No attachment to be saved");
+			}
 		}
 	}
 }

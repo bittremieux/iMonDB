@@ -738,7 +738,11 @@ public class Viewer extends JPanel {
 					try {
 						// create new event
 						Instrument instrument = dbReader.getInstrument(dialog.getInstrumentName(), true, false);
-						Event event = new Event(instrument, dialog.getDate(), dialog.getType(), dialog.getDescription(), dialog.getPicture());
+						Event event = new Event(instrument, dialog.getDate(), dialog.getType(), dialog.getProblem(), dialog.getSolution(), dialog.getExtra());
+						if(dialog.getAttachmentName() != null && dialog.getAttachmentContent() != null) {
+							event.setAttachmentName(dialog.getAttachmentName());
+							event.setAttachmentContent(dialog.getAttachmentContent());
+						}
 
 						// write the event to the database
 						dbWriter.writeOrUpdateEvent(event);
@@ -841,13 +845,29 @@ public class Viewer extends JPanel {
 			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Edit event", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
 			if(option == JOptionPane.OK_OPTION) {
-				// update the changed information
-				// only the description and the picture can be changed
-				boolean toWrite = (event.getDescription() == null && dialog.getDescription() != null) ||
-						(event.getDescription() != null && !event.getDescription().equals(dialog.getDescription())) ||
-						!Arrays.equals(event.getPicture(), dialog.getPicture());
-				event.setDescription(dialog.getDescription());
-				event.setPicture(dialog.getPicture());
+				// update the changed event information
+				boolean toWrite = false;
+
+				if(event.getProblem() != null ? !event.getProblem().equals(dialog.getProblem()) : dialog.getProblem() != null) {
+					event.setProblem(dialog.getProblem());
+					toWrite = true;
+				}
+				if(event.getSolution() != null ? !event.getSolution().equals(dialog.getSolution()) : dialog.getSolution() != null) {
+					event.setSolution(dialog.getSolution());
+					toWrite = true;
+				}
+				if(event.getExtra() != null ? !event.getExtra().equals(dialog.getExtra()) : dialog.getExtra() != null) {
+					event.setExtra(dialog.getExtra());
+					toWrite = true;
+				}
+				if(event.getAttachmentName() != null && event.getAttachmentContent() != null ?
+						!event.getAttachmentName().equals(dialog.getAttachmentName()) ||
+								!Arrays.equals(event.getAttachmentContent(), dialog.getAttachmentContent()) :
+						dialog.getAttachmentName() != null || dialog.getAttachmentContent() != null) {
+					event.setAttachmentName(dialog.getAttachmentName());
+					event.setAttachmentContent(dialog.getAttachmentContent());
+					toWrite = true;
+				}
 
 				if(toWrite)
 					dbWriter.writeOrUpdateEvent(event);
