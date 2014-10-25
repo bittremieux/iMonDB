@@ -264,8 +264,8 @@ public class IMonDBWriter {
 
 				// make sure the pre-existing properties and corresponding cv's are retained
 				HashMap<String, Property> properties = new HashMap<>();
-				for(Iterator<Value> it = run.getValueIterator(); it.hasNext(); ) {
-					Property prop = it.next().getDefiningProperty();
+				for(Iterator<Property> it = run.getInstrument().getPropertyIterator(); it.hasNext(); ) {
+					Property prop = it.next();
 					properties.put(prop.getAccession(), prop);
 				}
 				if(properties.size() > 0)
