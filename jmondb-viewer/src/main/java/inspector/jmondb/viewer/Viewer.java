@@ -6,6 +6,8 @@ import inspector.jmondb.model.*;
 import inspector.jmondb.model.Event;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
+import net.sf.dynamicreports.report.exception.DRException;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -14,6 +16,7 @@ import org.jfree.chart.plot.XYPlot;
 
 import javax.persistence.EntityManagerFactory;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
@@ -141,7 +144,7 @@ public class Viewer extends JPanel {
 		JMenuItem menuItemSaveGraph = new JMenuItem("Save graph as...");
 		menuItemSaveGraph.addActionListener(new ListenerSaveGraph());
 		menuFile.add(menuItemSaveGraph);
-		JMenuItem menuItemExportEvents = new JMenuItem("Export events report");
+		JMenuItem menuItemExportEvents = new JMenuItem("Export event log as...");
 		menuItemExportEvents.addActionListener(new ListenerExportEvents());
 		menuFile.add(menuItemExportEvents);
 
@@ -347,10 +350,14 @@ public class Viewer extends JPanel {
 
 		expandEventsTree();
 
-		JPanel buttonsPanel = new JPanel(new GridLayout(0, 3));
+		JPanel buttonsPanel = new JPanel(new GridLayout(2, 2));
+		buttonsPanel.setPreferredSize(new Dimension(250, 50));
 		JButton buttonAdd = new JButton("Add");
 		buttonAdd.addActionListener(new ListenerAddEvent());
 		buttonsPanel.add(buttonAdd);
+		JButton buttonExport = new JButton("Export");
+		buttonExport.addActionListener(new ListenerExportEvents());
+		buttonsPanel.add(buttonExport);
 		JButton buttonRemove = new JButton("Remove");
 		buttonRemove.addActionListener(removeListener);
 		buttonsPanel.add(buttonRemove);
@@ -716,7 +723,41 @@ public class Viewer extends JPanel {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
+			if(dbWriter == null) {
+				JOptionPane.showMessageDialog(frameParent, "Please connect to a database exporting an event log.", "Warning", JOptionPane.WARNING_MESSAGE);
+			}
+			else {
+				// get all events in chronological order
+				String instrumentName = (String) comboBoxInstrument.getSelectedItem();
+				Map<String, String> parameters = ImmutableMap.of("name", instrumentName);
+				List<Event> events = dbReader.getFromCustomQuery("SELECT event FROM Event event WHERE event.instrument.name = :name ORDER BY event.date", Event.class, parameters);
 
+				if(events.size() == 0) {
+					JOptionPane.showMessageDialog(frameParent, "No events found for instrument <" + instrumentName + "> to export.", "Warning", JOptionPane.WARNING_MESSAGE);
+				}
+				else {
+					// export to a file
+					JFileChooser fileChooser = new JFileChooser();
+					fileChooser.setFileFilter(new FileNameExtensionFilter("PDF documents", "pdf"));
+					int returnVal = fileChooser.showSaveDialog(frameParent);
+					if(returnVal == JFileChooser.APPROVE_OPTION) {
+						Thread eventExporter = new Thread() {
+							public void run() {
+								try {
+									File file = fileChooser.getSelectedFile();
+									if(FilenameUtils.getExtension(file.getName()).equals(""))
+										file = new File(file.getAbsolutePath() + ".pdf");
+									EventsReportWriter.writeReport(instrumentName, events, file);
+
+								} catch(DRException | IOException e1) {
+									JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error while exporting the event log", JOptionPane.ERROR_MESSAGE);
+								}
+							}
+						};
+						eventExporter.start();
+					}
+				}
+			}
 		}
 	}
 
