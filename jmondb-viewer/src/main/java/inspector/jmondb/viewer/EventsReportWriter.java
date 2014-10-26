@@ -56,10 +56,10 @@ public class EventsReportWriter {
 		HorizontalListBuilder solutionList = cmp.horizontalList(solutionHeader, solutionValue);
 		HorizontalListBuilder extraList = cmp.horizontalList(extraHeader, extraValue);
 
-		VerticalListBuilder rowList = cmp.verticalList(dateList, typeList, problemList, solutionList, extraList).setGap(3);
+		VerticalListBuilder rowList = cmp.verticalList(cmp.text(""), dateList, typeList, problemList, solutionList, extraList, cmp.text("")).setGap(3);
+		rowList.setStyle(stl.style().setBottomBorder(stl.pen2Point()));
 
 		// add to the report
-		report.setColumnStyle(stl.style().setBottomBorder(stl.penDouble()));
 		report.columns(col.componentColumn(rowList));
 
 		report.pageFooter(cmp.pageXofY());
