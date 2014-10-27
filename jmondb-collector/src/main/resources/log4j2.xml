@@ -17,7 +17,7 @@
 	<loggers>
 		<root level="TRACE">
 			<appender-ref ref="logFile" />
-			<appender-ref ref="console" level="WARN" />
+			<appender-ref ref="console" level="INFO" />
 		</root>
 	</loggers>
 	

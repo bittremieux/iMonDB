@@ -70,6 +70,7 @@ public class Collector {
 			// read the general information from the config file
 			Timestamp newestTimestamp = config.getLastDate();
 
+			boolean forceUnique = config.getForceUniqueFileNames();
 			String matchFile = config.getMatchFile();
 
 			// thread pool
@@ -99,7 +100,7 @@ public class Collector {
 
 					if(instrumentName != null) {
 						logger.trace("Add file <{}> for instrument <{}> to the thread pool", file.getCanonicalPath(), instrumentName);
-						pool.submit(new FileProcessor(dbReader, dbWriter, extractor, metadataMapper, file, instrumentName));
+						pool.submit(new FileProcessor(dbReader, dbWriter, extractor, metadataMapper, file, instrumentName, forceUnique));
 						threadsSubmitted++;
 					}
 				}

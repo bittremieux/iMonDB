@@ -27,6 +27,9 @@ general:
     # A regular expression used to match the file name of the raw files that need to be processed. Matching is case insensitive.
     # Required.
     match_file: ^.*\.raw$
+    # Boolean flag to indicate whether the original file names should be converted to a unique file name. Unique file names are obtained by using the file's MD5 checksum.
+    # Optional. Default: false. Possible values: true, false.
+    force_unique: false
     # The number of worker threads used for collecting the raw files and processing them.
     # Optional. Default: 1.
     num_threads: 1

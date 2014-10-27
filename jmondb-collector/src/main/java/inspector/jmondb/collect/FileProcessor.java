@@ -6,11 +6,14 @@ import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
 import inspector.jmondb.model.Run;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -35,6 +38,7 @@ public class FileProcessor implements Callable<Timestamp> {
 	private MetadataMapper metadataMapper;
 	private File file;
 	private String instrumentName;
+	private boolean forceUnique;
 
 	/**
 	 * Processes a file by extracting the instrument data from it and storing the resulting run in the database.
@@ -53,14 +57,16 @@ public class FileProcessor implements Callable<Timestamp> {
 	 * @param metadataMapper  the {@link MetadataMapper} used to obtain metadata based on the config file
 	 * @param file  the raw file that will be processed
 	 * @param instrumentName  the (unique) name of the instrument on which the run was performed
+	 * @param forceUnique  flag which indicates whether file names have to be made unique explicitly
 	 */
-	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, MetadataMapper metadataMapper, File file, String instrumentName) {
+	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, MetadataMapper metadataMapper, File file, String instrumentName, boolean forceUnique) {
 		this.dbReader = dbReader;
 		this.dbWriter = dbWriter;
 		this.extractor = extractor;
 		this.metadataMapper = metadataMapper;
 		this.file = file;
 		this.instrumentName = instrumentName;
+		this.forceUnique = forceUnique;
 	}
 
 	@Override
@@ -68,6 +74,19 @@ public class FileProcessor implements Callable<Timestamp> {
 		logger.info("Process file <{}>", file.getAbsolutePath());
 
 		String runName = FilenameUtils.getBaseName(file.getName());
+		if(forceUnique) {
+			// append the MD5 checksum to enforce unique file names
+			try {
+				FileInputStream fis = new FileInputStream(file);
+
+				String md5 = DigestUtils.md5Hex(fis);
+				runName += "_" + md5;
+
+				fis.close();
+			} catch(IOException e) {
+				e.printStackTrace();
+			}
+		}
 
 		// check if this run already exists in the database for the given instrument
 		Map<String, String> parameters = ImmutableMap.of("runName", runName, "instName", instrumentName);

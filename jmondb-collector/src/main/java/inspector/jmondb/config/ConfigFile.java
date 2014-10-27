@@ -157,6 +157,18 @@ public class ConfigFile {
 			return regexStr;
 	}
 
+	public boolean getForceUniqueFileNames() {
+		@SuppressWarnings("unchecked")
+		Boolean forceUnique = ((Map<String, Boolean>) rootMap.get("general")).get("force_unique");
+
+		if(forceUnique == null) {
+			logger.info("Unspecified whether file names need to be unique, defaulting to <false>");
+			return false;
+		}
+		else
+			return forceUnique;
+	}
+
 	public int getNumberOfThreads() {
 		@SuppressWarnings("unchecked")
 		Integer numThreads = ((Map<String, Integer>) rootMap.get("general")).get("num_threads");
