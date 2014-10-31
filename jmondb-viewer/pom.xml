@@ -38,18 +38,14 @@
             <version>1.0.0-alpha2</version>
         </dependency>
 
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.11</version>
-            <scope>test</scope>
-        </dependency>
-
+        <!-- graphs -->
         <dependency>
             <groupId>org.jfree</groupId>
             <artifactId>jfreechart</artifactId>
             <version>1.0.19</version>
         </dependency>
+
+        <!-- event date picker -->
         <dependency>
             <groupId>net.sourceforge.jdatepicker</groupId>
             <artifactId>jdatepicker</artifactId>
@@ -63,7 +59,7 @@
             <version>1.6</version>
         </dependency>
 
-        <!-- event log export -->
+        <!-- event log pdf export -->
         <dependency>
             <groupId>net.sourceforge.dynamicreports</groupId>
             <artifactId>dynamicreports-core</artifactId>

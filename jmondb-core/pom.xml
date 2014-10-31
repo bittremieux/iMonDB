@@ -15,7 +15,7 @@
     <version>1.0.0-alpha2</version>
 
     <name>jMonDB Core</name>
-    <description>The jMonDB core implementation</description>
+    <description>The jMonDB core API</description>
 
 	<!-- Dependencies -->
 	<dependencies>
