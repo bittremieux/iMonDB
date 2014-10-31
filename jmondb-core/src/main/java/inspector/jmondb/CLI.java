@@ -33,9 +33,21 @@ public class CLI {
 
 			// help
 			if(cmd.hasOption("?"))
-				new HelpFormatter().printHelp("jMonDB-core", options);
+				new HelpFormatter().printHelp("jMonDB-core", options, true);
 			else {
 				boolean error = false;
+
+				// logging verbosity
+				if(cmd.hasOption("v") || cmd.hasOption("vv")) {
+					LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+					Configuration config = ctx.getConfiguration();
+					LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+					if(cmd.hasOption("v"))
+						loggerConfig.setLevel(Level.INFO);
+					else if(cmd.hasOption("vv"))
+						loggerConfig.setLevel(Level.DEBUG);
+					ctx.updateLoggers();
+				}
 
 				// database information
 				String host = null;
@@ -78,18 +90,6 @@ public class CLI {
 					logger.fatal("No instrument name provided");
 				}
 
-				// logging verbosity
-				if(cmd.hasOption("v") || cmd.hasOption("vv")) {
-					LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-					Configuration config = ctx.getConfiguration();
-					LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-					if(cmd.hasOption("v"))
-						loggerConfig.setLevel(Level.INFO);
-					else if(cmd.hasOption("vv"))
-						loggerConfig.setLevel(Level.DEBUG);
-					ctx.updateLoggers();
-				}
-
 				if(!error) {
 					// create database connection
 					emf = IMonDBManagerFactory.createMySQLFactory(host, port, database, user, pass);
@@ -100,12 +100,12 @@ public class CLI {
 					writer.writeRun(run);
 				}
 				else
-					new HelpFormatter().printHelp("jMonDB-core", options);
+					new HelpFormatter().printHelp("jMonDB-core", options, true);
 			}
 
 		} catch (ParseException e) {
 			logger.fatal("Error while parsing the command-line arguments: {}", e.getMessage());
-			new HelpFormatter().printHelp("jMonDB-core", options);
+			new HelpFormatter().printHelp("jMonDB-core", options, true);
 		}
 		finally {
 			if(emf != null)
@@ -118,8 +118,10 @@ public class CLI {
 		// help
 		options.addOption("?", "help", false, "show help");
 		// logging verbosity
-		options.addOption("v", "verbose", false, "verbose logging");
-		options.addOption("vv", "very-verbose", false, "very verbose logging");
+		OptionGroup logging = new OptionGroup();
+		logging.addOption(new Option("v", "verbose", false, "verbose logging"));
+		logging.addOption(new Option("vv", "very-verbose", false, "extremely verbose logging"));
+		options.addOptionGroup(logging);
 		// MySQL connection options
 		options.addOption(new Option("h", "host", true, "the iMonDB MySQL host"));
 		options.addOption(new Option("p", "port", true, "the iMonDB MySQL port"));
