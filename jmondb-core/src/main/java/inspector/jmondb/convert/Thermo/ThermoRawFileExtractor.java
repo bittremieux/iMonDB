@@ -218,7 +218,7 @@ public class ThermoRawFileExtractor {
 		// check whether the file has the correct *.raw extension
 		else if(!FilenameUtils.getExtension(fileName).equalsIgnoreCase("raw")) {
 			logger.error("Invalid file name <{}>: Not a *.raw file", fileName);
-			throw new NullPointerException("Not a *.raw file");
+			throw new IllegalArgumentException("Not a *.raw file");
 		}
 
 		File file = new File(fileName);
