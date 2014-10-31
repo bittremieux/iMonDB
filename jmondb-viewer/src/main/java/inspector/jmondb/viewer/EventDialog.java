@@ -346,7 +346,7 @@ public class EventDialog extends JPanel {
 						logger.trace("Save the attachment to file <{}>", fileChooser.getSelectedFile().getPath());
 						FileUtils.writeByteArrayToFile(fileChooser.getSelectedFile(), attachmentContent);
 					} catch(IOException e1) {
-						logger.error("Error while saving the attachment to file <{}>: {}", fileChooser.getSelectedFile().getPath(), e1.getMessage());
+						logger.warn("Error while saving the attachment to file <{}>: {}", fileChooser.getSelectedFile().getPath(), e1.getMessage());
 						JOptionPane.showMessageDialog(null, "Could not save the attachment", "Error", JOptionPane.ERROR_MESSAGE);
 					}
 				}

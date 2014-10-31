@@ -113,7 +113,7 @@ public class FileProcessor implements Callable<Timestamp> {
 			return run.getSampleDate();
 		}
 		else {
-			logger.info("Run <{}> already found in the database; skipping...", runName);
+			logger.trace("Run <{}> already found in the database; skipping...", runName);
 			return null;
 		}
 	}

@@ -37,7 +37,7 @@ public class IMonDBManagerFactory {
 			throw new NullPointerException("Invalid database user");
 		}
 
-		logger.info("Create MySQL EntityManagerFactory");
+		logger.debug("Create MySQL EntityManagerFactory");
 
 		// add connection-specific properties
 		Map<String, String> properties = new HashMap<>();

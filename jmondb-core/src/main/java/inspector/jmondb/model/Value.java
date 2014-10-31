@@ -123,8 +123,8 @@ public class Value {
 		if(property != null)
 			this.definingProperty = property;
 		else {
-			logger.error("The value's defining property is not allowed to be null");
-			throw new NullPointerException("The value's defining property is not allowed to be null");
+			logger.error("The value's defining property is not allowed to be <null>");
+			throw new NullPointerException("The value's defining property is not allowed to be <null>");
 		}
 	}
 
@@ -136,8 +136,8 @@ public class Value {
 		if(run != null)
 			this.originatingRun = run;
 		else {
-			logger.error("The value's originating run is not allowed to be null");
-			throw new NullPointerException("The value's originating run is not allowed to be null");
+			logger.error("The value's originating run is not allowed to be <null>");
+			throw new NullPointerException("The value's originating run is not allowed to be <null>");
 		}
 	}
 

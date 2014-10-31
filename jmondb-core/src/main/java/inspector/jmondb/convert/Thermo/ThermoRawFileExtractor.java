@@ -62,7 +62,7 @@ public class ThermoRawFileExtractor {
 					!new File("./Thermo/ThermoStatusLog.exe").exists() ||
 					!new File("./Thermo/ThermoTuneMethod.exe").exists()) {
 				// copy the resources outside the jar
-				logger.info("Copying the Thermo extractor CLI's to a new folder in the base directory");
+				logger.debug("Copying the Thermo extractor CLI's to a new folder in the base directory");
 				copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
 			}
 		} finally {
@@ -198,7 +198,7 @@ public class ThermoRawFileExtractor {
 			return run;
 
 		} catch(IOException e) {
-			logger.error("Error while resolving the canonical path for file <{}>", fileName);
+			logger.warn("Error while resolving the canonical path for file <{}>", fileName);
 			throw new IllegalStateException("Error while resolving the canonical path for file <" + fileName + ">");
 		}
 	}
@@ -262,8 +262,8 @@ public class ThermoRawFileExtractor {
 			logger.error("Could not read the raw file extractor output: {}", e.getMessage());
 			throw new IllegalStateException("Could not read the raw file extractor output: " + e.getMessage());
 		} catch(InterruptedException e) {
-			logger.error("Error while extracting the raw file: {}", e);
-			throw new IllegalStateException("Error while extracting the raw file: " + e);
+			logger.error("Error while extracting the raw file: {}", e.getMessage());
+			throw new IllegalStateException("Error while extracting the raw file: " + e.getMessage());
 		}
 	}
 
@@ -410,8 +410,8 @@ public class ThermoRawFileExtractor {
 			return data;
 
 		} catch(IOException e) {
-			logger.error("Error while reading the instrument data: {}", e);
-			throw new IllegalStateException("Error while reading the instrument data: " + e);
+			logger.error("Error while reading the instrument data: {}", e.getMessage());
+			throw new IllegalStateException("Error while reading the instrument data: " + e.getMessage());
 		}
 	}
 

@@ -85,7 +85,7 @@ public class Collector {
 			// browse the start directory and underlying directories to find new raw files
 			File startDir = config.getStartDirectory();
 			try {
-				logger.info("Process directory <{}>", startDir.getCanonicalPath());
+				logger.debug("Process directory <{}>", startDir.getCanonicalPath());
 
 				// retrieve all files that were created after the specified date, and matching the specified regex
 				Collection<File> files = FileUtils.listFiles(startDir,
@@ -105,7 +105,7 @@ public class Collector {
 					}
 				}
 			} catch(IOException e) {
-				logger.error("IO error: {}", e.getMessage());
+				logger.fatal("IO error: {}", e.getMessage());
 				throw new IllegalArgumentException("IO error: " + e.getMessage());
 			}
 
@@ -116,7 +116,7 @@ public class Collector {
 					Timestamp runTimestamp = pool.take().get();
 					newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
 				} catch(Exception e) {	// catch all possible exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
-					logger.error("Error while executing a thread: {}", e.getMessage());
+					logger.error("Error while executing a thread: {}", e.getMessage(), e);
 				}
 			}
 
@@ -152,12 +152,12 @@ public class Collector {
 			// check whether an explicit config file exists in the current directory
 			File config = new File("config.yaml");
 			if(config.exists()) {
-				logger.info("Load user-specific config file");
+				logger.debug("Load user-specific config file");
 				inputStream = new FileInputStream(config);
 			}
 			else {
 				// else load the standard config file
-				logger.info("No user-specific config file found, loading the standard config file");
+				logger.debug("No user-specific config file found, loading the standard config file");
 				inputStream = Collector.class.getResourceAsStream("/config.yaml");
 			}
 

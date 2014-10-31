@@ -46,7 +46,7 @@ public class IMonDBReader {
 			return emf.createEntityManager();
 		}
 		catch(Exception e) {
-			logger.info("Error while creating the EntityManager to connect to the database: {}", e);
+			logger.warn("Error while creating the EntityManager to connect to the database: {}", e);
 			throw new IllegalStateException("Couldn't connect to the database: " + e);
 		}
 	}
@@ -75,7 +75,7 @@ public class IMonDBReader {
 	 * @return the {@code Instrument} specified by the given name if it is present in the database, else {@code null}
 	 */
 	public Instrument getInstrument(String name, boolean includeEvents, boolean includeProperties) {
-		logger.info("Retrieve instrument <{}>", name);
+		logger.debug("Retrieve instrument <{}>", name);
 
 		EntityManager entityManager = createEntityManager();
 
@@ -123,7 +123,7 @@ public class IMonDBReader {
 	 * @return the {@code Run} specified by the given name and performed on the given {@code Instrument} if present in the database, else {@code null}
 	 */
 	public Run getRun(String runName, String instrumentName) {
-		logger.info("Retrieve run <{}> for instrument <{}>", runName, instrumentName);
+		logger.debug("Retrieve run <{}> for instrument <{}>", runName, instrumentName);
 
 		EntityManager entityManager = createEntityManager();
 
@@ -163,7 +163,7 @@ public class IMonDBReader {
 	 * @return the {@code Property} specified by the given accession if found, else {@code null}
 	 */
 	public Property getProperty(String accession) {
-		logger.info("Retrieve property <{}>", accession);
+		logger.debug("Retrieve property <{}>", accession);
 
 		EntityManager entityManager = createEntityManager();
 
@@ -224,7 +224,7 @@ public class IMonDBReader {
 	 */
 	public <T> List<T> getFromCustomQuery(String queryStr, Class<T> clss, Map<String, String> parameters) {
 		if(queryStr != null && clss != null) {
-			logger.info("Execute custom query: {}", queryStr);
+			logger.debug("Execute custom query: {}", queryStr);
 
 			EntityManager entityManager = createEntityManager();
 
@@ -233,12 +233,12 @@ public class IMonDBReader {
 
 				if(parameters != null)
 					for(Map.Entry<String, String> entry : parameters.entrySet()) {
-						logger.info("Set parameter <{}>: <{}>", entry.getKey(), entry.getValue());
+						logger.trace("Set parameter <{}>: <{}>", entry.getKey(), entry.getValue());
 						query.setParameter(entry.getKey(), entry.getValue());
 					}
 
 				List<T> result = query.getResultList();
-				logger.debug("Result list retrieved from the database");
+				logger.trace("Result list retrieved from the database");
 
 				return result;
 			}
@@ -247,7 +247,7 @@ public class IMonDBReader {
 			}
 		}
 		else {
-			logger.info("Unable to execute <null> query");
+			logger.debug("Unable to execute <null> query");
 			return null;
 		}
 	}

@@ -5,8 +5,12 @@ import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBWriter;
 import inspector.jmondb.model.Run;
 import org.apache.commons.cli.*;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 
 import javax.persistence.EntityManagerFactory;
 
@@ -47,15 +51,13 @@ public class CLI {
 					database = cmd.getOptionValue("db");
 				else {
 					error = true;
-					logger.error("No database provided");
-					System.err.println("No database provided");
+					logger.fatal("No database provided");
 				}
 				if(cmd.hasOption("u"))
 					user = cmd.getOptionValue("u");
 				else {
 					error = true;
-					logger.error("No user name provided");
-					System.err.println("No user name provided");
+					logger.fatal("No user name provided");
 				}
 				if(cmd.hasOption("pw"))
 					pass = cmd.getOptionValue("pw");
@@ -67,15 +69,25 @@ public class CLI {
 					rawFile = cmd.getOptionValue("f");
 				else {
 					error = true;
-					logger.error("No raw file provided");
-					System.err.println("No raw file provided");
+					logger.fatal("No raw file provided");
 				}
 				if(cmd.hasOption("i"))
 					instrumentName = cmd.getOptionValue("i");
 				else {
 					error = true;
-					logger.error("No instrument name provided");
-					System.err.println("No instrument name provided");
+					logger.fatal("No instrument name provided");
+				}
+
+				// logging verbosity
+				if(cmd.hasOption("v") || cmd.hasOption("vv")) {
+					LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+					Configuration config = ctx.getConfiguration();
+					LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+					if(cmd.hasOption("v"))
+						loggerConfig.setLevel(Level.INFO);
+					else if(cmd.hasOption("vv"))
+						loggerConfig.setLevel(Level.DEBUG);
+					ctx.updateLoggers();
 				}
 
 				if(!error) {
@@ -92,8 +104,7 @@ public class CLI {
 			}
 
 		} catch (ParseException e) {
-			logger.error("Error while parsing the command-line arguments: {}", e.getMessage());
-			System.err.println("Error while parsing the command-line arguments: " + e.getMessage());
+			logger.fatal("Error while parsing the command-line arguments: {}", e.getMessage());
 			new HelpFormatter().printHelp("jMonDB-core", options);
 		}
 		finally {
@@ -106,6 +117,9 @@ public class CLI {
 		Options options = new Options();
 		// help
 		options.addOption("?", "help", false, "show help");
+		// logging verbosity
+		options.addOption("v", "verbose", false, "verbose logging");
+		options.addOption("vv", "very-verbose", false, "very verbose logging");
 		// MySQL connection options
 		options.addOption(new Option("h", "host", true, "the iMonDB MySQL host"));
 		options.addOption(new Option("p", "port", true, "the iMonDB MySQL port"));

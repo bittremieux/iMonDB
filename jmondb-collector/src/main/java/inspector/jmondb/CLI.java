@@ -40,15 +40,13 @@ public class CLI {
 						hour = Integer.parseInt(cmd.getOptionValue("h"));
 					else {
 						error = true;
-						logger.error("No hour provided");
-						System.err.println("No hour provided");
+						logger.fatal("No hour provided");
 					}
 					if(cmd.hasOption("m"))
 						minute = Integer.parseInt(cmd.getOptionValue("m"));
 					else {
 						error = true;
-						logger.error("No minute provided");
-						System.err.println("No minute provided");
+						logger.fatal("No minute provided");
 					}
 
 					if(!error && cmd.hasOption("rd")) {
@@ -90,8 +88,7 @@ public class CLI {
 						}
 						else {
 							error = true;
-							logger.error("No day provided");
-							System.err.println("No day provided");
+							logger.fatal("No day provided");
 						}
 					}
 
@@ -99,19 +96,16 @@ public class CLI {
 						new HelpFormatter().printHelp("jMonDB-collector", options);
 				}
 				else {
-					logger.error("No schedule information provided");
-					System.err.println("No schedule information provided");
+					logger.fatal("No schedule information provided");
 					new HelpFormatter().printHelp("jMonDB-collector", options);
 				}
 			}
 
 		} catch (ParseException e) {
-			logger.error("Error while parsing the command-line arguments: {}", e.getMessage());
-			System.err.println("Error while parsing the command-line arguments: " + e.getMessage());
+			logger.fatal("Error while parsing the command-line arguments: {}", e.getMessage());
 			new HelpFormatter().printHelp("jMonDB-collector", options);
 		} catch(SchedulerException e) {
-			logger.error("Error while executing the scheduler: {}", e.getMessage());
-			System.err.println("Error while executing the scheduler: " + e.getMessage());
+			logger.fatal("Error while executing the scheduler: {}", e.getMessage());
 		}
 	}
 

@@ -112,8 +112,8 @@ public class Event {
 			instrument.addEvent(this);
 		}
 		else {
-			logger.error("The event's instrument is not allowed to be null");
-			throw new NullPointerException("The event's instrument is not allowed to be null");
+			logger.error("The event's instrument is not allowed to be <null>");
+			throw new NullPointerException("The event's instrument is not allowed to be <null>");
 		}
 	}
 
@@ -125,8 +125,8 @@ public class Event {
 		if(date != null)
 			this.date = date;
 		else {
-			logger.error("The event's date is not allowed to be null");
-			throw new NullPointerException("The event's date is not allowed to be null");
+			logger.error("The event's date is not allowed to be <null>");
+			throw new NullPointerException("The event's date is not allowed to be <null>");
 		}
 	}
 
@@ -138,8 +138,8 @@ public class Event {
 		if(type != null)
 			this.type = type;
 		else {
-			logger.error("The event's type is not allowed to be null");
-			throw new NullPointerException("The event's type is not allowed to be null");
+			logger.error("The event's type is not allowed to be <null>");
+			throw new NullPointerException("The event's type is not allowed to be <null>");
 		}
 	}
 

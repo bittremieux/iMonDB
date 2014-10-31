@@ -46,8 +46,8 @@ public class IMonDBWriter {
 			return emf.createEntityManager();
 		}
 		catch(Exception e) {
-			logger.info("Error while creating the EntityManager to connect to the database: {}", e);
-			throw new IllegalStateException("Couldn't connect to the database: " + e);
+			logger.error("Error while creating the EntityManager to connect to the database: {}", e.getMessage());
+			throw new IllegalStateException("Couldn't connect to the database: " + e.getMessage());
 		}
 	}
 
@@ -63,7 +63,7 @@ public class IMonDBWriter {
 	 */
 	public void writeInstrument(Instrument instrument) {
 		if(instrument != null) {
-			logger.info("Store instrument <{}>", instrument.getName());
+			logger.debug("Store instrument <{}>", instrument.getName());
 
 			EntityManager entityManager = createEntityManager();
 
@@ -139,7 +139,7 @@ public class IMonDBWriter {
 		// if so, assign its id to the new cv
 		List<Long> result = cvQuery.getResultList();
 		if(result.size() > 0) {
-			logger.debug("Duplicate cv <{}>: assign id <{}>", cv.getLabel(), result.get(0));
+			logger.trace("Duplicate cv <{}>: assign id <{}>", cv.getLabel(), result.get(0));
 			cv.setId(result.get(0));
 		}
 	}
@@ -155,7 +155,7 @@ public class IMonDBWriter {
 	 */
 	public void writeOrUpdateEvent(Event event) {
 		if(event != null) {
-			logger.info("Store event <{}> which occurred on instrument <{}>", event.getDate(), event.getInstrument().getName());
+			logger.debug("Store event <{}> which occurred on instrument <{}>", event.getDate(), event.getInstrument().getName());
 
 			EntityManager entityManager = createEntityManager();
 
@@ -171,7 +171,7 @@ public class IMonDBWriter {
 				}
 				// else, assign the correct id for the instrument
 				else {
-					logger.debug("Existing instrument <{}>: assign id <{}>", event.getInstrument().getName(), instResult.get(0));
+					logger.trace("Existing instrument <{}>: assign id <{}>", event.getInstrument().getName(), instResult.get(0));
 					event.getInstrument().setId(instResult.get(0));
 				}
 
@@ -182,7 +182,7 @@ public class IMonDBWriter {
 				eventQuery.setMaxResults(1);	// restrict to a single result
 				List<Long> eventResult = eventQuery.getResultList();
 				if(eventResult.size() > 0) {
-					logger.debug("Existing event <{}> which occurred on instrument <{}>: assign id <{}>", event.getDate(), event.getInstrument().getName(), eventResult.get(0));
+					logger.trace("Existing event <{}> which occurred on instrument <{}>: assign id <{}>", event.getDate(), event.getInstrument().getName(), eventResult.get(0));
 					event.setId(eventResult.get(0));
 				}
 
@@ -230,7 +230,7 @@ public class IMonDBWriter {
 	 */
 	public void writeRun(Run run) {
 		if(run != null) {
-			logger.info("Store run <{}> for instrument <{}>", run.getName(), run.getInstrument().getName());
+			logger.debug("Store run <{}> for instrument <{}>", run.getName(), run.getInstrument().getName());
 
 			EntityManager entityManager = createEntityManager();
 
@@ -246,7 +246,7 @@ public class IMonDBWriter {
 				}
 				// else, assign the correct id for the instrument and its referenced cv
 				else {
-					logger.debug("Existing instrument <{}>: assign id <{}>", run.getInstrument().getName(), instResult.get(0));
+					logger.trace("Existing instrument <{}>: assign id <{}>", run.getInstrument().getName(), instResult.get(0));
 					run.getInstrument().setId(instResult.get(0));
 					assignDuplicateCvId(run.getInstrument().getCv(), entityManager);
 				}
@@ -330,12 +330,12 @@ public class IMonDBWriter {
 		for(Property prop : properties.values()) {
 			if(prop.getId() == null && propAccessionIdMap.containsKey(prop.getAccession())) {
 				prop.setId(propAccessionIdMap.get(prop.getAccession()));
-				logger.debug("Duplicate property <{}>: assign id <{}>", prop.getAccession(), prop.getId());
+				logger.trace("Duplicate property <{}>: assign id <{}>", prop.getAccession(), prop.getId());
 			}
 			CV cv = prop.getCv();
 			if(cv.getId() == null && cvLabelIdMap.containsKey(cv.getLabel())) {
 				cv.setId(cvLabelIdMap.get(cv.getLabel()));
-				logger.debug("Duplicate cv <label={}>: assign id <{}>", cv.getLabel(), cv.getId());
+				logger.trace("Duplicate cv <label={}>: assign id <{}>", cv.getLabel(), cv.getId());
 			}
 		}
 	}
@@ -352,7 +352,7 @@ public class IMonDBWriter {
 	 */
 	public void writeProperty(Property property) {
 		if(property != null) {
-			logger.info("Store property <{}>", property.getAccession());
+			logger.debug("Store property <{}>", property.getAccession());
 
 			EntityManager entityManager = createEntityManager();
 
@@ -410,7 +410,7 @@ public class IMonDBWriter {
 	 */
 	public void writeCv(CV cv) {
 		if(cv != null) {
-			logger.info("Store cv <{}>", cv.getLabel());
+			logger.debug("Store cv <{}>", cv.getLabel());
 
 			EntityManager entityManager = createEntityManager();
 
@@ -450,7 +450,7 @@ public class IMonDBWriter {
 
 	public void removeEvent(String instrumentName, Timestamp eventDate) {
 		if(instrumentName != null && eventDate != null) {
-			logger.info("Remove event <{}> for instrument <{}>", eventDate, instrumentName);
+			logger.debug("Remove event <{}> for instrument <{}>", eventDate, instrumentName);
 
 			EntityManager entityManager = createEntityManager();
 
