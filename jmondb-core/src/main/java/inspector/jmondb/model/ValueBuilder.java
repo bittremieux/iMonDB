@@ -5,15 +5,9 @@ package inspector.jmondb.model;
  */
 public class ValueBuilder {
 
-	private String name;
-	private String type;
-	private String accession;
-	private CV cv;
-	private Boolean isNumeric;
 	private String firstValue;
 	private Integer n;
 	private Integer nDiffValues;
-	private Integer nNotMissingValues;
 	private Double min;
 	private Double max;
 	private Double mean;
@@ -21,31 +15,8 @@ public class ValueBuilder {
 	private Double sd;
 	private Double q1;
 	private Double q3;
-
-	public ValueBuilder setName(String name) {
-		this.name = name;
-		return this;
-	}
-
-	public ValueBuilder setType(String type) {
-		this.type = type;
-		return this;
-	}
-
-	public ValueBuilder setAccession(String accession) {
-		this.accession = accession;
-		return this;
-	}
-
-	public ValueBuilder setCv(CV cv) {
-		this.cv = cv;
-		return this;
-	}
-
-	public ValueBuilder isNumeric(Boolean isNumeric) {
-		this.isNumeric = isNumeric;
-		return this;
-	}
+	private Property property;
+	private Run run;
 
 	public ValueBuilder setFirstValue(String firstValue) {
 		this.firstValue = firstValue;
@@ -59,11 +30,6 @@ public class ValueBuilder {
 
 	public ValueBuilder setNDiffValues(Integer nDiffValues) {
 		this.nDiffValues = nDiffValues;
-		return this;
-	}
-
-	public ValueBuilder setNNotMissingValues(Integer nNotMissingValues) {
-		this.nNotMissingValues = nNotMissingValues;
 		return this;
 	}
 
@@ -102,7 +68,17 @@ public class ValueBuilder {
 		return this;
 	}
 
+	public ValueBuilder setDefiningProperty(Property property) {
+		this.property = property;
+		return this;
+	}
+
+	public ValueBuilder setOriginatingRun(Run run) {
+		this.run = run;
+		return this;
+	}
+
 	public Value createValue() {
-		return new Value(name, type, accession, cv, isNumeric, firstValue, n, nDiffValues, nNotMissingValues, min, max, mean, median, sd, q1, q3);
+		return new Value(firstValue, n, nDiffValues, min, max, mean, median, sd, q1, q3, property, run);
 	}
 }

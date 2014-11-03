@@ -3,18 +3,21 @@
 <configuration>
 
 	<appenders>
-		<File name="logFile" fileName="jmondb.log" append="true">
+		<RollingFile name="logFile" fileName="jmondb.log" filePattern="jmondb.log">
 			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
-		</File>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+		</RollingFile>
 		<Console name="console" target="SYSTEM_OUT">
 			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
 		</Console>
 	</appenders>
 	
 	<loggers>
-		<root level="TRACE">
+		<root level="OFF">
 			<appender-ref ref="logFile" />
-			<appender-ref ref="console" level="OFF" />
+			<appender-ref ref="console" />
 		</root>
 	</loggers>
 	

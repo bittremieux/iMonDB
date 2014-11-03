@@ -3,6 +3,7 @@ package inspector.jmondb.io;
 import org.junit.Test;
 
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceException;
 
 public class IMonDBManagerFactoryTest {
 
@@ -12,7 +13,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
@@ -23,7 +24,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("127.0.0.1", "3306", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
@@ -34,7 +35,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory(null, "3306", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
@@ -45,7 +46,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", null, "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
@@ -56,7 +57,7 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", null, "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
@@ -67,64 +68,63 @@ public class IMonDBManagerFactoryTest {
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "iMonDBtest", null, null);
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
 
-	@Test(expected = IllegalStateException.class)
+	@Test(expected = PersistenceException.class)
 	public void createMySQLFactory_invalidHost() {
 		// create EMF
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("nonlocalhost", "3306", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
 
-	@Test(expected = IllegalStateException.class)
+	@Test(expected = PersistenceException.class)
 	public void createMySQLFactory_invalidPort() {
 		// create EMF
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "123456", "iMonDBtest", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
 
-	@Test(expected = IllegalStateException.class)
+	@Test(expected = PersistenceException.class)
 	public void createMySQLFactory_invalidDatabase() {
 		// create EMF
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "noDb", "iMonDB", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
 
-	@Test(expected = IllegalStateException.class)
+	@Test(expected = PersistenceException.class)
 	public void createMySQLFactory_invalidUser() {
 		// create EMF
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "iMonDBtest", "noUser", "iMonDB");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
 
-	@Test(expected = IllegalStateException.class)
+	@Test(expected = PersistenceException.class)
 	public void createMySQLFactory_invalidPassword() {
 		// create EMF
 		EntityManagerFactory emf = IMonDBManagerFactory.createMySQLFactory("localhost", "3306", "iMonDBtest", "iMonDB", "wrongPass");
 		// test connection
 		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getProject("Wout");
+		reader.getInstrument(null);
 		// close emf
 		emf.close();
 	}
-
 }

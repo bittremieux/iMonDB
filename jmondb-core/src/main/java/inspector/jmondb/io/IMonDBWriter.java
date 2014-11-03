@@ -1,277 +1,487 @@
 package inspector.jmondb.io;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Maps;
-import inspector.jmondb.model.CV;
-import inspector.jmondb.model.Project;
-import inspector.jmondb.model.Run;
-import inspector.jmondb.model.Value;
+import inspector.jmondb.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.persistence.*;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.sql.Timestamp;
+import java.util.*;
 
 /**
  * An iMonDB output writer to write to an RDBMS.
+ *
+ * <em>Attention:</em> This class is not thread-safe!
+ * If multiple threads try to write to the same database concurrently, this must be synchronized externally.
+ * (For example: most {@link Instrument}s will refer to the same {@link CV}, {@link Property}s are applicable for multiple {@link Value}s, ...)
  */
 public class IMonDBWriter {
 
 	private static final Logger logger = LogManager.getLogger(IMonDBWriter.class);
 
-	/** EntityManagerFactory used to set up connections to the database */
+	/** {@link EntityManagerFactory} used to set up connections to the database */
 	private EntityManagerFactory emf;
 
 	/**
-	 * Creates an IMonDBWriter specified by the given {@link EntityManagerFactory}.
+	 * Creates an {@code IMonDBWriter} specified by the given {@link EntityManagerFactory}.
 	 *
-	 * @param emf  the EntityManagerFactory used to set up the connection to the database
+	 * @param emf  the {@code EntityManagerFactory} used to set up the connection to the database, not {@code null}
 	 */
 	public IMonDBWriter(EntityManagerFactory emf) {
-		this.emf = emf;
+		if(emf != null)
+			this.emf = emf;
+		else {
+			logger.error("The EntityManagerFactory is not allowed to be <null>");
+			throw new NullPointerException("The EntityManagerFactory is not allowed to be <null>");
+		}
 	}
 
 	/**
 	 * Creates an {@link EntityManager} to set up a connection to the database.
 	 *
-	 * @return An EntityManager to connect to the database
+	 * @return an {@code EntityManager} to connect to the database
 	 */
 	private EntityManager createEntityManager() {
 		try {
 			return emf.createEntityManager();
 		}
 		catch(Exception e) {
-			logger.info("Error while creating the EntityManager to connect to the database: {}", e);
-			throw new IllegalStateException("Couldn't connect to the database: " + e);
+			logger.error("Error while creating the EntityManager to connect to the database: {}", e.getMessage());
+			throw new IllegalStateException("Couldn't connect to the database: " + e.getMessage());
 		}
 	}
 
 	/**
-	 * Persist the given {@link Project} to the database.
+	 * Write the given {@link Instrument} to the database.
 	 *
-	 * If a Project with the same label was already present, the previous Project is replaced by the given Project.
+	 * If an {@code Instrument} with the same name was already present in the database, an {@link IllegalArgumentException} will be thrown.
 	 *
-	 * @param project  The Project that will be persisted to the database
+	 * The {@link Run}s performed on the given {@code Instrument} will <em>not</em> be written to the database.
+	 * The {@link CV} used to define the {@code Instrument} on the other hand will be written to the database or updated if it is already present.
+	 *
+	 * @param instrument  the {@code Instrument} that will be written to the database, not {@code null}
 	 */
-	public synchronized void writeProject(Project project) {
-		if(project != null) {
-			logger.info("Store project <{}>", project.getLabel());
+	public void writeInstrument(Instrument instrument) {
+		if(instrument != null) {
+			logger.debug("Store instrument <{}>", instrument.getName());
 
 			EntityManager entityManager = createEntityManager();
 
-			// persist the project in a transaction
 			try {
-				// check if the project is already in the database and if so, delete the old information
-				// (the delete will cascade to the child Runs and Values)
-				TypedQuery<Long> projectQuery = entityManager.createQuery("SELECT project.id FROM Project project WHERE project.label = :label", Long.class);
-				projectQuery.setParameter("label", project.getLabel());
-				projectQuery.setMaxResults(1);	// restrict to a single result (label is unique anyway)
-
-				List<Long> result = projectQuery.getResultList();
+				// cancel if the instrument is already in the database
+				TypedQuery<Long> query = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name", Long.class);
+				query.setParameter("name", instrument.getName());
+				query.setMaxResults(1);	// restrict to a single result
+				List<Long> result = query.getResultList();
 				if(result.size() > 0) {
-					// delete the old project
-					logger.info("Duplicate project <label={}>: delete old project <id={}>", project.getLabel(), result.get(0));
-					Project oldProject = entityManager.find(Project.class, result.get(0));
-					entityManager.getTransaction().begin();
-					entityManager.remove(oldProject);
-					entityManager.getTransaction().commit();
+					logger.error("Instrument <{}> already exists with id <{}>", instrument.getName(), result.get(0));
+					throw new IllegalArgumentException("Instrument <" + instrument.getName() + " already exists with id <" + result.get(0) + ">");
 				}
 
-				// make sure the existing cv's are retained
-				for(Iterator<Run> it = project.getRunIterator(); it.hasNext(); )
-					replaceDuplicateCV(it.next(), entityManager);
+				// make sure a pre-existing cv is updated
+				assignDuplicateCvId(instrument.getCv(), entityManager);
+				// make sure the pre-existing properties and corresponding cv's are retained
+				HashMap<String, Property> properties = new HashMap<>();
+				for(Iterator<Property> it = instrument.getPropertyIterator(); it.hasNext(); ) {
+					Property prop = it.next();
+					properties.put(prop.getAccession(), prop);
+				}
+				if(properties.size() > 0)
+					assignDuplicatePropertyCvId(properties, entityManager);
 
-				// store the new project
+				// store this instrument
 				entityManager.getTransaction().begin();
-				entityManager.merge(project);
+				entityManager.merge(instrument);
 				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
 				try {
+					logger.debug("Rollback because instrument <{}> already exists in the database: {}", instrument.getName(), e.getMessage());
 					entityManager.getTransaction().rollback();
 				}
 				catch(PersistenceException p) {
-					logger.error("Unable to rollback the transaction for project <{}> to the database: {}", project.getLabel(), p);
+					logger.debug("Unable to rollback for instrument <{}>: {}", instrument.getName(), p.getMessage());
 				}
 
-				logger.error("Unable to persist project <{}> to the database: {}", project.getLabel(), e);
-				throw new IllegalArgumentException("Unable to persist project <" + project.getLabel() + "> to the database");
+				logger.error("Unable to store instrument <{}>: {}", instrument.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store instrument <" + instrument.getName() + ">");
 			}
 			catch(RollbackException e) {
-				logger.error("Unable to commit the transaction for project <{}> to the database: {}", project.getLabel(), e);
-				throw new IllegalArgumentException("Unable to commit the transaction for project <" + project.getLabel() + "> to the database");
+				logger.error("Unable to store instrument <{}>: {}", instrument.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store instrument <" + instrument.getName() + ">");
 			}
 			finally {
 				entityManager.close();
 			}
 		}
 		else {
-			logger.error("Unable to write <null> project element to the database");
-			throw new NullPointerException("Unable to write <null> project element to the database");
+			logger.error("Unable to store <null> instrument");
+			throw new NullPointerException("Unable to persist <null> instrument");
 		}
 	}
 
 	/**
-	 * Make sure duplicate cv's aren't persisted multiple times to the database.
+	 * Make sure a duplicate {@link CV} is not persisted multiple times to the database.
 	 *
-	 * If a cv is already present in the database, set its id to the new cv, so the same cv will be retained (but updated information will be overwritten).
+	 * If the {@code CV} is already present in the database, assign its id to the new {@code CV}, so the original {@code CV} (and its relationships) will be retained (but updated information will be overwritten).
 	 *
-	 * @param run  The run for which cv's linked to all values will be checked
-	 * @param entityManager  The connection to the database
+	 * @param cv  the {@code CV} that will be checked, not {@code null}
+	 * @param entityManager  the connection to the database, not {@code null}
 	 */
-	private void replaceDuplicateCV(Run run, EntityManager entityManager) {
-		// get all cv's existing in the database
-		TypedQuery<CV> cvQuery = entityManager.createQuery("SELECT cv FROM CV cv", CV.class);
-		Map<String, CV> cvLabelMap = Maps.uniqueIndex(cvQuery.getResultList(), CV::getLabel);
-		// check which cv's are duplicate
-		for(Iterator<Value> valIt = run.getValueIterator(); valIt.hasNext(); ) {
-			CV cv = valIt.next().getCv();
-			if(cv.getId() == null && cvLabelMap.containsKey(cv.getLabel())) {
-				cv.setId(cvLabelMap.get(cv.getLabel()).getId());
-				logger.info("Duplicate CV <label={}>: assign id <{}>", cv.getLabel(), cv.getId());
-			}
+	private void assignDuplicateCvId(CV cv, EntityManager entityManager) {
+		logger.debug("Checking if cv <{}> is already present in the database", cv.getLabel());
+
+		// check if the cv already exists in the database
+		TypedQuery<Long> cvQuery = entityManager.createQuery("SELECT cv.id FROM CV cv WHERE cv.label = :label", Long.class);
+		cvQuery.setParameter("label", cv.getLabel());
+		cvQuery.setMaxResults(1);	// restrict to a single result
+
+		// if so, assign its id to the new cv
+		List<Long> result = cvQuery.getResultList();
+		if(result.size() > 0) {
+			logger.trace("Duplicate cv <{}>: assign id <{}>", cv.getLabel(), result.get(0));
+			cv.setId(result.get(0));
 		}
 	}
 
 	/**
-	 * Persist the given {@link Run} to the database for the {@link Project} with the given label.
+	 * Write the given {@link Event} to the database.
 	 *
-	 * If a Run with the same name was already present in this Project, the previous Run is replaced by the given Run.
+	 * If an {@code Event} which occurred on the same {@link Instrument} at the same time was already present, the previous {@code Event} is updated to the given {@code Event}.
 	 *
-	 * @param run  The Run that will be persisted to the database
-	 * @param projectLabel  The label identifying the Project to which this Run will be added.
-	 *                      If this project is not present in the database yet, a minimal project will be created using the given information.
+	 * If the {@link Instrument} for which the {@code Event} occurred is not present in the database, an {@link IllegalStateException} will be thrown.
+	 *
+	 * @param event  the {@code Event} that will be written to the database, not {@code null}
 	 */
-	public synchronized void writeRun(Run run, String projectLabel) {
-		if(run != null && projectLabel != null) {
-			logger.info("Store run <{}> for project <{}>", run.getName(), projectLabel);
+	public void writeOrUpdateEvent(Event event) {
+		if(event != null) {
+			logger.debug("Store event <{}> which occurred on instrument <{}>", event.getDate(), event.getInstrument().getName());
 
 			EntityManager entityManager = createEntityManager();
 
-			// persist the run in a transaction
 			try {
-				// check if a project with the given label is already in the database
-				TypedQuery<Long> projectQuery = entityManager.createQuery("SELECT project.id FROM Project project WHERE project.label = :label", Long.class);
-				projectQuery.setParameter("label", projectLabel);
-				projectQuery.setMaxResults(1);	// restrict to a single result (label is unique anyway)
-
-				List<Long> result = projectQuery.getResultList();
-				if(result.size() > 0) {
-					logger.info("Project <label={}> found <id={}>", projectLabel, result.get(0));
-
-					entityManager.getTransaction().begin();
-
-					Project project = entityManager.find(Project.class, result.get(0));
-					// check if a run with the same name already existed for this project
-					if(project.getRun(run.getName()) != null) {
-						// if so, delete this run from the database
-						logger.info("Duplicate run <name={}>: delete old run <id={}>", run.getName(), project.getRun(run.getName()).getId());
-						entityManager.remove(project.getRun(run.getName()));
-					}
-
-					// make sure the existing cv's are retained
-					replaceDuplicateCV(run, entityManager);
-
-					// add the run to the prior existing project
-					// the project is still attached to the entity manager, so changes are persisted on the fly
-					project.addRun(run);
-
-					entityManager.getTransaction().commit();
+				// cancel if the instrument for which the event occurred is not yet in the database
+				TypedQuery<Long> instQuery = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name", Long.class);
+				instQuery.setParameter("name", event.getInstrument().getName());
+				instQuery.setMaxResults(1);	// restrict to a single result
+				List<Long> instResult = instQuery.getResultList();
+				if(instResult.size() == 0) {
+					logger.error("Instrument <{}> for which event <{}> occurred is not in the database yet", event.getInstrument().getName(), event.getDate());
+					throw new IllegalStateException("Instrument <" + event.getInstrument().getName() + "> for which event <" + event.getDate() + "> occurred is not in the database yet");
 				}
-				else {	// no project found -> create a new project
-					logger.info("No existing project with label <{}> found: creating a new project. " +
-							"You might want to update the information for this project", projectLabel);
-					Project project = new Project(projectLabel, projectLabel);
-					project.addRun(run);
-					// store the complete project in the database
-					writeProject(project);
+				// else, assign the correct id for the instrument
+				else {
+					logger.trace("Existing instrument <{}>: assign id <{}>", event.getInstrument().getName(), instResult.get(0));
+					event.getInstrument().setId(instResult.get(0));
 				}
+
+				// check if the event is already in the database and assign its id
+				TypedQuery<Long> eventQuery = entityManager.createQuery("SELECT event.id FROM Event event WHERE event.date = :date AND event.instrument.name = :instName", Long.class);
+				eventQuery.setParameter("date", event.getDate());
+				eventQuery.setParameter("instName", event.getInstrument().getName());
+				eventQuery.setMaxResults(1);	// restrict to a single result
+				List<Long> eventResult = eventQuery.getResultList();
+				if(eventResult.size() > 0) {
+					logger.trace("Existing event <{}> which occurred on instrument <{}>: assign id <{}>", event.getDate(), event.getInstrument().getName(), eventResult.get(0));
+					event.setId(eventResult.get(0));
+				}
+
+				// store the new event
+				entityManager.getTransaction().begin();
+				entityManager.merge(event);
+				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
 				try {
+					logger.debug("Rollback because event <{}> already exists in the database: {}", event.getDate(), e.getMessage());
 					entityManager.getTransaction().rollback();
 				}
 				catch(PersistenceException p) {
-					logger.error("Unable to rollback the transaction for run <{}> to the database: {}", run.getName(), p);
+					logger.debug("Unable to rollback for event <{}>: {}", event.getDate(), p.getMessage());
 				}
 
-				logger.error("Unable to persist run <{}> to the database: {}", run.getName(), e);
-				throw new IllegalArgumentException("Unable to persist run <" + run.getName() + "> to the database");
+				logger.error("Unable to store event <{}>: {}", event.getDate(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store event <" + event.getDate() + ">");
 			}
 			catch(RollbackException e) {
-				logger.error("Unable to commit the transaction for run <{}> to the database: {}", run.getName(), e);
-				throw new IllegalArgumentException("Unable to commit the transaction for run <" + run.getName() + "> to the database");
+				logger.error("Unable to store event <{}>: {}", event.getDate(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store event <" + event.getDate() + ">");
 			}
 			finally {
 				entityManager.close();
 			}
 		}
 		else {
-			if(run == null) {
-				logger.error("Unable to write <null> run element to the database");
-				throw new NullPointerException("Unable to write <null> run element to the database");
+			logger.error("Unable to store <null> event");
+			throw new NullPointerException("Unable to persist <null> event");
+		}
+	}
+
+	/**
+	 * Write the given {@link Run} to the database.
+	 *
+	 * If the {@link Instrument} on which the {@code Run} is performed is not present in the database, an {@link IllegalStateException} will be thrown.
+	 * If a {@code Run} with the same name performed on the same {@code Instrument} was already present in the database, an {@link IllegalArgumentException} will be thrown.
+	 *
+	 * All child {@link Value}s and their associated {@link Property}s and {@link CV}'s will be written to the database as well.
+	 * If some of these {@code Property}s or {@code CV}'s were already present in the database, they will be updated.
+	 *
+	 * @param run  the {@code Run} that will be written to the database, not {@code null}
+	 */
+	public void writeRun(Run run) {
+		if(run != null) {
+			logger.debug("Store run <{}> for instrument <{}>", run.getName(), run.getInstrument().getName());
+
+			EntityManager entityManager = createEntityManager();
+
+			try {
+				// cancel if the run's instrument is not yet in the database
+				TypedQuery<Long> instQuery = entityManager.createQuery("SELECT inst.id FROM Instrument inst WHERE inst.name = :name", Long.class);
+				instQuery.setParameter("name", run.getInstrument().getName());
+				instQuery.setMaxResults(1);	// restrict to a single result
+				List<Long> instResult = instQuery.getResultList();
+				if(instResult.size() == 0) {
+					logger.error("Instrument <{}> for run <{}> is not in the database yet", run.getInstrument().getName(), run.getName());
+					throw new IllegalStateException("Instrument <" + run.getInstrument().getName() + "> for run <" + run.getName() + "> is not in the database yet");
+				}
+				// else, assign the correct id for the instrument and its referenced cv
+				else {
+					logger.trace("Existing instrument <{}>: assign id <{}>", run.getInstrument().getName(), instResult.get(0));
+					run.getInstrument().setId(instResult.get(0));
+					assignDuplicateCvId(run.getInstrument().getCv(), entityManager);
+				}
+
+				// cancel if the run is already in the database
+				TypedQuery<Long> runQuery = entityManager.createQuery("SELECT run.id FROM Run run WHERE run.name = :name AND run.instrument.name = :instName", Long.class);
+				runQuery.setParameter("name", run.getName());
+				runQuery.setParameter("instName", run.getInstrument().getName());
+				runQuery.setMaxResults(1);	// restrict to a single result
+				List<Long> runResult = runQuery.getResultList();
+				if(runResult.size() > 0) {
+					logger.error("Run <{}> for instrument <{}> already exists with id <{}>", run.getName(),  run.getInstrument().getName(), runResult.get(0));
+					throw new IllegalArgumentException("Run <" + run.getName() + "> for instrument <" + run.getInstrument().getName() + "> already exists with id <" + runResult.get(0) + ">");
+				}
+
+				// make sure the pre-existing properties and corresponding cv's are retained
+				HashMap<String, Property> properties = new HashMap<>();
+				for(Iterator<Property> it = run.getInstrument().getPropertyIterator(); it.hasNext(); ) {
+					Property prop = it.next();
+					properties.put(prop.getAccession(), prop);
+				}
+				if(properties.size() > 0)
+					assignDuplicatePropertyCvId(properties, entityManager);
+
+				// store the new run
+				entityManager.getTransaction().begin();
+				entityManager.merge(run);
+				entityManager.getTransaction().commit();
 			}
-			else {
-				logger.error("Unable to write the run to a <null> project");
-				throw new NullPointerException("Unable to write the run to a <null> project");
+			catch(EntityExistsException e) {
+				try {
+					logger.debug("Rollback because run <{}> already exists in the database: {}", run.getName(), e.getMessage());
+					entityManager.getTransaction().rollback();
+				}
+				catch(PersistenceException p) {
+					logger.debug("Unable to rollback for run <{}>: {}", run.getName(), p.getMessage());
+				}
+
+				logger.error("Unable to store run <{}>: {}", run.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store run <" + run.getName() + ">");
+			}
+			catch(RollbackException e) {
+				logger.error("Unable to store run <{}>: {}", run.getName(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store run <" + run.getName() + ">");
+			}
+			finally {
+				entityManager.close();
+			}
+		}
+		else {
+			logger.error("Unable to store <null> run");
+			throw new NullPointerException("Unable to persist <null> run");
+		}
+	}
+
+	/**
+	 * Make sure duplicate {@link Property}s and {@link CV}s are not persisted multiple times to the database.
+	 *
+	 * If an item is already present in the database, assign its id to the new item, so the original item (and its relationships) will be retained (but updated information will be overwritten).
+	 *
+	 * @param properties  a {@code Map} with {@code Property}s as values and their {@code accession} as keys, not {@code null}
+	 * @param entityManager  the connection to the database, not {@code null}
+	 */
+	private void assignDuplicatePropertyCvId(Map<String, Property> properties, EntityManager entityManager) {
+		logger.debug("Updating all properties in the database associated to the run");
+
+		// get all pre-existing properties that have the same accession number
+		TypedQuery<IdDataPair> propQuery = entityManager.createQuery("SELECT NEW inspector.jmondb.io.IdDataPair(prop.id, prop.accession) FROM Property prop WHERE prop.accession in :propAccessions", IdDataPair.class);
+		propQuery.setParameter("propAccessions", properties.keySet());
+		Map<String, Long> propAccessionIdMap = new HashMap<>();
+		for(IdDataPair propPair : propQuery.getResultList())
+			propAccessionIdMap.put((String) propPair.getData(), propPair.getId());
+
+		// get all pre-existing cv's (not filtered on label, but should be a low number of items)
+		TypedQuery<IdDataPair> cvQuery = entityManager.createQuery("SELECT NEW inspector.jmondb.io.IdDataPair(cv.id, cv.label) FROM CV cv", IdDataPair.class);
+		Map<String, Long> cvLabelIdMap = new HashMap<>();
+		for(IdDataPair cvPair : cvQuery.getResultList())
+			cvLabelIdMap.put((String) cvPair.getData(), cvPair.getId());
+
+		// assign id's from pre-existing entities
+		for(Property prop : properties.values()) {
+			if(prop.getId() == null && propAccessionIdMap.containsKey(prop.getAccession())) {
+				prop.setId(propAccessionIdMap.get(prop.getAccession()));
+				logger.trace("Duplicate property <{}>: assign id <{}>", prop.getAccession(), prop.getId());
+			}
+			CV cv = prop.getCv();
+			if(cv.getId() == null && cvLabelIdMap.containsKey(cv.getLabel())) {
+				cv.setId(cvLabelIdMap.get(cv.getLabel()));
+				logger.trace("Duplicate cv <label={}>: assign id <{}>", cv.getLabel(), cv.getId());
 			}
 		}
 	}
 
 	/**
-	 * Persist the given {@link CV} to the database.
+	 * Write the given {@link Property} to the database.
 	 *
-	 * If a CV with the same label was already present in the database, its data will be updated to the given CV.
+	 * If a {@code Property} with the same accession was already present in the database, an {@link IllegalArgumentException} will be thrown.
 	 *
-	 * @param cv  The cv that will be persisted to the database
+	 * The {@link Value}s associated with the given {@code Property} will <em>not</em> be written to the database.
+	 * The {@link CV} used to define the {@code Property} on the other hand will be written to the database or updated if it is already present.
+	 *
+	 * @param property  the {@code Property} that will be written to the database, not {@code null}
 	 */
-	public synchronized void writeCv(CV cv) {
-		if(cv != null) {
-			logger.info("Store cv <{}>", cv.getLabel());
+	public void writeProperty(Property property) {
+		if(property != null) {
+			logger.debug("Store property <{}>", property.getAccession());
 
 			EntityManager entityManager = createEntityManager();
 
-			// persist the CV in a transaction
 			try {
-				// check if the CV is already in the database and retrieve its primary key
-				TypedQuery<Long> query = entityManager.createQuery("SELECT cv.id FROM CV cv WHERE cv.label = :label", Long.class);
-				query.setParameter("label", cv.getLabel()).setMaxResults(1);
+				// cancel if the property is already in the database
+				TypedQuery<Long> query = entityManager.createQuery("SELECT prop.id FROM Property prop WHERE prop.accession = :accession", Long.class);
+				query.setParameter("accession", property.getAccession());
+				query.setMaxResults(1);	// restrict to a single result
 				List<Long> result = query.getResultList();
 				if(result.size() > 0) {
-					logger.info("Duplicate cv <label={}>: assign id <{}>", cv.getLabel(), result.get(0));
-					cv.setId(result.get(0));
+					logger.error("Property <{}> already exists with id <{}>", property.getAccession(), result.get(0));
+					throw new IllegalArgumentException("Property <" + property.getAccession() + " already exists with id <" + result.get(0) + ">");
 				}
 
-				// store this Property
+				// make sure a pre-existing cv is updated
+				assignDuplicateCvId(property.getCv(), entityManager);
+
+				// store this property
+				entityManager.getTransaction().begin();
+				entityManager.merge(property);
+				entityManager.getTransaction().commit();
+			}
+			catch(EntityExistsException e) {
+				try {
+					logger.debug("Rollback because property <{}> already exists in the database: {}", property.getAccession(), e.getMessage());
+					entityManager.getTransaction().rollback();
+				}
+				catch(PersistenceException p) {
+					logger.debug("Unable to rollback for property <{}>: {}", property.getAccession(), p.getMessage());
+				}
+
+				logger.error("Unable to store property <{}>: {}", property.getAccession(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store property <" + property.getAccession() + ">");
+			}
+			catch(RollbackException e) {
+				logger.error("Unable to store property <{}>: {}", property.getAccession(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store property <" + property.getAccession() + ">");
+			}
+			finally {
+				entityManager.close();
+			}
+		}
+		else {
+			logger.error("Unable to store <null> property");
+			throw new NullPointerException("Unable to persist <null> property");
+		}
+	}
+
+	/**
+	 * Write the given {@link CV} to the database.
+	 *
+	 * If a {@code CV} with the same label was already present in the database, it will be updated to the given {@code CV}.
+	 *
+	 * @param cv  the {@code CV} that will be written to the database, not {@code null}
+	 */
+	public void writeCv(CV cv) {
+		if(cv != null) {
+			logger.debug("Store cv <{}>", cv.getLabel());
+
+			EntityManager entityManager = createEntityManager();
+
+			try {
+				assignDuplicateCvId(cv, entityManager);
+
+				// store this cv
 				entityManager.getTransaction().begin();
 				entityManager.merge(cv);
 				entityManager.getTransaction().commit();
 			}
 			catch(EntityExistsException e) {
 				try {
+					logger.debug("Rollback because cv <{}> already exists in the database: {}", cv.getLabel(), e.getMessage());
 					entityManager.getTransaction().rollback();
 				}
 				catch(PersistenceException p) {
-					logger.error("Unable to rollback the transaction for cv <{}> to the database: {}", cv.getLabel(), p);
+					logger.debug("Unable to rollback for cv <{}>: {}", cv.getLabel(), p.getMessage());
 				}
 
-				logger.error("Unable to persist cv <{}> to the database: {}", cv.getLabel(), e);
-				throw new IllegalArgumentException("Unable to persist cv <" + cv.getLabel() + "> to the database");
+				logger.error("Unable to store cv <{}>: {}", cv.getLabel(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store cv <" + cv.getLabel() + ">");
 			}
 			catch(RollbackException e) {
-				logger.error("Unable to commit the transaction for cv <{}> to the database: {}", cv.getLabel(), e);
-				throw new IllegalArgumentException("Unable to commit the transaction for cv <" + cv.getLabel() + "> to the database");
+				logger.error("Unable to store cv <{}>: {}", cv.getLabel(), e.getMessage());
+				throw new IllegalArgumentException("Unable to store cv <" + cv.getLabel() + ">");
 			}
 			finally {
 				entityManager.close();
 			}
 		}
-
 		else {
-			logger.error("Unable to write <null> cv to the database");
-			throw new NullPointerException("Unable to write <null> cv to the database");
+			logger.error("Unable to store <null> cv");
+			throw new NullPointerException("Unable to persist <null> cv");
+		}
+	}
+
+	public void removeEvent(String instrumentName, Timestamp eventDate) {
+		if(instrumentName != null && eventDate != null) {
+			logger.debug("Remove event <{}> for instrument <{}>", eventDate, instrumentName);
+
+			EntityManager entityManager = createEntityManager();
+
+			try {
+				// get the event
+				TypedQuery<Event> query = entityManager.createQuery("SELECT e FROM Event e WHERE e.date = :date AND e.instrument.name = :name", Event.class);
+				query.setParameter("date", eventDate);
+				query.setParameter("name", instrumentName);
+				Event event = query.getSingleResult();
+
+				// remove the event
+				entityManager.getTransaction().begin();
+				entityManager.remove(event);
+				entityManager.getTransaction().commit();
+
+			} catch(NoResultException e) {
+				logger.debug("Event <{}> for instrument <{}> not found in the database", eventDate, instrumentName);
+				throw new IllegalArgumentException("Event <" + eventDate + "> for instrument <" + instrumentName + "> not found in the database");
+			} catch(RollbackException e) {
+				logger.error("Unable to remove event <{}> for instrument <{}>: {}", eventDate, instrumentName, e.getMessage());
+				throw new IllegalArgumentException("Unable to remove event <" + eventDate + ">");
+			} finally {
+				entityManager.close();
+			}
+		}
+		else {
+			if(instrumentName == null)
+				logger.error("Unable to remove event with <null> instrument name");
+			if(eventDate == null)
+				logger.error("Unable to remove event with <null> date");
+			throw new NullPointerException("Unable to remove <null> event");
 		}
 	}
 }

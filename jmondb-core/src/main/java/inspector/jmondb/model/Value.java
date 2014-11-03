@@ -5,7 +5,13 @@ import org.apache.logging.log4j.Logger;
 
 import javax.persistence.*;
 
+/**
+ * A {@code Value} signifies a summary value calculated out of a range of different observations.
+ *
+ * A {@code Value} can be uniquely identified by the combination of its defining {@link Property} and its originating {@link Run}.
+ */
 @Entity
+@Access(AccessType.FIELD)
 @Table(name = "imon_value")
 public class Value {
 
@@ -18,23 +24,6 @@ public class Value {
 	@GeneratedValue(strategy=GenerationType.IDENTITY)
 	private Long id;
 
-	/** the name of the value */
-	@Column(name="name", nullable=false, length=200)
-	private String name;
-	/** the type of the value */
-	@Column(name="type", nullable=false, length=20)
-	private String type;
-	/** the accession number that identifies the value in the controlled vocabulary */
-	@Column(name="accession", nullable=false, length=255)
-	private String accession;
-	/** the controlled vocabulary that defines the value */
-	@ManyToOne(cascade=CascadeType.MERGE, fetch=FetchType.EAGER)
-	@JoinColumn(name="l_imon_cv_id", referencedColumnName="id")
-	private CV cv;
-
-	/** indicates whether the Value signifies numerical data */
-	@Column(name="isnumeric", nullable=false)
-	private Boolean isNumeric;
 	/** the first observation */
 	@Column(name="firstvalue", length=200)
 	private String firstValue;
@@ -44,9 +33,6 @@ public class Value {
 	/** the number of different observations */
 	@Column(name="n_diffvalues")
 	private Integer nDiffValues;
-	/** the number of observations present */
-	@Column(name="n_notmissingvalues")
-	private Integer nNotMissingValues;
 	/** the minimum observation */
 	@Column(name="min")
 	private Double min;
@@ -69,135 +55,89 @@ public class Value {
 	@Column(name="q3")
 	private Double q3;
 
+	/** inverse part of the bi-directional relationship with {@link Property} */
+	@ManyToOne(cascade={CascadeType.PERSIST, CascadeType.MERGE}, fetch=FetchType.LAZY)
+	@JoinColumn(name="l_imon_property_id", nullable=false, referencedColumnName="id")
+	private Property definingProperty;
+
 	/** inverse part of the bi-directional relationship with {@link Run} */
 	@ManyToOne(fetch=FetchType.LAZY)
-	@JoinColumn(name="l_imon_run_id", referencedColumnName="id")
-	private Run fromRun;
+	@JoinColumn(name="l_imon_run_id", nullable=false, referencedColumnName="id")
+	private Run originatingRun;
 
 	/**
 	 * Default constructor required by JPA.
-	 * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
+	 * Protected access modification enforces class immutability.
 	 */
 	protected Value() {
 
 	}
 
 	/**
-	 * Creates a Value. Use the {@link ValueBuilder} to easily create a Value with a specific set of member variables.
+	 * Creates a {@code Value}. Use the {@link ValueBuilder} to easily create a Value with a specific set of member variables.
 	 *
-	 * This Value signifies a summary value calculated out of a range of different observations.
+	 * This {@code Value} signifies a summary value calculated out of a range of different observations.
 	 *
-	 * The id is automatically determined by the database as primary key.
-	 *
-	 * @param name  The name of the value
-	 * @param type  The type of the value
-	 * @param accession  The accession number that identifies the value in the controlled vocabulary
-	 * @param cv  The controlled vocabulary that defines the value
-	 * @param isNumeric  Indicates whether the Value signifies numerical data
-	 * @param firstValue  The first observation
-	 * @param n  The number of observations used to calculate the summary value
-	 * @param nDiffValues  The number of different observations
-	 * @param nNotMissingValues  The number of observations present
-	 * @param min  The minimum observation
-	 * @param max  The maximum observation
-	 * @param mean  The mean observation
-	 * @param median  The median observation
-	 * @param sd  The standard deviation
-	 * @param q1  The first quartile
-	 * @param q3  The third quartile
+	 * @param firstValue  the first observation
+	 * @param n  the number of observations used to calculate the summary value
+	 * @param nDiffValues  the number of different observations
+	 * @param min  the minimum observation
+	 * @param max  the maximum observation
+	 * @param mean  the mean observation
+	 * @param median  the median observation
+	 * @param sd  the standard deviation
+	 * @param q1  the first quartile
+	 * @param q3  the third quartile
+	 * @param property  the {@link Property} that defines the value, not {@code null}
+	 * @param run  the {@link Run} from which the value originates, not {@code null}
 	 */
-	public Value(String name, String type, String accession, CV cv, Boolean isNumeric, String firstValue, Integer n, Integer nDiffValues, Integer nNotMissingValues, Double min, Double max, Double mean, Double median, Double sd, Double q1, Double q3) {
+	public Value(String firstValue, Integer n, Integer nDiffValues, Double min, Double max, Double mean, Double median, Double sd, Double q1, Double q3, Property property, Run run) {
 		this();
 
-		setName(name);
-		setType(type);
-		setAccession(accession);
-		setCv(cv);
-		setNumeric(isNumeric);
-		setFirstValue(firstValue);
-		setN(n);
-		setNDiffValues(nDiffValues);
-		setNNotMissingValues(nNotMissingValues);
-		setMin(min);
-		setMax(max);
-		setMean(mean);
-		setMedian(median);
-		setSd(sd);
-		setQ1(q1);
-		setQ3(q3);
+		this.firstValue = firstValue;
+		this.n = n;
+		this.nDiffValues = nDiffValues;
+		this.min = min;
+		this.max = max;
+		this.mean = mean;
+		this.median = median;
+		this.sd = sd;
+		this.q1 = q1;
+		this.q3 = q3;
+
+		setDefiningProperty(property);
+		setOriginatingRun(run);
+		property.assignValue(this);
+		run.addValue(this);
 	}
 
 	public Long getId() {
 		return id;
 	}
 
-	/* package private: read-only key to be set by the JPA implementation */
-	void setId(Long id) {
-		this.id = id;
+	public Property getDefiningProperty() {
+		return definingProperty;
 	}
 
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		if(name != null)
-			this.name = name;
+	private void setDefiningProperty(Property property) {
+		if(property != null)
+			this.definingProperty = property;
 		else {
-			logger.error("The value's name is not allowed to be <null>");
-			throw new NullPointerException("The value's name is not allowed to be <null>");
+			logger.error("The value's defining property is not allowed to be <null>");
+			throw new NullPointerException("The value's defining property is not allowed to be <null>");
 		}
 	}
 
-	public String getType() {
-		return type;
+	public Run getOriginatingRun() {
+		return originatingRun;
 	}
 
-	public void setType(String type) {
-		if(type != null)
-			this.type = type;
+	private void setOriginatingRun(Run run) {
+		if(run != null)
+			this.originatingRun = run;
 		else {
-			logger.error("The value's type is not allowed to be <null>");
-			throw new NullPointerException("The value's type is not allowed to be <null>");
-		}
-	}
-
-	public String getAccession() {
-		return accession;
-	}
-
-	public void setAccession(String accession) {
-		if(accession != null)
-			this.accession = accession;
-		else {
-			logger.error("The value's accession is not allowed to be <null>");
-			throw new NullPointerException("The value's accession is not allowed to be <null>");
-		}
-	}
-
-	public CV getCv() {
-		return cv;
-	}
-
-	public void setCv(CV cv) {
-		if(cv != null)
-			this.cv = cv;
-		else {
-			logger.error("The value's CV is not allowed to be <null>");
-			throw new NullPointerException("The value's CV is not allowed to be <null>");
-		}
-	}
-
-	public Boolean getNumeric() {
-		return isNumeric;
-	}
-
-	public void setNumeric(Boolean numeric) {
-		if(numeric != null)
-			this.isNumeric = numeric;
-		else {
-			logger.error("It is mandatory to specify whether the value is numeric");
-			throw new NullPointerException("It is mandatory to specify whether the value is numeric");
+			logger.error("The value's originating run is not allowed to be <null>");
+			throw new NullPointerException("The value's originating run is not allowed to be <null>");
 		}
 	}
 
@@ -205,96 +145,40 @@ public class Value {
 		return firstValue;
 	}
 
-	public void setFirstValue(String firstValue) {
-		this.firstValue = firstValue;
-	}
-
 	public Integer getN() {
 		return n;
-	}
-
-	public void setN(Integer n) {
-		this.n = n;
 	}
 
 	public Integer getNDiffValues() {
 		return nDiffValues;
 	}
 
-	public void setNDiffValues(Integer nDiffValues) {
-		this.nDiffValues = nDiffValues;
-	}
-
-	public Integer getNNotMissingValues() {
-		return nNotMissingValues;
-	}
-
-	public void setNNotMissingValues(Integer nNotMissingValues) {
-		this.nNotMissingValues = nNotMissingValues;
-	}
-
 	public Double getMin() {
 		return min;
-	}
-
-	public void setMin(Double min) {
-		this.min = min;
 	}
 
 	public Double getMax() {
 		return max;
 	}
 
-	public void setMax(Double max) {
-		this.max = max;
-	}
-
 	public Double getMean() {
 		return mean;
-	}
-
-	public void setMean(Double mean) {
-		this.mean = mean;
 	}
 
 	public Double getMedian() {
 		return median;
 	}
 
-	public void setMedian(Double median) {
-		this.median = median;
-	}
-
 	public Double getSd() {
 		return sd;
-	}
-
-	public void setSd(Double sd) {
-		this.sd = sd;
 	}
 
 	public Double getQ1() {
 		return q1;
 	}
 
-	public void setQ1(Double q1) {
-		this.q1 = q1;
-	}
-
 	public Double getQ3() {
 		return q3;
-	}
-
-	public void setQ3(Double q3) {
-		this.q3 = q3;
-	}
-
-	public Run getFromRun() {
-		return fromRun;
-	}
-
-	public void setFromRun(Run run) {
-		this.fromRun = run;
 	}
 
 	@Override
@@ -302,31 +186,44 @@ public class Value {
 		if(this == o) return true;
 		if(o == null || getClass() != o.getClass()) return false;
 
-		Value that = (Value) o;
+		Value value = (Value) o;
 
-		if(name != null ? !name.equals(that.name) : that.name != null) return false;
-		if(type != null ? !type.equals(that.type) : that.type != null) return false;
-		if(accession != null ? !accession.equals(that.accession) : that.accession != null) return false;
-		if(cv != null ? !cv.equals(that.cv) : that.cv != null) return false;
-		if(firstValue != null ? !firstValue.equals(that.firstValue) : that.firstValue != null) return false;
-		if(isNumeric != null ? !isNumeric.equals(that.isNumeric) : that.isNumeric != null) return false;
-		if(max != null ? !max.equals(that.max) : that.max != null) return false;
-		if(mean != null ? !mean.equals(that.mean) : that.mean != null) return false;
-		if(median != null ? !median.equals(that.median) : that.median != null) return false;
-		if(min != null ? !min.equals(that.min) : that.min != null) return false;
-		if(n != null ? !n.equals(that.n) : that.n != null) return false;
-		if(nDiffValues != null ? !nDiffValues.equals(that.nDiffValues) : that.nDiffValues != null) return false;
-		if(nNotMissingValues != null ? !nNotMissingValues.equals(that.nNotMissingValues) : that.nNotMissingValues != null)
-			return false;
-		if(q1 != null ? !q1.equals(that.q1) : that.q1 != null) return false;
-		if(q3 != null ? !q3.equals(that.q3) : that.q3 != null) return false;
-		if(sd != null ? !sd.equals(that.sd) : that.sd != null) return false;
+		if(firstValue != null ? !firstValue.equals(value.firstValue) : value.firstValue != null) return false;
+		if(n != null ? !n.equals(value.n) : value.n != null) return false;
+		if(nDiffValues != null ? !nDiffValues.equals(value.nDiffValues) : value.nDiffValues != null) return false;
+		if(min != null ? !min.equals(value.min) : value.min != null) return false;
+		if(max != null ? !max.equals(value.max) : value.max != null) return false;
+		if(mean != null ? !mean.equals(value.mean) : value.mean != null) return false;
+		if(median != null ? !median.equals(value.median) : value.median != null) return false;
+		if(sd != null ? !sd.equals(value.sd) : value.sd != null) return false;
+		if(q1 != null ? !q1.equals(value.q1) : value.q1 != null) return false;
+		if(q3 != null ? !q3.equals(value.q3) : value.q3 != null) return false;
+		if(!definingProperty.equals(value.definingProperty)) return false;
+		if(!originatingRun.equals(value.originatingRun)) return false;
 
 		return true;
 	}
 
 	@Override
+	public int hashCode() {
+		int result = firstValue != null ? firstValue.hashCode() : 0;
+		result = 31 * result + (n != null ? n.hashCode() : 0);
+		result = 31 * result + (nDiffValues != null ? nDiffValues.hashCode() : 0);
+		result = 31 * result + (min != null ? min.hashCode() : 0);
+		result = 31 * result + (max != null ? max.hashCode() : 0);
+		result = 31 * result + (mean != null ? mean.hashCode() : 0);
+		result = 31 * result + (median != null ? median.hashCode() : 0);
+		result = 31 * result + (sd != null ? sd.hashCode() : 0);
+		result = 31 * result + (q1 != null ? q1.hashCode() : 0);
+		result = 31 * result + (q3 != null ? q3.hashCode() : 0);
+		result = 31 * result + definingProperty.hashCode();
+		result = 31 * result + originatingRun.hashCode();
+		return result;
+	}
+
+	@Override
 	public String toString() {
-		return "Value {id=" + id + ", name=" + name + ", type=" + type + "CV=" + cv.getLabel()+ "#" + accession + "firstValue=" + firstValue + "}";
+		return "Value {id=" + id + ", firstValue=" + firstValue +
+				", property=" + definingProperty.getName() + ", run=" + originatingRun.getName() + "}";
 	}
 }

@@ -1,37 +1,28 @@
 package inspector.jmondb.viewer;
 
 import com.google.common.collect.ImmutableMap;
-import inspector.jmondb.intervention.Intervention;
+import inspector.jmondb.io.IMonDBWriter;
+import inspector.jmondb.model.*;
+import inspector.jmondb.model.Event;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
-import inspector.jmondb.model.Value;
+import net.sf.dynamicreports.report.exception.DRException;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.DateAxis;
-import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYDifferenceRenderer;
-import org.jfree.chart.renderer.xy.XYItemRenderer;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
 
 import javax.persistence.EntityManagerFactory;
 import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.Ellipse2D;
 import java.io.*;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 
@@ -40,8 +31,8 @@ public class Viewer extends JPanel {
 	private JFrame frameParent;
 
 	// combo boxes that will be populated when connected to the database
-	private JComboBox<String> comboBoxProject;
-	private JComboBox<String> comboBoxValue;
+	private JComboBox<String> comboBoxInstrument;
+	private JComboBox<PropertyComboBoxItem> comboBoxProperty;
 
 	// graph showing the values over time
 	private JPanel panelGraph;
@@ -53,26 +44,47 @@ public class Viewer extends JPanel {
 	private static ImageIcon iconNotConnected = new ImageIcon(Viewer.class.getResource("/images/nok.png"), "not connected");
 	private static ImageIcon iconConnected = new ImageIcon(Viewer.class.getResource("/images/ok.png"), "connected");
 
-	// interventions information
+	// events information
 	private DefaultMutableTreeNode nodeCalibration;
 	private HashMap<Date, ValueMarker> markerCalibration;
-	private DefaultMutableTreeNode nodeEvent;
-	private HashMap<Date, ValueMarker> markerEvent;
+	private DefaultMutableTreeNode nodeMaintenance;
+	private HashMap<Date, ValueMarker> markerMaintenance;
 	private DefaultMutableTreeNode nodeIncident;
 	private HashMap<Date, ValueMarker> markerIncident;
 
-	private JTree treeInterventions;
+	private JTree treeEvents;
 
 	private JCheckBox checkBoxCalibration;
-	private JCheckBox checkBoxEvent;
+	private JCheckBox checkBoxMaintenace;
 	private JCheckBox checkBoxIncident;
+
+	// advanced search settings
+	private SearchDialog advancedSearchDialog;
 
 	// connection to the iMonDB
 	private EntityManagerFactory emf;
 	private IMonDBReader dbReader;
+	private IMonDBWriter dbWriter;
 
 	public static void main(String[] args) {
 
+		try {
+			// Nimbus look and feel
+			for(UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+				if("Nimbus".equals(info.getName())) {
+					UIManager.setLookAndFeel(info.getClassName());
+					break;
+				}
+			}
+		} catch (Exception e) {
+			// if Nimbus is not available, fall back to cross-platform
+			try {
+				UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+			} catch (Exception ignored) {
+			}
+		}
+
+		// start viewer
 		SwingUtilities.invokeLater(() -> {
 			Viewer viewer = new Viewer();
 			viewer.display();
@@ -89,13 +101,8 @@ public class Viewer extends JPanel {
 
 	public Viewer() {
 		frameParent = new JFrame("iMonDB Viewer");
-		frameParent.setBackground(Color.WHITE);
-
-		UIManager.put("OptionPane.background", Color.white);
-		UIManager.put("Panel.background", Color.white);
 
 		JPanel panelParent = new JPanel(new BorderLayout());
-		panelParent.setBackground(Color.WHITE);
 		frameParent.setContentPane(panelParent);
 
 		// create menu bar
@@ -104,8 +111,8 @@ public class Viewer extends JPanel {
 		// arrange panels
 		JPanel panelSelection = new JPanel();
 		JPanel panelDbConnection = new JPanel();
-		JPanel panelInterventions = new JPanel();
-		arrangePanels(panelParent, panelSelection, panelDbConnection, panelInterventions);
+		JPanel panelEvents = new JPanel();
+		arrangePanels(panelParent, panelSelection, panelDbConnection, panelEvents);
 
 		// value selection panel
 		createSelectionPanel(panelSelection);
@@ -113,11 +120,11 @@ public class Viewer extends JPanel {
 		// database connection panel
 		createDbConnectionPanel(panelDbConnection);
 
-		// interventions panel
+		// events panel
 		markerCalibration = new HashMap<>();
-		markerEvent = new HashMap<>();
+		markerMaintenance = new HashMap<>();
 		markerIncident = new HashMap<>();
-		createInterventionsPanel(panelInterventions);
+		createEventsPanel(panelEvents);
 	}
 
 	private JMenuBar createMenuBar() {
@@ -137,12 +144,9 @@ public class Viewer extends JPanel {
 		JMenuItem menuItemSaveGraph = new JMenuItem("Save graph as...");
 		menuItemSaveGraph.addActionListener(new ListenerSaveGraph());
 		menuFile.add(menuItemSaveGraph);
-		JMenuItem menuItemLoadInterventions = new JMenuItem("Load interventions");
-		menuItemLoadInterventions.addActionListener(new ListenerLoadInterventions());
-		menuFile.add(menuItemLoadInterventions);
-		JMenuItem menuItemSaveInterventions = new JMenuItem("Save interventions");
-		menuItemSaveInterventions.addActionListener(new ListenerSaveInterventions());
-		menuFile.add(menuItemSaveInterventions);
+		JMenuItem menuItemExportEvents = new JMenuItem("Export event log as...");
+		menuItemExportEvents.addActionListener(new ListenerExportEvents());
+		menuFile.add(menuItemExportEvents);
 
 		menuFile.addSeparator();
 
@@ -165,19 +169,15 @@ public class Viewer extends JPanel {
 		return menuBar;
 	}
 
-	private void arrangePanels(JPanel panelParent, JPanel panelSelection, JPanel panelDbConnection, JPanel panelInterventions) {
-		panelSelection.setBackground(Color.WHITE);
+	private void arrangePanels(JPanel panelParent, JPanel panelSelection, JPanel panelDbConnection, JPanel panelEvents) {
 		panelParent.add(panelSelection, BorderLayout.PAGE_START);
 
 		panelGraph = new JPanel(new BorderLayout());
-		panelGraph.setBackground(Color.WHITE);
 		panelParent.add(panelGraph, BorderLayout.CENTER);
 
-		panelDbConnection.setBackground(Color.WHITE);
 		panelParent.add(panelDbConnection, BorderLayout.PAGE_END);
 
-		panelInterventions.setBackground(Color.WHITE);
-		panelParent.add(panelInterventions, BorderLayout.LINE_END);
+		panelParent.add(panelEvents, BorderLayout.LINE_END);
 	}
 
 	private void createSelectionPanel(JPanel panelSelection) {
@@ -185,20 +185,27 @@ public class Viewer extends JPanel {
 		buttonConnectToDatabase.addActionListener(new ListenerConnectToDatabase());
 		panelSelection.add(buttonConnectToDatabase);
 
-		JLabel labelProject = new JLabel("Project");
-		panelSelection.add(labelProject);
-		comboBoxProject = new JComboBox<>();
-		comboBoxProject.addActionListener(new ListenerFillProjectValues());
-		comboBoxProject.setPreferredSize(new Dimension(250, 25));
-		comboBoxProject.setMaximumSize(new Dimension(250, 25));
-		panelSelection.add(comboBoxProject);
+		JLabel labelInstrument = new JLabel("Instrument");
+		panelSelection.add(labelInstrument);
+		comboBoxInstrument = new JComboBox<>();
+		comboBoxInstrument.addActionListener(new ListenerLoadInstrumentEvents());
+		comboBoxInstrument.addActionListener(new ListenerCreateAdvancedSearchDialog());
+		comboBoxInstrument.setPreferredSize(new Dimension(250, 25));
+		comboBoxInstrument.setMaximumSize(new Dimension(250, 25));
+		panelSelection.add(comboBoxInstrument);
 
-		JLabel labelValue = new JLabel("Value");
-		panelSelection.add(labelValue);
-		comboBoxValue = new JComboBox<>();
-		comboBoxValue.setPreferredSize(new Dimension(500, 25));
-		comboBoxValue.setMaximumSize(new Dimension(500, 25));
-		panelSelection.add(comboBoxValue);
+		JLabel labelProperty = new JLabel("Property");
+		panelSelection.add(labelProperty);
+		ComboBoxModel<PropertyComboBoxItem> sortedComboBoxModel = new SortedComboBoxModel<>();
+		comboBoxProperty = new JComboBox<>(sortedComboBoxModel);
+		comboBoxProperty.setPreferredSize(new Dimension(450, 25));
+		comboBoxProperty.setMaximumSize(new Dimension(450, 25));
+		panelSelection.add(comboBoxProperty);
+
+		JButton buttonAdvanced = new JButton(new ImageIcon(getClass().getResource("/images/search.png"), "advanced search settings"));
+		buttonAdvanced.setToolTipText("advanced search settings");
+		buttonAdvanced.addActionListener(new ListenerAdvancedSettings());
+		panelSelection.add(buttonAdvanced);
 
 		JButton buttonShowGraph = new JButton("Show graph");
 		buttonShowGraph.addActionListener(new ListenerShowGraph());
@@ -215,74 +222,81 @@ public class Viewer extends JPanel {
 		panelDbConnection.add(labelDbIcon);
 	}
 
-	private void createInterventionsPanel(JPanel interventionsPanel) {
-		BorderLayout interventionsLayout = new BorderLayout();
-		interventionsLayout.setVgap(25);
-		interventionsPanel.setLayout(interventionsLayout);
+	private void createEventsPanel(JPanel eventsPanel) {
+		BorderLayout eventsLayout = new BorderLayout();
+		eventsLayout.setVgap(25);
+		eventsPanel.setLayout(eventsLayout);
 
 		// create checkboxes
 		JPanel panelCheckBoxes = new JPanel(new GridLayout(0, 1));
-		panelCheckBoxes.add(new JLabel("Show interventions:"));
+		panelCheckBoxes.add(new JLabel("Show events:"));
 		checkBoxCalibration = new JCheckBox("Calibration");
 		checkBoxCalibration.setSelected(true);
 		panelCheckBoxes.add(checkBoxCalibration);
-		checkBoxEvent = new JCheckBox("Event");
-		checkBoxEvent.setSelected(true);
-		panelCheckBoxes.add(checkBoxEvent);
+		checkBoxMaintenace = new JCheckBox("Maintenance");
+		checkBoxMaintenace.setSelected(true);
+		panelCheckBoxes.add(checkBoxMaintenace);
 		checkBoxIncident = new JCheckBox("Incident");
 		checkBoxIncident.setSelected(true);
 		panelCheckBoxes.add(checkBoxIncident);
 
 		ItemListener checkBoxListener = new ListenerCheckBox();
 		checkBoxCalibration.addItemListener(checkBoxListener);
-		checkBoxEvent.addItemListener(checkBoxListener);
+		checkBoxMaintenace.addItemListener(checkBoxListener);
 		checkBoxIncident.addItemListener(checkBoxListener);
 
-		interventionsPanel.add(panelCheckBoxes, BorderLayout.PAGE_START);
+		eventsPanel.add(panelCheckBoxes, BorderLayout.PAGE_START);
 
-		// create interventions tree view
-		DefaultMutableTreeNode nodeInterventions = new DefaultMutableTreeNode("Interventions");
-		treeInterventions = new JTree(nodeInterventions);
+		// create events tree view
+		DefaultMutableTreeNode nodeEvents = new DefaultMutableTreeNode("Events");
+		treeEvents = new JTree(nodeEvents);
 		// mouse listener to create context menus on right click
-		ActionListener removeListener = new ListenerRemoveIntervention();
-		treeInterventions.addMouseListener(new MouseAdapter() {
+		ActionListener removeListener = new ListenerRemoveEvent();
+		treeEvents.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
-				InterventionNode selectedNode = (InterventionNode) treeInterventions.getSelectionPath().getLastPathComponent();
-				if(SwingUtilities.isRightMouseButton(e)) {
-					// highlight relevant item
-					int row = treeInterventions.getClosestRowForLocation(e.getX(), e.getY());
-					treeInterventions.setSelectionRow(row);
+				if(treeEvents.getSelectionPath() != null &&
+						treeEvents.getSelectionPath().getLastPathComponent() instanceof EventNode) {
+					EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
+					if(SwingUtilities.isRightMouseButton(e)) {
+						// highlight relevant item
+						int row = treeEvents.getClosestRowForLocation(e.getX(), e.getY());
+						treeEvents.setSelectionRow(row);
 
-					// show pop-up menu
-					JPopupMenu popupMenu = new JPopupMenu();
-					JMenuItem itemEdit = new JMenuItem("Edit");
-					itemEdit.addActionListener(new ListenerEditIntervention(selectedNode.getIntervention()));
-					popupMenu.add(itemEdit);
-					JMenuItem itemRemove = new JMenuItem("Remove");
-					itemRemove.addActionListener(removeListener);
-					popupMenu.add(itemRemove);
+						// show pop-up menu
+						JPopupMenu popupMenu = new JPopupMenu();
+						JMenuItem itemEdit = new JMenuItem("Edit");
+						itemEdit.addActionListener(new ListenerEditEvent(selectedNode.getEvent()));
+						popupMenu.add(itemEdit);
+						JMenuItem itemRemove = new JMenuItem("Remove");
+						itemRemove.addActionListener(removeListener);
+						popupMenu.add(itemRemove);
 
-					popupMenu.show(e.getComponent(), e.getX(), e.getY());
-				}
-				else if(e.getClickCount() == 2) {
-					new ListenerEditIntervention(selectedNode.getIntervention()).actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, null));
+						popupMenu.show(e.getComponent(), e.getX(), e.getY());
+					} else if(e.getClickCount() == 2) {
+						new ListenerEditEvent(selectedNode.getEvent()).actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, null));
+					}
 				}
 			}
 		});
-		//TODO: possibly set alternative icons
-		treeInterventions.setCellRenderer(new DefaultTreeCellRenderer() {
+		ImageIcon eventIcon = new ImageIcon(Viewer.class.getResource("/images/event.png"));
+		ImageIcon calibrationIcon = new ImageIcon(Viewer.class.getResource("/images/calibration.png"));
+		ImageIcon maintenanceIcon = new ImageIcon(Viewer.class.getResource("/images/maintenance.png"));
+		ImageIcon incidentIcon = new ImageIcon(Viewer.class.getResource("/images/incident.png"));
+		treeEvents.setCellRenderer(new DefaultTreeCellRenderer() {
 			@Override
 			public Component getTreeCellRendererComponent(JTree tree,
 														  Object value, boolean selected, boolean expanded,
 														  boolean isLeaf, int row, boolean focused) {
+				// because of some weird bug the text color has to be set before calling super
+				// and the icons have to be set after calling super
 				String s = value.toString();
 				switch(s) {
 					case "Calibration":
 						setTextNonSelectionColor(Color.GREEN);
 						setTextSelectionColor(Color.GREEN);
 						break;
-					case "Event":
+					case "Maintenance":
 						setTextNonSelectionColor(Color.BLUE);
 						setTextSelectionColor(Color.BLUE);
 						break;
@@ -295,37 +309,67 @@ public class Viewer extends JPanel {
 						setTextSelectionColor(Color.WHITE);
 						break;
 				}
-				return super.getTreeCellRendererComponent(tree, value, selected, expanded, isLeaf, row, focused);
+				super.getTreeCellRendererComponent(tree, value, selected, expanded, isLeaf, row, focused);
+				switch(s) {
+					case "Events":
+						setIcon(eventIcon);
+						setClosedIcon(eventIcon);
+						setOpenIcon(eventIcon);
+						break;
+					case "Calibration":
+						setIcon(calibrationIcon);
+						setClosedIcon(calibrationIcon);
+						setOpenIcon(calibrationIcon);
+						break;
+					case "Maintenance":
+						setIcon(maintenanceIcon);
+						setClosedIcon(maintenanceIcon);
+						setOpenIcon(maintenanceIcon);
+						break;
+					case "Incident":
+						setIcon(incidentIcon);
+						setClosedIcon(incidentIcon);
+						setOpenIcon(incidentIcon);
+						break;
+					default:
+						break;
+				}
+
+				return this;
 			}
 		});
 
-		JScrollPane scrollPaneInterventions = new JScrollPane(treeInterventions);
+		JScrollPane scrollPaneEvents = new JScrollPane(treeEvents);
 
 		nodeCalibration = new DefaultMutableTreeNode("Calibration");
-		nodeInterventions.add(nodeCalibration);
-		nodeEvent = new DefaultMutableTreeNode("Event");
-		nodeInterventions.add(nodeEvent);
+		nodeEvents.add(nodeCalibration);
+		nodeMaintenance = new DefaultMutableTreeNode("Maintenance");
+		nodeEvents.add(nodeMaintenance);
 		nodeIncident = new DefaultMutableTreeNode("Incident");
-		nodeInterventions.add(nodeIncident);
+		nodeEvents.add(nodeIncident);
 
-		expandInterventionsTree();
+		expandEventsTree();
 
-		JPanel buttonsPanel = new JPanel(new GridLayout(0, 3));
+		JPanel buttonsPanel = new JPanel(new GridLayout(2, 2));
+		buttonsPanel.setPreferredSize(new Dimension(250, 50));
 		JButton buttonAdd = new JButton("Add");
-		buttonAdd.addActionListener(new ListenerAddIntervention());
+		buttonAdd.addActionListener(new ListenerAddEvent());
 		buttonsPanel.add(buttonAdd);
+		JButton buttonExport = new JButton("Export");
+		buttonExport.addActionListener(new ListenerExportEvents());
+		buttonsPanel.add(buttonExport);
 		JButton buttonRemove = new JButton("Remove");
 		buttonRemove.addActionListener(removeListener);
 		buttonsPanel.add(buttonRemove);
 		JButton buttonClear = new JButton("Clear");
-		buttonClear.addActionListener(new ListenerClearInterventions());
+		buttonClear.addActionListener(new ListenerClearEvents());
 		buttonsPanel.add(buttonClear);
 
 		JPanel treePanel = new JPanel(new BorderLayout());
-		treePanel.add(scrollPaneInterventions, BorderLayout.CENTER);
+		treePanel.add(scrollPaneEvents, BorderLayout.CENTER);
 		treePanel.add(buttonsPanel, BorderLayout.PAGE_END);
 
-		interventionsPanel.add(treePanel, BorderLayout.CENTER);
+		eventsPanel.add(treePanel, BorderLayout.CENTER);
 	}
 
 	private void closeDbConnection() {
@@ -334,20 +378,25 @@ public class Viewer extends JPanel {
 			emf.close();
 		emf = null;
 		dbReader = null;
+		dbWriter = null;
 		// remove combo box values
-		comboBoxProject.removeAllItems();
-		comboBoxValue.removeAllItems();
+		comboBoxInstrument.removeAllItems();
+		comboBoxProperty.removeAllItems();
+		// remove events
+		clearEventVisualization();
+		// remove advanced search settings
+		advancedSearchDialog = null;
 		// show information
 		labelDbConnection.setText("Not connected");
 		labelDbIcon.setIcon(iconNotConnected);
 	}
 
-	private void expandInterventionsTree() {
-		for(int i = 0; i < treeInterventions.getRowCount(); i++)
-			treeInterventions.expandRow(i);
+	private void expandEventsTree() {
+		for(int i = 0; i < treeEvents.getRowCount(); i++)
+			treeEvents.expandRow(i);
 	}
 
-	private void drawInterventions() {
+	private void drawEvents() {
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 
@@ -355,10 +404,10 @@ public class Viewer extends JPanel {
 				markerCalibration.values().forEach(plot::addDomainMarker);
 			else
 				markerCalibration.values().forEach(plot::removeDomainMarker);
-			if(checkBoxEvent.isSelected())
-				markerEvent.values().forEach(plot::addDomainMarker);
+			if(checkBoxMaintenace.isSelected())
+				markerMaintenance.values().forEach(plot::addDomainMarker);
 			else
-				markerEvent.values().forEach(plot::removeDomainMarker);
+				markerMaintenance.values().forEach(plot::removeDomainMarker);
 			if(checkBoxIncident.isSelected())
 				markerIncident.values().forEach(plot::addDomainMarker);
 			else
@@ -366,44 +415,47 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private void clearInterventions() {
+	private void clearEventVisualization() {
 		// remove from graph
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 			markerCalibration.values().forEach(plot::removeDomainMarker);
-			markerEvent.values().forEach(plot::removeDomainMarker);
+			markerMaintenance.values().forEach(plot::removeDomainMarker);
 			markerIncident.values().forEach(plot::removeDomainMarker);
 		}
-		// remove from interventions panel
+		// remove from events panel
+		treeEvents.clearSelection();
 		nodeIncident.removeAllChildren();
-		nodeEvent.removeAllChildren();
+		nodeMaintenance.removeAllChildren();
 		nodeCalibration.removeAllChildren();
-		DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
+		DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
 		treeModel.reload();
 		// remove markers
 		markerIncident.clear();
-		markerEvent.clear();
+		markerMaintenance.clear();
 		markerCalibration.clear();
 	}
 
-	private void sortInterventions(DefaultMutableTreeNode parent) {
-		List<InterventionNode> children = new ArrayList<>(parent.getChildCount());
+	private void sortEvents(DefaultMutableTreeNode parent) {
+		List<EventNode> children = new ArrayList<>(parent.getChildCount());
 		for(int i = 0; i< parent.getChildCount(); i++)
-			children.add((InterventionNode) parent.getChildAt(i));
+			children.add((EventNode) parent.getChildAt(i));
 		Collections.sort(children);
 		parent.removeAllChildren();
 		children.forEach(parent::add);
 	}
 
-	private ValueMarker removeMarker(Intervention intervention) {
-		if(intervention.isIncident())
-			return markerIncident.remove(intervention.getDate());
-		else if(intervention.isEvent())
-			return markerEvent.remove(intervention.getDate());
-		else if(intervention.isCalibration())
-			return markerCalibration.remove(intervention.getDate());
-		else
-			return null;
+	private ValueMarker removeMarker(Event event) {
+		switch(event.getType()) {
+			case CALIBRATION:
+				return markerCalibration.remove(event.getDate());
+			case MAINTENANCE:
+				return markerMaintenance.remove(event.getDate());
+			case INCIDENT:
+				return markerIncident.remove(event.getDate());
+			default:
+				return null;
+		}
 	}
 
 	private class ListenerConnectToDatabase implements ActionListener {
@@ -418,35 +470,71 @@ public class Viewer extends JPanel {
 			if(option == JOptionPane.OK_OPTION) {
 				Thread dbConnector = new Thread() {
 					public void run() {
-						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
 						try {
+							frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
 							// first close an existing connection
 							closeDbConnection();
 
 							// create the new connection
 							String password = !connectionDialog.getPassword().equals("") ? connectionDialog.getPassword() : null;
 							emf = IMonDBManagerFactory.createMySQLFactory(connectionDialog.getHost(), connectionDialog.getPort(),
-									connectionDialog.getUserName(), password, connectionDialog.getDatabase());
+									connectionDialog.getDatabase(), connectionDialog.getUserName(), password);
 							dbReader = new IMonDBReader(emf);
+							dbWriter = new IMonDBWriter(emf);
 
-							// fill in possible projects in the combo box
-							List<String> projectLabels = dbReader.getFromCustomQuery("SELECT project.label FROM Project project ORDER BY project.label", String.class);
-							projectLabels.forEach(comboBoxProject::addItem);
+							// fill in possible instruments in the combo box
+							comboBoxInstrument.removeAllItems();
+							List<String> instrumentNames = dbReader.getFromCustomQuery("SELECT inst.name FROM Instrument inst ORDER BY inst.name", String.class);
+							instrumentNames.forEach(comboBoxInstrument::addItem);
+
+							// create advanced search settings
+							createAdvancedSearchDialog();
+							// fill in possible properties in the combo box
+							setProperties();
 
 							// show the connection information
 							labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
 							labelDbIcon.setIcon(iconConnected);
-						}
-						catch(Exception e1) {
+						} catch(Exception e1) {
 							closeDbConnection();
 							JOptionPane.showMessageDialog(frameParent, "<html><b>Could not connect to the database</b></html>\n" + e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+						} finally {
+							frameParent.setCursor(Cursor.getDefaultCursor());
 						}
-
-						frameParent.setCursor(Cursor.getDefaultCursor());
 					}
 				};
 				dbConnector.start();
+			}
+		}
+	}
+
+	private void createAdvancedSearchDialog() {
+		if(dbReader != null && comboBoxInstrument.getSelectedIndex() != -1) {
+			// get all unique metadata names for the selected instrument
+			List<Metadata> metadata = dbReader.getFromCustomQuery("SELECT md FROM Metadata md WHERE md.run.instrument.name = :instName", Metadata.class, ImmutableMap.of("instName", (String) comboBoxInstrument.getSelectedItem()));
+
+			// create dialog (this implicitly resets it as well)
+			advancedSearchDialog = new SearchDialog(metadata);
+			setProperties();
+		}
+	}
+
+	private void setProperties() {
+		comboBoxProperty.removeAllItems();
+
+		// load the instrument and all it's properties
+		Instrument instrument = dbReader.getInstrument((String) comboBoxInstrument.getSelectedItem(), false, true);
+
+		for(Iterator<Property> it = instrument.getPropertyIterator(); it.hasNext(); ) {
+			Property property = it.next();
+
+			if(property.getNumeric()) {
+				if(advancedSearchDialog != null && advancedSearchDialog.getFilterString() != null) {
+					if(StringUtils.containsIgnoreCase(property.getName(), advancedSearchDialog.getFilterString()))
+						comboBoxProperty.addItem(new PropertyComboBoxItem(property.getName(), property.getAccession()));
+				} else
+					comboBoxProperty.addItem(new PropertyComboBoxItem(property.getName(), property.getAccession()));
 			}
 		}
 	}
@@ -458,27 +546,87 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private class ListenerFillProjectValues implements ActionListener {
+	private class ListenerLoadInstrumentEvents implements ActionListener {
 
+		@Override
 		public void actionPerformed(ActionEvent e) {
-
-			Thread projectFiller = new Thread() {
+			Thread eventLoader = new Thread() {
 				public void run() {
 					if(dbReader != null) {
-						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+						// remove old events
+						clearEventVisualization();
 
-						comboBoxValue.removeAllItems();
+						// add new events
+						String instrumentName = (String) comboBoxInstrument.getSelectedItem();
+						Map<String, String> parameters = ImmutableMap.of("name", instrumentName);
+						List<Event> events = dbReader.getFromCustomQuery("SELECT event FROM Event event WHERE event.instrument.name = :name ORDER BY event.date", Event.class, parameters);
 
-						String projectLabel = (String) comboBoxProject.getSelectedItem();
-						Map<String, String> parameters = ImmutableMap.of("projectLabel", projectLabel);
-						List<String> values = dbReader.getFromCustomQuery("SELECT DISTINCT val.name FROM Value val WHERE val.fromRun.fromProject.label = :projectLabel ORDER BY val.name", String.class, parameters);
-						values.forEach(comboBoxValue::addItem);
+						for(Event event : events) {
+							EventNode node = new EventNode(event);
 
-						frameParent.setCursor(Cursor.getDefaultCursor());
+							// add to the correct event type
+							switch(event.getType()) {
+								case CALIBRATION:
+									nodeCalibration.add(node);
+									markerCalibration.put(event.getDate(), new ValueMarker(event.getDate().getTime(), Color.GREEN, new BasicStroke(1)));
+									break;
+								case MAINTENANCE:
+									nodeMaintenance.add(node);
+									markerMaintenance.put(event.getDate(), new ValueMarker(event.getDate().getTime(), Color.BLUE, new BasicStroke(1)));
+									break;
+								case INCIDENT:
+									nodeIncident.add(node);
+									markerIncident.put(event.getDate(), new ValueMarker(event.getDate().getTime(), Color.RED, new BasicStroke(1)));
+									break;
+								default:
+									break;
+							}
+						}
 					}
+					// show all events in the events panel (TODO: might be reconsidered later on)
+					expandEventsTree();
+					// show the events on the graph
+					drawEvents();
 				}
 			};
-			projectFiller.start();
+			eventLoader.start();
+		}
+	}
+
+	private class ListenerCreateAdvancedSearchDialog implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			createAdvancedSearchDialog();
+		}
+	}
+
+	private class ListenerAdvancedSettings implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			if(dbReader != null && advancedSearchDialog != null) {
+				String oldFilter = advancedSearchDialog.getFilterString();
+
+				String[] options = new String[] { "OK", "Cancel", "Reset" };
+				int option = JOptionPane.showOptionDialog(frameParent, advancedSearchDialog, "Advanced search settings", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
+
+				if(option == JOptionPane.YES_OPTION) {
+					// apply advanced settings
+					// property filtering
+					if((oldFilter == null && advancedSearchDialog.getFilterString() != null) ||
+							(oldFilter != null && !oldFilter.equals(advancedSearchDialog.getFilterString()))) {
+						setProperties();
+					}
+					// metadata only has to be applied when querying to show the graph
+				}
+				else if(option == JOptionPane.CANCEL_OPTION) {
+					// remove advanced settings
+					advancedSearchDialog.reset();
+					if(oldFilter != null)
+						setProperties();
+				}
+			}
 		}
 	}
 
@@ -489,87 +637,67 @@ public class Viewer extends JPanel {
 			if(dbReader != null) {
 				Thread graphThread = new Thread() {
 					public void run() {
-						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+						try {
+							frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
-						String projectLabel = (String)comboBoxProject.getSelectedItem();
-						String valueName = (String)comboBoxValue.getSelectedItem();
+							String instrumentName = (String) comboBoxInstrument.getSelectedItem();
+							PropertyComboBoxItem property = (PropertyComboBoxItem) comboBoxProperty.getSelectedItem();
+							if(property == null)
+								JOptionPane.showMessageDialog(frameParent, "Invalid property selected.", "Warning", JOptionPane.WARNING_MESSAGE);
+							else {
+								// check whether the selected property is numeric
+								Boolean isNumeric = dbReader.getFromCustomQuery("SELECT isNumeric FROM Property prop WHERE accession = :accession", Boolean.class, ImmutableMap.of("accession", property.getAccession())).get(0);
+								if(!isNumeric)
+									JOptionPane.showMessageDialog(frameParent, "Property <" + property.getName() + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
+								else {
+									// load all values for the property and instrument
+									StringBuilder querySelectFrom = new StringBuilder("SELECT val, val.originatingRun.sampleDate FROM Value val");
+									StringBuilder queryWhere = new StringBuilder("WHERE val.originatingRun.instrument.name = :instName AND val.definingProperty.accession = :propAccession");
+									Map<String, String> parameters = new HashMap<>();
+									parameters.put("instName", instrumentName);
+									parameters.put("propAccession", property.getAccession());
 
-						Map<String, String> parameters = ImmutableMap.of("projectLabel", projectLabel, "valueName", valueName);
-						List<Value> values = dbReader.getFromCustomQuery("SELECT val FROM Value val WHERE val.fromRun.fromProject.label = :projectLabel AND val.name = :valueName ORDER BY val.fromRun.sampleDate", Value.class, parameters);
+									// set advanced search settings
+									for(int i = 0; i < advancedSearchDialog.getMetadataCount(); i++) {
+										querySelectFrom.append(" JOIN val.originatingRun.metadata md").append(i);
 
-						if(values.size() == 0)
-							JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
-						if(values.size() > 0 && !values.get(0).getNumeric())
-							JOptionPane.showMessageDialog(frameParent, "Value <" + valueName + "> is not numeric.", "Warning", JOptionPane.WARNING_MESSAGE);
-						else {
-							// add data
-							XYSeries medianSeries = new XYSeries("Median");
-							XYSeries q1Series = new XYSeries("Q1");
-							XYSeries q3Series = new XYSeries("Q3");
-							XYSeries minSeries = new XYSeries("Min");
-							XYSeries maxSeries = new XYSeries("Max");
-							for(Value value : values) {
-								medianSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMedian());
-								q1Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ1());
-								q3Series.add(value.getFromRun().getSampleDate().getTime(), value.getQ3());
-								minSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMin());
-								maxSeries.add(value.getFromRun().getSampleDate().getTime(), value.getMax());
+										if(i == 0)
+											queryWhere.append(" AND (");
+										else if(i > 0)
+											queryWhere.append(" ").append(advancedSearchDialog.getMetadataCombination(i));
+										queryWhere.append(" md").append(i).append(".name = :md").append(i).append("Name AND md")
+												.append(i).append(".value ").append(advancedSearchDialog.getMetadataOperator(i))
+												.append(" :md").append(i).append("Value");
+										if(i == advancedSearchDialog.getMetadataCount() - 1)
+											queryWhere.append(")");
+
+										parameters.put("md" + i + "Name", advancedSearchDialog.getMetadataName(i));
+										parameters.put("md" + i + "Value", advancedSearchDialog.getMetadataValue(i));
+									}
+									String query = querySelectFrom.toString() + " " + queryWhere.toString() + " ORDER BY val.originatingRun.sampleDate";
+
+									List<Object[]> values = dbReader.getFromCustomQuery(query, Object[].class, parameters);
+
+									if(values.size() == 0)
+										JOptionPane.showMessageDialog(frameParent, "No matching values found.", "Warning", JOptionPane.WARNING_MESSAGE);
+									else {
+										// draw graph
+										ValuePlot plot = new ValuePlot(values);
+										JFreeChart chart = new JFreeChart(property.getName(), plot);
+										chart.removeLegend();
+										chartPanel = new ChartPanel(chart, false, true, false, true, false);
+
+										panelGraph.removeAll();
+										panelGraph.add(chartPanel, BorderLayout.CENTER);
+										panelGraph.validate();
+
+										drawEvents();
+									}
+								}
 							}
-
-							XYSeriesCollection medianCollection = new XYSeriesCollection(medianSeries);
-							XYSeriesCollection q1q3Collection = new XYSeriesCollection();
-							q1q3Collection.addSeries(q1Series);
-							q1q3Collection.addSeries(q3Series);
-							XYSeriesCollection minMaxCollection = new XYSeriesCollection();
-							minMaxCollection.addSeries(minSeries);
-							minMaxCollection.addSeries(maxSeries);
-
-							// renderer
-							XYItemRenderer medianRenderer = new XYLineAndShapeRenderer();
-							medianRenderer.setSeriesPaint(0, Color.BLACK);
-							medianRenderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
-							XYDifferenceRenderer q1q3Renderer = new XYDifferenceRenderer(Color.GRAY, Color.GRAY, true);
-							q1q3Renderer.setSeriesPaint(0, Color.GRAY);
-							q1q3Renderer.setSeriesPaint(1, Color.GRAY);
-							q1q3Renderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
-							q1q3Renderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
-							XYDifferenceRenderer minMaxRenderer = new XYDifferenceRenderer(Color.LIGHT_GRAY, Color.LIGHT_GRAY, true);
-							minMaxRenderer.setSeriesPaint(0, Color.LIGHT_GRAY);
-							minMaxRenderer.setSeriesPaint(1, Color.LIGHT_GRAY);
-							minMaxRenderer.setSeriesShape(0, new Ellipse2D.Double(-2, -2, 4, 4));
-							minMaxRenderer.setSeriesShape(1, new Ellipse2D.Double(-2, -2, 4, 4));
-
-							// create axis
-							DateAxis dateAxis = new DateAxis("Date");
-							dateAxis.setDateFormatOverride(new SimpleDateFormat("dd/MM/yyyy"));
-							dateAxis.setVerticalTickLabels(true);
-
-							NumberAxis valueAxis = new NumberAxis("Value");
-							valueAxis.setAutoRangeIncludesZero(false);
-
-							// create plot and draw graph
-							XYPlot plot = new XYPlot();
-							plot.setDomainAxis(dateAxis);
-							plot.setRangeAxis(valueAxis);
-							plot.setDataset(0, medianCollection);
-							plot.setDataset(1, q1q3Collection);
-							plot.setDataset(2, minMaxCollection);
-							plot.setRenderer(0, medianRenderer);
-							plot.setRenderer(1, q1q3Renderer);
-							plot.setRenderer(2, minMaxRenderer);
-							JFreeChart chart = new JFreeChart(valueName, plot);
-							chart.setBackgroundPaint(Color.WHITE);
-							chartPanel = new ChartPanel(chart, false, true, false, true, false);
-							chart.removeLegend();
-
-							panelGraph.removeAll();
-							panelGraph.add(chartPanel, BorderLayout.CENTER);
-							panelGraph.validate();
-
-							drawInterventions();
+						} finally {
+							frameParent.setCursor(Cursor.getDefaultCursor());
 						}
-
-						frameParent.setCursor(Cursor.getDefaultCursor());
 					}
 				};
 				graphThread.start();
@@ -591,334 +719,230 @@ public class Viewer extends JPanel {
 		}
 	}
 
-	private class ListenerLoadInterventions implements ActionListener {
+	private class ListenerExportEvents implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			JFileChooser fileChooser = new JFileChooser();
-			fileChooser.setFileFilter(new FileFilter() {
-				@Override
-				public boolean accept(File f) {
-					return FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("csv");
-				}
-
-				@Override
-				public String getDescription() {
-					return "Interventions CSV file";
-				}
-			});
-			int returnVal = fileChooser.showOpenDialog(frameParent);
-			if(returnVal == JFileChooser.APPROVE_OPTION) {
-
-				Thread interventionsLoader = new Thread() {
-					public void run() {
-						frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-						// remove previous interventions
-						clearInterventions();
-
-						// read new interventions
-						File file = fileChooser.getSelectedFile();
-						try {
-							BufferedReader fileReader = new BufferedReader(new FileReader(file));
-							SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-							String line = fileReader.readLine();	// skip header line
-							while((line = fileReader.readLine()) != null) {
-								String[] lineSplit = line.split(",", -1);
-								Date date = sdf.parse(lineSplit[0]);
-								boolean isCalibrationCheck = lineSplit[1].equals("1");
-								boolean isCalibration = lineSplit[2].equals("1");
-								boolean isEvent = lineSplit[3].equals("1");
-								boolean isIncident = lineSplit[4].equals("1");
-								String comment = lineSplit[5];
-
-								Intervention intervention = new Intervention(date, isCalibrationCheck, isCalibration, isEvent, isIncident, comment);
-								InterventionNode node = new InterventionNode(intervention);
-
-								// add to the correct intervention type
-								if(intervention.isIncident()) {
-									nodeIncident.add(node);
-									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
-									markerIncident.put(intervention.getDate(), marker);
-								}
-								else if(intervention.isEvent()) {
-									nodeEvent.add(node);
-									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-									markerEvent.put(intervention.getDate(), marker);
-								}
-								else if(intervention.isCalibration()) {
-									nodeCalibration.add(node);
-									ValueMarker marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
-									markerCalibration.put(intervention.getDate(), marker);
-								}
-							}
-
-							// sort interventions
-							sortInterventions(nodeIncident);
-							sortInterventions(nodeEvent);
-							sortInterventions(nodeCalibration);
-
-						} catch(ParseException | IOException e1) {
-							JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-						}
-
-						// show all interventions in the interventions panel (TODO: might be reconsidered later on)
-						expandInterventionsTree();
-						// show the interventions on the graph
-						drawInterventions();
-
-						frameParent.setCursor(Cursor.getDefaultCursor());
-					}
-				};
-				interventionsLoader.start();
-			}
-		}
-	}
-
-	private class ListenerSaveInterventions implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-
-			if(markerCalibration.size() + markerEvent.size() + markerIncident.size() < 1) {
-				JOptionPane.showMessageDialog(frameParent, "No interventions available yet.\nPlease load an interventions file or manually create some interventions first.", "Error", JOptionPane.ERROR_MESSAGE);
+			if(dbWriter == null) {
+				JOptionPane.showMessageDialog(frameParent, "Please connect to a database exporting an event log.", "Warning", JOptionPane.WARNING_MESSAGE);
 			}
 			else {
+				// get all events in chronological order
+				String instrumentName = (String) comboBoxInstrument.getSelectedItem();
+				Map<String, String> parameters = ImmutableMap.of("name", instrumentName);
+				List<Event> events = dbReader.getFromCustomQuery("SELECT event FROM Event event WHERE event.instrument.name = :name ORDER BY event.date", Event.class, parameters);
 
-				JFileChooser fileChooser = new JFileChooser();
-				fileChooser.setFileFilter(new FileFilter() {
-					@Override
-					public boolean accept(File f) {
-						return FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("csv");
-					}
+				if(events.size() == 0) {
+					JOptionPane.showMessageDialog(frameParent, "No events found for instrument <" + instrumentName + "> to export.", "Warning", JOptionPane.WARNING_MESSAGE);
+				}
+				else {
+					// export to a file
+					JFileChooser fileChooser = new JFileChooser();
+					fileChooser.setFileFilter(new FileNameExtensionFilter("PDF documents", "pdf"));
+					int returnVal = fileChooser.showSaveDialog(frameParent);
+					if(returnVal == JFileChooser.APPROVE_OPTION) {
+						Thread eventExporter = new Thread() {
+							public void run() {
+								try {
+									File file = fileChooser.getSelectedFile();
+									if(FilenameUtils.getExtension(file.getName()).equals(""))
+										file = new File(file.getAbsolutePath() + ".pdf");
+									EventsReportWriter.writeReport(instrumentName, events, file);
 
-					@Override
-					public String getDescription() {
-						return "Interventions CSV file";
-					}
-				});
-				int returnVal = fileChooser.showSaveDialog(frameParent);
-				if(returnVal == JFileChooser.APPROVE_OPTION) {
-
-					Thread interventionsSaver = new Thread() {
-						public void run() {
-							frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-							// save interventions to a new file
-							File file = fileChooser.getSelectedFile();
-							// add extension if missing
-							if(FilenameUtils.getExtension(file.getName()).equals(""))
-								file = new File(file.getAbsolutePath() + ".csv");
-
-							try {
-								FileWriter writer = new FileWriter(file);
-								SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-
-								// header
-								writer.write("Date,Calibration check,Calibration,Event,Incident,Comment\n");
-								// body
-								PriorityQueue<Intervention> interventions = new PriorityQueue<>(markerCalibration.size() + markerEvent.size() + markerIncident.size());
-								Enumeration incidents = nodeIncident.children();
-								while(incidents.hasMoreElements()) {
-									Intervention i = ((InterventionNode) incidents.nextElement()).getIntervention();
-									interventions.add(i);
+								} catch(DRException | IOException e1) {
+									JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error while exporting the event log", JOptionPane.ERROR_MESSAGE);
 								}
-								Enumeration events = nodeEvent.children();
-								while(events.hasMoreElements()) {
-									Intervention i = ((InterventionNode) events.nextElement()).getIntervention();
-									interventions.add(i);
-								}
-								Enumeration calibrations = nodeCalibration.children();
-								while(calibrations.hasMoreElements()) {
-									Intervention i = ((InterventionNode) calibrations.nextElement()).getIntervention();
-									interventions.add(i);
-								}
-								while(!interventions.isEmpty()) {
-									// date
-									Intervention i = interventions.poll();
-									writer.append(sdf.format(i.getDate())).append(",");
-									// calibration check
-									if(i.isCalibrationCheck())
-										writer.append("1,");
-									else
-										writer.append(",");
-									// calibration
-									if(i.isCalibration())
-										writer.append("1,");
-									else
-										writer.append(",");
-									// event
-									if(i.isEvent())
-										writer.append("1,");
-									else
-										writer.append(",");
-									// incident
-									if(i.isIncident())
-										writer.append("1,");
-									else
-										writer.append(",");
-									// comment
-									writer.append(i.getComment()).append("\n");
-								}
-
-								writer.flush();
-								writer.close();
-
-							} catch(IOException e1) {
-								JOptionPane.showMessageDialog(frameParent, e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 							}
+						};
+						eventExporter.start();
+					}
+				}
+			}
+		}
+	}
 
-							frameParent.setCursor(Cursor.getDefaultCursor());
+	private class ListenerAddEvent implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+
+			if(dbWriter == null) {
+				JOptionPane.showMessageDialog(frameParent, "Please connect to a database before creating a new event.", "Warning", JOptionPane.WARNING_MESSAGE);
+			}
+			else {
+				// create event dialog
+				EventDialog dialog = new EventDialog(comboBoxInstrument);
+
+				int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Add an event", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+				if(option == JOptionPane.OK_OPTION) {
+					try {
+						// create new event
+						Instrument instrument = dbReader.getInstrument(dialog.getInstrumentName(), true, false);
+						Event event = new Event(instrument, dialog.getDate(), dialog.getType(), dialog.getProblem(), dialog.getSolution(), dialog.getExtra());
+						if(dialog.getAttachmentName() != null && dialog.getAttachmentContent() != null) {
+							event.setAttachmentName(dialog.getAttachmentName());
+							event.setAttachmentContent(dialog.getAttachmentContent());
 						}
-					};
-					interventionsSaver.start();
+
+						// write the event to the database
+						dbWriter.writeOrUpdateEvent(event);
+
+						// add to the events list and create a marker
+						ValueMarker marker = null;
+						boolean toDraw = false;
+						switch(event.getType()) {
+							case CALIBRATION:
+								nodeCalibration.add(new EventNode(event));
+								sortEvents(nodeCalibration);
+
+								marker = new ValueMarker(event.getDate().getTime(), Color.GREEN, new BasicStroke(1));
+								markerCalibration.put(event.getDate(), marker);
+								toDraw = checkBoxCalibration.isSelected();
+								break;
+							case MAINTENANCE:
+								nodeMaintenance.add(new EventNode(event));
+								sortEvents(nodeMaintenance);
+
+								marker = new ValueMarker(event.getDate().getTime(), Color.BLUE, new BasicStroke(1));
+								markerMaintenance.put(event.getDate(), marker);
+								toDraw = checkBoxMaintenace.isSelected();
+								break;
+							case INCIDENT:
+								nodeIncident.add(new EventNode(event));
+								sortEvents(nodeIncident);
+
+								marker = new ValueMarker(event.getDate().getTime(), Color.RED, new BasicStroke(1));
+								markerIncident.put(event.getDate(), marker);
+								toDraw = checkBoxIncident.isSelected();
+								break;
+							default:
+								break;
+						}
+						DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
+						treeModel.reload();
+
+						// show all events in the events panel
+						expandEventsTree();
+						// draw the event on the graph
+						if(toDraw && chartPanel != null) {
+							XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+							plot.addDomainMarker(marker);
+						}
+					} catch(NullPointerException npe) {
+						JOptionPane.showMessageDialog(frameParent, npe.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+					}
 				}
 			}
 		}
 	}
 
-	private class ListenerAddIntervention implements ActionListener {
+	private class ListenerRemoveEvent implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			// create intervention dialog
-			InterventionDialog dialog = new InterventionDialog();
 
-			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Add an intervention", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+			if(treeEvents.getSelectionPath() != null &&
+					treeEvents.getSelectionPath().getLastPathComponent() instanceof EventNode) {
+
+				int option = JOptionPane.showConfirmDialog(frameParent, "Attention: The event will be removed from the database as well.", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+
+				if(option == JOptionPane.OK_OPTION) {
+					EventNode selectedNode = (EventNode) treeEvents.getSelectionPath().getLastPathComponent();
+					try {
+						// remove from the database
+						dbWriter.removeEvent((String) comboBoxInstrument.getSelectedItem(), selectedNode.getEvent().getDate());
+
+						// remove from tree
+						DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
+						treeModel.removeNodeFromParent(selectedNode);
+						// remove from graph
+						ValueMarker marker = removeMarker(selectedNode.getEvent());
+						if(chartPanel != null && marker != null) {
+							XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+							plot.removeDomainMarker(marker);
+						}
+					} catch(Exception ex) {
+						JOptionPane.showMessageDialog(frameParent, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+					}
+				}
+			}
+		}
+	}
+
+	private class ListenerEditEvent implements ActionListener {
+
+		private Event event;
+
+		public ListenerEditEvent(Event event) {
+			this.event = event;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			// create event dialog
+			EventDialog dialog = new EventDialog(comboBoxInstrument, event);
+
+			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Edit event", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
 			if(option == JOptionPane.OK_OPTION) {
-				// create new intervention
-				Intervention intervention;
-				if(dialog.getComment().equals(""))
-					intervention = new Intervention(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident());
-				else
-					intervention = new Intervention(dialog.getDate(), dialog.isCalibrationCheck(), dialog.isCalibration(), dialog.isEvent(), dialog.isIncident(), dialog.getComment());
+				// update the changed event information
+				boolean toWrite = false;
 
-				// add to the interventions list and create a marker
-				ValueMarker marker = null;
-				boolean toDraw = false;
-				if(intervention.isIncident()) {
-					nodeIncident.add(new InterventionNode(intervention));
-					sortInterventions(nodeIncident);
-
-					marker = new ValueMarker(intervention.getDate().getTime(), Color.RED, new BasicStroke(1));
-					markerIncident.put(intervention.getDate(), marker);
-					toDraw = checkBoxIncident.isSelected();
+				if(event.getProblem() != null ? !event.getProblem().equals(dialog.getProblem()) : dialog.getProblem() != null) {
+					event.setProblem(dialog.getProblem());
+					toWrite = true;
 				}
-				else if(intervention.isEvent()) {
-					nodeEvent.add(new InterventionNode(intervention));
-					sortInterventions(nodeEvent);
-
-					marker = new ValueMarker(intervention.getDate().getTime(), Color.BLUE, new BasicStroke(1));
-					markerEvent.put(intervention.getDate(), marker);
-					toDraw = checkBoxEvent.isSelected();
+				if(event.getSolution() != null ? !event.getSolution().equals(dialog.getSolution()) : dialog.getSolution() != null) {
+					event.setSolution(dialog.getSolution());
+					toWrite = true;
 				}
-				else if(intervention.isCalibration()) {
-					nodeCalibration.add(new InterventionNode(intervention));
-					sortInterventions(nodeCalibration);
-
-					marker = new ValueMarker(intervention.getDate().getTime(), Color.GREEN, new BasicStroke(1));
-					markerCalibration.put(intervention.getDate(), marker);
-					toDraw = checkBoxCalibration.isSelected();
+				if(event.getExtra() != null ? !event.getExtra().equals(dialog.getExtra()) : dialog.getExtra() != null) {
+					event.setExtra(dialog.getExtra());
+					toWrite = true;
 				}
-				DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
-				treeModel.reload();
-
-				// show all interventions in the interventions panel (TODO: might be reconsidered later on)
-				expandInterventionsTree();
-				// draw the interventions on the graph
-				if(toDraw && chartPanel != null) {
-					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
-					plot.addDomainMarker(marker);
+				if(event.getAttachmentName() != null && event.getAttachmentContent() != null ?
+						!event.getAttachmentName().equals(dialog.getAttachmentName()) ||
+								!Arrays.equals(event.getAttachmentContent(), dialog.getAttachmentContent()) :
+						dialog.getAttachmentName() != null || dialog.getAttachmentContent() != null) {
+					event.setAttachmentName(dialog.getAttachmentName());
+					event.setAttachmentContent(dialog.getAttachmentContent());
+					toWrite = true;
 				}
+
+				if(toWrite)
+					dbWriter.writeOrUpdateEvent(event);
 			}
 		}
 	}
 
-	private class ListenerRemoveIntervention implements ActionListener {
+	private class ListenerClearEvents implements ActionListener {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
 
-			if(treeInterventions.getSelectionPath().getLastPathComponent() instanceof InterventionNode) {
-				InterventionNode selectedNode = (InterventionNode) treeInterventions.getSelectionPath().getLastPathComponent();
-				// remove from tree
-				DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
-				treeModel.removeNodeFromParent(selectedNode);
-				// remove from graph
-				ValueMarker marker = removeMarker(selectedNode.getIntervention());
-				if(chartPanel != null && marker != null) {
-					XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
-					plot.removeDomainMarker(marker);
+			if(dbWriter != null) {
+				int option = JOptionPane.showConfirmDialog(frameParent, "Attention: This will remove all events from the database!", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+
+				if(option == JOptionPane.OK_OPTION) {
+					// remove the events from the database
+					for(int i = 0; i < nodeCalibration.getChildCount(); i++) {
+						Event event = ((EventNode) nodeCalibration.getChildAt(i)).getEvent();
+						dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+					}
+					for(int i = 0; i < nodeMaintenance.getChildCount(); i++) {
+						Event event = ((EventNode) nodeMaintenance.getChildAt(i)).getEvent();
+						dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+					}
+					for(int i = 0; i < nodeIncident.getChildCount(); i++) {
+						Event event = ((EventNode) nodeIncident.getChildAt(i)).getEvent();
+						dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+					}
+
+					// remove the events from the viewer
+					clearEventVisualization();
 				}
 			}
-		}
-	}
-
-	private class ListenerEditIntervention implements ActionListener {
-
-		private Intervention intervention;
-
-		public ListenerEditIntervention(Intervention i) {
-			this.intervention = i;
-		}
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			// create intervention dialog
-			InterventionDialog dialog = new InterventionDialog(intervention, false);
-
-			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Edit intervention", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-
-			if(option == JOptionPane.OK_OPTION) {
-				// retrieve the old marker
-				ValueMarker marker = null;
-				if(intervention.isIncident())
-					marker = markerIncident.remove(intervention.getDate());
-				else if(intervention.isEvent())
-					marker = markerEvent.remove(intervention.getDate());
-				else if(intervention.isCalibration())
-					marker = markerCalibration.remove(intervention.getDate());
-
-				// update the intervention
-				intervention.setDate(dialog.getDate());
-				if(!dialog.getComment().equals(""))
-					intervention.setComment(dialog.getComment());
-
-				// sort the interventions tree
-				if(intervention.isIncident())
-					sortInterventions(nodeIncident);
-				else if(intervention.isEvent())
-					sortInterventions(nodeEvent);
-				else if(intervention.isCalibration())
-					sortInterventions(nodeCalibration);
-				DefaultTreeModel treeModel = ((DefaultTreeModel) treeInterventions.getModel());
-				treeModel.reload();
-				expandInterventionsTree();
-
-				// update the marker
-				if(marker != null) {
-					marker.setValue(intervention.getDate().getTime());
-					if(intervention.isIncident())
-						markerIncident.put(intervention.getDate(), marker);
-					else if(intervention.isEvent())
-						markerEvent.put(intervention.getDate(), marker);
-					else if(intervention.isCalibration())
-						markerCalibration.put(intervention.getDate(), marker);
-				}
-			}
-		}
-	}
-
-	private class ListenerClearInterventions implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-
-			int option = JOptionPane.showConfirmDialog(frameParent, "Attention: this will remove all interventions.\nAny unsaved interventions will be lost!", "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
-
-			if(option == JOptionPane.OK_OPTION)
-				clearInterventions();
 		}
 	}
 
@@ -930,18 +954,18 @@ public class Viewer extends JPanel {
 				XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 
 				Object source = e.getItemSelectable();
-				// show or hide the specific interventions
+				// show or hide the specific events
 				if(source == checkBoxCalibration) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
 						markerCalibration.values().forEach(plot::removeDomainMarker);
 					else
 						markerCalibration.values().forEach(plot::addDomainMarker);
 				}
-				if(source == checkBoxEvent) {
+				if(source == checkBoxMaintenace) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
-						markerEvent.values().forEach(plot::removeDomainMarker);
+						markerMaintenance.values().forEach(plot::removeDomainMarker);
 					else
-						markerEvent.values().forEach(plot::addDomainMarker);
+						markerMaintenance.values().forEach(plot::addDomainMarker);
 				}
 				if(source == checkBoxIncident) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
@@ -964,37 +988,8 @@ public class Viewer extends JPanel {
 	private class ListenerAbout implements ActionListener {
 
 		public void actionPerformed(ActionEvent e) {
-			try {
-				URI uri = new URI("https://bitbucket.org/proteinspector/jmondb");
-				class OpenUrlAction implements ActionListener {
-					public void actionPerformed(ActionEvent e) {
-						if(Desktop.isDesktopSupported()) {
-							try {
-								Desktop.getDesktop().browse(uri);
-							} catch(IOException e2) {
-								JOptionPane.showMessageDialog(frameParent, e2.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-							}
-						} else {
-							JOptionPane.showMessageDialog(frameParent, "Could not open the website", "Error", JOptionPane.ERROR_MESSAGE);
-						}
-					}
-				}
-
-				JButton button = new JButton();
-				button.setText("<html>For more information, please visit our <font color=\"#000099\"><u>website</u></font>.</html>");
-				button.setHorizontalAlignment(SwingConstants.LEFT);
-				button.setBorderPainted(false);
-				button.setOpaque(false);
-				button.setBackground(Color.WHITE);
-
-				button.setToolTipText(uri.toString());
-				button.addActionListener(new OpenUrlAction());
-
-				JOptionPane.showMessageDialog(frameParent, button, "About", JOptionPane.INFORMATION_MESSAGE);
-
-			} catch(URISyntaxException e1) {
-				JOptionPane.showMessageDialog(frameParent, "Could not open the website", "Error", JOptionPane.ERROR_MESSAGE);
-			}
+			JLabelLink linkAbout = new JLabelLink("For more information, please visit our", "website", "https://bitbucket.org/proteinspector/jmondb", ".");
+			JOptionPane.showMessageDialog(frameParent, linkAbout, "About", JOptionPane.INFORMATION_MESSAGE);
 		}
 	}
 }

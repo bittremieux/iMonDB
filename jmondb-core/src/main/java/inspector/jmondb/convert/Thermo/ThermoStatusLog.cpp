@@ -36,7 +36,11 @@ int main(int argc, const char* argv[])
     try
     {
         // read raw file
-        thermo::RawFilePtr rawFile = thermo::RawFile::create(argv[1]);        
+        thermo::RawFilePtr rawFile = thermo::RawFile::create(argv[1]);
+
+		// initialize raw file access
+		rawFile->getInstrumentModel();
+
         // read all scans
         for(long scan = 1; /* end loop in catch */; ++scan)
         {
@@ -53,9 +57,12 @@ int main(int argc, const char* argv[])
                 
                     std::cout << label << '\t' << value << std::endl;
                 }
+
+                std::cout << "--END_OF_SCAN_" << scan << std::endl;
             }
-            catch(thermo::RawEgg&)
+            catch(thermo::RawEgg& e)
             {
+				//std::cerr << "Error: " << e.what() << std::endl;
                 break;
             }
         }        

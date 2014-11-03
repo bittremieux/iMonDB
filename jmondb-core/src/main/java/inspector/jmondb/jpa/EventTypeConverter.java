@@ -1,0 +1,20 @@
+package inspector.jmondb.jpa;
+
+import inspector.jmondb.model.EventType;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.Converter;
+
+@Converter(autoApply=true)
+public class EventTypeConverter implements AttributeConverter<EventType, String> {
+
+	@Override
+	public String convertToDatabaseColumn(EventType eventType) {
+		return eventType.toString();
+	}
+
+	@Override
+	public EventType convertToEntityAttribute(String s) {
+		return EventType.fromString(s);
+	}
+}

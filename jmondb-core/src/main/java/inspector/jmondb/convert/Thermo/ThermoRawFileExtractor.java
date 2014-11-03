@@ -2,11 +2,9 @@ package inspector.jmondb.convert.Thermo;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import inspector.jmondb.convert.InstrumentModel;
-import inspector.jmondb.convert.RawFileMetaData;
-import inspector.jmondb.model.CV;
-import inspector.jmondb.model.Run;
-import inspector.jmondb.model.Value;
+import inspector.jmondb.convert.RawFileMetadata;
+import inspector.jmondb.model.InstrumentModel;
+import inspector.jmondb.model.*;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
@@ -33,6 +31,7 @@ import java.util.jar.JarFile;
  * An extractor to retrieve instrument data (either status log or tune method data) from Thermo raw files.
  *
  * Attention: instrument data extraction is only possible on a Microsoft Windows platform!
+ * For more information on the required operating system and available libraries, please check the official website.
  */
 public class ThermoRawFileExtractor {
 
@@ -41,14 +40,13 @@ public class ThermoRawFileExtractor {
 	/** static lock to make sure that the Thermo external resources are only accessed by a single instance */
 	private static final Lock FILE_COPY_LOCK = new ReentrantLock();
 
-	/** Properties containing a list of value names that have to be excluded */
+	/** properties containing a list of value names that have to be excluded */
 	private PropertiesConfiguration exclusionProperties;
 
-	//TODO 1: correctly specify the used cv
-	//TODO 1: maybe we can even re-use some terms from the PSI-MS cv?
-	//TODO 2: this is a global variable to fix a duplicate key error when inserting multiple CV objects with the same label that didn't exist in the database before
-	//TODO 2: fix this by having a global CV list or something
-	private CV cv = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
+	//TODO: correctly specify the used cv
+	//TODO: maybe we can even re-use some terms from the PSI-MS cv?
+	private static CV cvIMon = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
+	private static CV cvMS = new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
 
 	/**
 	 * Creates an extractor to retrieve instrument data from Thermo raw files.
@@ -58,13 +56,13 @@ public class ThermoRawFileExtractor {
 		exclusionProperties = initializeExclusionProperties();
 
 		// make sure the extractor exe's are available outside the jar
-		FILE_COPY_LOCK.lock();
 		try {
+			FILE_COPY_LOCK.lock();
 			if(!new File("./Thermo/ThermoMetaData.exe").exists() ||
 					!new File("./Thermo/ThermoStatusLog.exe").exists() ||
 					!new File("./Thermo/ThermoTuneMethod.exe").exists()) {
 				// copy the resources outside the jar
-				logger.info("Copying the Thermo extractor CLI's to a new folder in the base directory");
+				logger.debug("Copying the Thermo extractor CLI's to a new folder in the base directory");
 				copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
 			}
 		} finally {
@@ -78,7 +76,7 @@ public class ThermoRawFileExtractor {
 	 * A file with exclusion properties can be provided as command-line argument "-Dexclusion.properties=file-name".
 	 * Otherwise, the default exclusion properties are used.
 	 *
-	 * @return A {@link PropertiesConfiguration} for the exclusion properties
+	 * @return a {@link PropertiesConfiguration} for the exclusion properties
 	 */
 	private PropertiesConfiguration initializeExclusionProperties() {
 		try {
@@ -105,8 +103,8 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Copies resources to a new destination.
 	 *
-	 * @param originUrl  The URL where the resources originate
-	 * @param destinationDir  The destination directory to which the resources are copied
+	 * @param originUrl  the {@link URL} where the resources originate, not {@code null}
+	 * @param destinationDir  the destination directory to which the resources are copied, not {@code null}
 	 */
 	private void copyResources(URL originUrl, File destinationDir) {
 		try {
@@ -131,8 +129,8 @@ public class ThermoRawFileExtractor {
 	 *
 	 * This is necessary because the CLI exe's can't be run from inside a packaged jar.
 	 *
-	 * @param jarConnection  The connection to the resources in the jar file
-	 * @param destinationDir  The destination directory to which the resources are copied
+	 * @param jarConnection  the connection to the resources in the jar file, not {@code null}
+	 * @param destinationDir  the destination directory to which the resources are copied, not {@code null}
 	 */
 	private void copyJarResources(JarURLConnection jarConnection, File destinationDir) {
 		try {
@@ -171,34 +169,36 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Creates a {@link Run} containing as {@link Value}s the status log and tune method data.
 	 *
-	 * @param fileName  The name of the raw file from which the instrument data will be extracted
-	 * @return A Run containing the instrument data as Values
+	 * @param fileName  the name of the raw file from which the instrument data will be extracted, not {@code null}
+	 * @param runName  the name of the created {@code Run}, if {@code null} the base file name is used
+	 * @param instrumentName  the name of the {@link Instrument} on which the {@code Run} was performed, not {@code null}
+	 * @return a {@code Run} containing the instrument data as {@code Value}s
 	 */
-	public Run extractInstrumentData(String fileName) {
+	public Run extractInstrumentData(String fileName, String runName, String instrumentName) {
 		try {
 			// test if the file name is valid
 			File rawFile = getFile(fileName);
 
 			// extract raw file meta data
-			RawFileMetaData metaData = getMetaData(rawFile);
-			Timestamp date = metaData.getDate();
-			InstrumentModel model = metaData.getModel();
+			RawFileMetadata metadata = getMetadata(rawFile);
+			Timestamp date = metadata.getDate();
+			InstrumentModel model = metadata.getModel();
 
-			// extract the data from the row file
-			ArrayList<Value> statusLogValues = getValues(rawFile, model, true);
-			ArrayList<Value> tuneMethodValues = getValues(rawFile, model, false);
+			// create the instrument on which the run was performed
+			Instrument instrument = new Instrument(instrumentName, model, cvMS);
+			// create a run to store all the instrument data values
+			if(runName == null)
+				runName = FilenameUtils.getBaseName(rawFile.getName());
+			Run run = new Run(runName, rawFile.getCanonicalPath(), date, instrument);
 
-			// create a run containing all the instrument data values
-			String runName = FilenameUtils.getBaseName(rawFile.getName());
-			Run run = new Run(runName, rawFile.getCanonicalPath(), date);
-			// add the values to the run
-			statusLogValues.forEach(run::addValue);
-			tuneMethodValues.forEach(run::addValue);
+			// extract the data from the raw file and add the values to the run
+			extractAndAddValues(rawFile, model, true, run);
+			extractAndAddValues(rawFile, model, false, run);
 
 			return run;
 
 		} catch(IOException e) {
-			logger.error("Error while resolving the canonical path for file <{}>", fileName);
+			logger.warn("Error while resolving the canonical path for file <{}>", fileName);
 			throw new IllegalStateException("Error while resolving the canonical path for file <" + fileName + ">");
 		}
 	}
@@ -206,8 +206,8 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Checks whether the given file name is valid and returns a file reference.
 	 *
-	 * @param fileName  The given file name
-	 * @return A reference to the given file
+	 * @param fileName  the given file name, not {@code null}
+	 * @return a reference to the given {@link File}
 	 */
 	private File getFile(String fileName) {
 		// check whether the file name is valid
@@ -218,7 +218,7 @@ public class ThermoRawFileExtractor {
 		// check whether the file has the correct *.raw extension
 		else if(!FilenameUtils.getExtension(fileName).equalsIgnoreCase("raw")) {
 			logger.error("Invalid file name <{}>: Not a *.raw file", fileName);
-			throw new NullPointerException("Not a *.raw file");
+			throw new IllegalArgumentException("Not a *.raw file");
 		}
 
 		File file = new File(fileName);
@@ -234,10 +234,10 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Extracts experiment meta data from the raw file, such as the sample date and the instrument model.
 	 *
-	 * @param rawFile  The raw file from which the instrument data will be read
-	 * @return A {@link RawFileMetaData} containing the sample date and the instrument model
+	 * @param rawFile  the raw file from which the instrument data will be read, not {@code null}
+	 * @return {@link RawFileMetadata} information containing the sample date and the instrument model
 	 */
-	private RawFileMetaData getMetaData(File rawFile) {
+	private RawFileMetadata getMetadata(File rawFile) {
 		// execute the CLI process
 		Process process = executeProcess("./Thermo/ThermoMetaData.exe", rawFile);
 
@@ -256,26 +256,26 @@ public class ThermoRawFileExtractor {
 			// close resources
 			reader.close();
 
-			return new RawFileMetaData(date, model);
+			return new RawFileMetadata(date, model);
 
 		} catch(IOException e) {
 			logger.error("Could not read the raw file extractor output: {}", e.getMessage());
 			throw new IllegalStateException("Could not read the raw file extractor output: " + e.getMessage());
 		} catch(InterruptedException e) {
-			logger.error("Error while extracting the raw file: {}", e);
-			throw new IllegalStateException("Error while extracting the raw file: " + e);
+			logger.error("Error while extracting the raw file: {}", e.getMessage());
+			throw new IllegalStateException("Error while extracting the raw file: " + e.getMessage());
 		}
 	}
 
 	/**
 	 * Extracts instrument data from the raw file and computes (summary) statistics for the desired values.
 	 *
-	 * @param rawFile  The raw file from which the instrument data will be read
-	 * @param model  The mass spectrometer {@link InstrumentModel}
-	 * @param isStatusLog  True if the status log values have to be generated, false if the tune method values have to be generated
-	 * @return A list of the computed instrument data {@link Value}s
+	 * @param rawFile  the raw file from which the instrument data will be read, not {@code null}
+	 * @param model  the mass spectrometer {@link InstrumentModel}, not {@code null}
+	 * @param isStatusLog  {@code true} if the status log values have to be generated, {@code false} if the tune method values have to be generated
+	 * @param run  the {@link Run} to which the {@code Value}s will be added, not {@code null}
 	 */
-	private ArrayList<Value> getValues(File rawFile, InstrumentModel model, boolean isStatusLog) {
+	private void extractAndAddValues(File rawFile, InstrumentModel model, boolean isStatusLog, Run run) {
 		String cliPath;
 		String valueType;
 		if(isStatusLog) {
@@ -305,86 +305,56 @@ public class ThermoRawFileExtractor {
 			// filter out unwanted values
 			filter(rawValues, valueType);
 
-			// compute the summary statistics
-			return computeStatistics(rawValues, valueType);
+			// compute the summary statistics and store the values in the given run
+			addStatisticsToRun(rawValues, valueType, run);
 
 		} catch(IOException e) {
 			logger.error("Could not read the raw file extractor output: {}", e.getMessage());
 			throw new IllegalStateException("Could not read the raw file extractor output: " + e.getMessage());
 		} catch(InterruptedException e) {
-			logger.error("Error while extracting the raw file: {}", e);
-			throw new IllegalStateException("Error while extracting the raw file: " + e);
+			logger.error("Error while extracting the raw file: {}", e.getMessage());
+			throw new IllegalStateException("Error while extracting the raw file: " + e.getMessage());
 		}
 	}
 
 	/**
 	 * Starts a process to execute the given C++ exe.
 	 *
-	 * @param cliPath  The path to the C++ exe that will be executed
-	 * @param rawFile  The raw file that will be processed by the C++ exe
-	 * @return  A {@link Process} to execute the given C++ exe
+	 * @param cliPath  the path to the C++ exe that will be executed, not {@code null}
+	 * @param rawFile  the raw file that will be processed by the C++ exe, not {@code null}
+	 * @return  a {@link Process} to execute the given C++ exe
 	 */
 	private Process executeProcess(String cliPath, File rawFile) {
 		try {
 			// execute the CLI process
 			return Runtime.getRuntime().exec(new File(cliPath).getAbsolutePath() + " \"" + rawFile.getAbsoluteFile() + "\"");
 		} catch(IOException e) {
-			logger.error("Could not execute the raw file extractor: {}", e);
-			throw new IllegalStateException("Could not execute the raw file extractor. Are you running this on a Windows platform? " + e);
+			logger.error("Could not execute the raw file extractor: {}", e.getMessage());
+			throw new IllegalStateException("Could not execute the raw file extractor. Are you running this on a Windows platform? " + e.getMessage());
 		}
 	}
 
 	/**
-	 * Converts an MS CV-term to an instrument model.
+	 * Converts an MS CV-term to an {@link InstrumentModel}.
 	 *
-	 * @param reader  A reader that reads as next line the instrument model description
-	 * @return The {@link InstrumentModel}
+	 * @param reader  a {@link BufferedReader} that reads as next line the instrument model description, not {@code null}
+	 * @return the {@code InstrumentModel}
 	 * @throws IOException
 	 */
 	private InstrumentModel readInstrumentModel(BufferedReader reader) throws IOException {
 
 		String modelLine = reader.readLine();
-		InstrumentModel model = null;
-		if(modelLine != null) {
-			String modelCv = modelLine.split("\t")[1];
-			//TODO: interpret the PSI-MS OBO file
-			switch(modelCv) {
-				case "MS:1000449":
-					model = InstrumentModel.THERMO_LTQ_ORBITRAP;
-					break;
-				case "MS:1000556":
-					model = InstrumentModel.THERMO_ORBITRAP_XL;
-					break;
-				case "MS:1000855":
-					model = InstrumentModel.THERMO_LTQ_VELOS;
-					break;
-				case "MS:1001510":
-					model = InstrumentModel.THERMO_TSQ_VANTAGE;
-					break;
-				case "MS:1001742":
-					model = InstrumentModel.THERMO_ORBITRAP_VELOS;
-					break;
-				case "MS:1001911":
-					model = InstrumentModel.THERMO_Q_EXACTIVE;
-					break;
-				case "MS:1002416":
-					model = InstrumentModel.THERMO_ORBITRAP_FUSION;
-					break;
-				default:
-					model = InstrumentModel.UNKNOWN_MODEL;
-					logger.info("Unknown instrument model <{}>", modelCv);
-					break;
-			}
-		}
+		if(modelLine != null)
+			return InstrumentModel.fromString(modelLine.split("\t")[1]);
 
-		return model;
+		return null;
 	}
 
 	/**
 	 * Converts the sample date description to a {@link Timestamp}.
 	 *
-	 * @param reader  A reader that reads as next line the sample date description
-	 * @return The sample date
+	 * @param reader  a {@link BufferedReader} that reads as next line the sample date description, not {@code null}
+	 * @return the sample date
 	 * @throws IOException
 	 */
 	private Timestamp readDate(BufferedReader reader) throws IOException {
@@ -406,9 +376,9 @@ public class ThermoRawFileExtractor {
 	/**
 	 * Reads the instrument data from the given reader.
 	 *
-	 * @param reader  A reader to read the instrument data
-	 * @param model  The mass spectrometer {@link InstrumentModel}
-	 * @return A {@link Table} with as key a possible header and the property name, and a list of values for each property
+	 * @param reader  a {@link BufferedReader} to read the instrument data, not {@code null}
+	 * @param model  the mass spectrometer {@link InstrumentModel}, not {@code null}
+	 * @return a {@link Table} with as key a possible header and the property name, and a list of values for each property
 	 */
 	private Table<String, String, ArrayList<String>> readRawValues(BufferedReader reader, InstrumentModel model) {
 		try {
@@ -416,55 +386,21 @@ public class ThermoRawFileExtractor {
 
 			// read all the individual values
 			String line;
-			String header = "";
+			String header = "";	// null header not allowed for insertion in the Table
 			while((line = reader.readLine()) != null) {
-				String[] values = line.split("\t");
-				// header
-				if(values.length == 1 && values[0].length() > 0) {
-					switch(model) {
-						case THERMO_LTQ_ORBITRAP:
-						case THERMO_ORBITRAP_XL:
-						case THERMO_LTQ_VELOS:
-						case THERMO_ORBITRAP_VELOS:
-							header = headerOrbitrap(values[0]);
-							break;
-						case THERMO_TSQ_VANTAGE:
-							header = headerTsqVantage(values[0], header);
-							break;
-						case THERMO_Q_EXACTIVE:
-							header = headerQExactive(values[0]);
-							break;
-						case THERMO_ORBITRAP_FUSION:
-							header = headerOrbitrapFusion(values[0], header);
-							break;
-						default:
-							header = values[0];
-							break;
-					}
+				if(isSeparator(line)) {
+					// reset header
+					header = "";
 				}
-				// value
-				else if(values.length == 2) {
-					String[] nameValue;
-					switch(model) {
-						case THERMO_LTQ_ORBITRAP:
-						case THERMO_ORBITRAP_XL:
-						case THERMO_LTQ_VELOS:
-						case THERMO_ORBITRAP_VELOS:
-							nameValue = valueOrbitrap(values);
-							break;
-						case THERMO_TSQ_VANTAGE:
-							nameValue = valueTsqVantage(values);
-							break;
-						case THERMO_Q_EXACTIVE:
-						case THERMO_ORBITRAP_FUSION:
-							nameValue = valueQExactiveFusion(values);
-							break;
-						default:
-							nameValue = values;
-							break;
-					}
+				else if(isHeader(line, model)) {
+					// get the header
+					header = getHeader(line, header, model);
+				}
+				else {
+					// extract the value
+					String[] nameValue = getNameAndValue(line, model);
 
-					// save value
+					// save the value
 					if(!data.contains(header, nameValue[0]))
 						data.put(header, nameValue[0], new ArrayList<>());
 					data.get(header, nameValue[0]).add(nameValue[1]);
@@ -474,8 +410,75 @@ public class ThermoRawFileExtractor {
 			return data;
 
 		} catch(IOException e) {
-			logger.error("Error while reading the instrument data: {}", e);
-			throw new IllegalStateException("Error while reading the instrument data: " + e);
+			logger.error("Error while reading the instrument data: {}", e.getMessage());
+			throw new IllegalStateException("Error while reading the instrument data: " + e.getMessage());
+		}
+	}
+
+	private boolean isSeparator(String line) {
+		return line.trim().isEmpty() || line.startsWith("--END_OF_");
+	}
+
+	private boolean isHeader(String line, InstrumentModel model) {
+		String[] lineSplit = line.split("\t");
+
+		if(lineSplit.length > 1)
+			return false;
+		else {
+			switch(model) {
+				case THERMO_LTQ_ORBITRAP:
+				case THERMO_ORBITRAP_XL:
+				case THERMO_LTQ_VELOS:
+				case THERMO_ORBITRAP_VELOS:
+					return isHeaderOrbitrap(lineSplit[0]);
+				case THERMO_TSQ_VANTAGE:
+					return isHeaderTsqVantage(lineSplit[0]);
+				case THERMO_Q_EXACTIVE:
+					return isHeaderQExactive(lineSplit[0]);
+				case THERMO_ORBITRAP_FUSION:
+					return isHeaderOrbitrapFusion(lineSplit[0]);
+				case UNKNOWN_MODEL:
+				default:
+					return false;
+			}
+		}
+	}
+
+	private boolean isHeaderOrbitrap(String line) {
+		return !line.contains(":");
+	}
+
+	@SuppressWarnings("unused")
+	private boolean isHeaderTsqVantage(String line) {
+		return true;
+	}
+
+	private boolean isHeaderQExactive(String line) {
+		return line.contains("===");
+	}
+
+	private boolean isHeaderOrbitrapFusion(String line) {
+		return !line.contains(":");
+	}
+
+	private String getHeader(String line, String oldHeader, InstrumentModel model) throws UnsupportedEncodingException {
+		line = line.trim();
+
+		switch(model) {
+			case THERMO_LTQ_ORBITRAP:
+			case THERMO_ORBITRAP_XL:
+			case THERMO_LTQ_VELOS:
+			case THERMO_ORBITRAP_VELOS:
+				return headerOrbitrap(line);
+			case THERMO_TSQ_VANTAGE:
+				return headerTsqVantage(line, oldHeader);
+			case THERMO_Q_EXACTIVE:
+				return headerQExactive(line);
+			case THERMO_ORBITRAP_FUSION:
+				return headerOrbitrapFusion(line, oldHeader);
+			case UNKNOWN_MODEL:
+			default:
+				return line;
 		}
 	}
 
@@ -508,32 +511,53 @@ public class ThermoRawFileExtractor {
 			return new String(newHeader.trim().getBytes("ascii"));
 	}
 
+	private String[] getNameAndValue(String line, InstrumentModel model) throws UnsupportedEncodingException {
+		String[] values = line.split("\t");
+
+		switch(model) {
+			case THERMO_LTQ_ORBITRAP:
+			case THERMO_ORBITRAP_XL:
+			case THERMO_LTQ_VELOS:
+			case THERMO_ORBITRAP_VELOS:
+				return valueOrbitrap(values);
+			case THERMO_TSQ_VANTAGE:
+				return valueTsqVantage(values);
+			case THERMO_Q_EXACTIVE:
+			case THERMO_ORBITRAP_FUSION:
+				return valueQExactiveFusion(values);
+			case UNKNOWN_MODEL:
+			default:
+				return values;
+		}
+	}
+
 	private String[] valueOrbitrap(String[] line) throws UnsupportedEncodingException {
 		String name = line[0].trim();
 		name = name.substring(0, name.lastIndexOf(':'));
-		String value = line[1].trim();
+		String value = line.length > 1 ? line[1].trim() : "";
 
 		return new String[] { new String(name.getBytes("ascii")), value };
 	}
 
 	private String[] valueTsqVantage(String[] line) throws UnsupportedEncodingException {
-		return new String[] { new String(line[0].getBytes("ascii")), line[1] };
+		String value = line.length > 1 ? line[1].trim() : "";
+		return new String[] { new String(line[0].getBytes("ascii")), value };
 	}
 
 	private String[] valueQExactiveFusion(String[] line) throws UnsupportedEncodingException {
 		String name = line[0].trim();
 		if(name.contains(":"))
 			name = name.substring(0, name.lastIndexOf(':'));
-		String value = line[1].trim();
+		String value = line.length > 1 ? line[1].trim() : "";
 
 		return new String[] { new String(name.getBytes("ascii")), value };
 	}
 
 	/**
-	 * Filters values that are set in the exclusion properties.
+	 * Filters data that is indicated in the exclusion properties.
 	 *
-	 * @param data  The data from which values will be removed
-	 * @param valueType  The type of values for which the exclusion properties has to be filtered
+	 * @param data  the data from which indicated values will be removed, not {@code null}
+	 * @param valueType  the type of values for which the exclusion properties will be applied, not {@code null}
 	 */
 	private void filter(Table<String, String, ArrayList<String>> data, String valueType) {
 		String[] filterLong = exclusionProperties.getStringArray(valueType + "-long");
@@ -551,20 +575,19 @@ public class ThermoRawFileExtractor {
 			boolean toRemove = false;
 			for(int i = 0; i < filterShort.length && !toRemove; i++) {
 				toRemove = cell.getColumnKey().contains(filterShort[i]);
-			if(toRemove)
-				it.remove();
+				if(toRemove)
+					it.remove();
 			}
 		}
 	}
 
 	/**
-	 * Calculates properties for each instrument value, including summary statistics if multiple values for the same parameter are present.
+	 * Computes summary statistics for each instrument value.
 	 *
-	 * @param data  A Table with as key a possible header and the property name, and a list of values for each property
-	 * @return A list of {@link Value}s
+	 * @param data  a {@link Table} with as key a possible header and the property name, and a list of values for each property, not {@code null}
+	 * @param run  the {@link Run} to which the computed {@code Value}s will be added, not {@code null}
 	 */
-	private ArrayList<Value> computeStatistics(Table<String, String, ArrayList<String>> data, String valueType) {
-		ArrayList<Value> values = new ArrayList<>(data.size());
+	private void addStatisticsToRun(Table<String, String, ArrayList<String>> data, String valueType, Run run) {
 
 		for(Table.Cell<String, String, ArrayList<String>> cell : data.cellSet()) {
 			// calculate the summary value
@@ -572,7 +595,6 @@ public class ThermoRawFileExtractor {
 			String firstValue = cell.getValue().get(0);
 			Integer n;
 			Integer nDiff;
-			Integer nNotMissing = 0;
 			Double min = null;
 			Double max = null;
 			Double mean = null;
@@ -583,38 +605,45 @@ public class ThermoRawFileExtractor {
 
 			DescriptiveStatistics stats = new DescriptiveStatistics(cell.getValue().size());
 			Frequency freq = new Frequency();
+			boolean isEmpty = true;
 			for(int i = 0; i < cell.getValue().size(); i++) {
 				String s = cell.getValue().get(i);
-				if(s != null && !s.equals("")) {
-					nNotMissing++;
+				if(s != null) {
 					freq.addValue(s);
-					try {
-						stats.addValue(Double.parseDouble(s));
-					} catch(NumberFormatException nfe) {
-						isNumeric = false;
-					}
+					isEmpty &= s.isEmpty();
+					if(isNumeric && !s.isEmpty())
+						try {
+							stats.addValue(Double.parseDouble(s));
+						} catch(NumberFormatException nfe) {
+							isNumeric = false;
+						}
 				}
 			}
-			n = (int) freq.getSumFreq();
-			nDiff = freq.getUniqueCount();
-			if(isNumeric) {
-				min = stats.getMin();
-				max = stats.getMax();
-				mean = stats.getMean();
-				median = stats.getPercentile(50);
-				sd = stats.getStandardDeviation();
-				q1 = stats.getPercentile(25);
-				q3 = stats.getPercentile(75);
+			// add a new value if it has at least one non-empty observation
+			if(!isEmpty) {
+				n = (int) freq.getSumFreq();
+				nDiff = freq.getUniqueCount();
+				if(isNumeric) {
+					min = stats.getMin();
+					max = stats.getMax();
+					mean = stats.getMean();
+					median = stats.getPercentile(50);
+					sd = stats.getStandardDeviation();
+					q1 = stats.getPercentile(25);
+					q3 = stats.getPercentile(75);
+				}
+
+				//TODO: correctly set the accession number once we have a valid cvIMon
+				String name;
+				if(!cell.getRowKey().isEmpty())
+					name = cell.getRowKey() + " - " + cell.getColumnKey();
+				else
+					name = cell.getColumnKey();
+				String accession = name;
+				Property property = new Property(name, valueType, accession, cvIMon, isNumeric);
+				// values are automatically added to the run and the property
+				new Value(firstValue, n, nDiff, min, max, mean, median, sd, q1, q3, property, run);
 			}
-
-			//TODO: correctly set the accession number once we have a valid cv
-			String name = cell.getRowKey() + " - " + cell.getColumnKey();
-			String accession = name;
-			Value value = new Value(name, valueType, accession, cv, isNumeric, firstValue, n, nDiff, nNotMissing, min, max, mean, median, sd, q1, q3);
-
-			values.add(value);
 		}
-
-		return values;
 	}
 }

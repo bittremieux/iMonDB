@@ -13,7 +13,7 @@
     <groupId>inspector.jmondb.jmondb-viewer</groupId>
     <artifactId>jmondb-viewer</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.0-alpha1</version>
+    <version>1.0.0</version>
 
     <name>jMonDB Viewer</name>
     <url>https://bitbucket.org/proteinspector/jmondb</url>
@@ -35,26 +35,37 @@
         <dependency>
             <groupId>inspector.jmondb.jmondb-core</groupId>
             <artifactId>jmondb-core</artifactId>
-            <version>1.0.0-alpha2</version>
+            <version>1.0.0</version>
         </dependency>
 
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.11</version>
-            <scope>test</scope>
-        </dependency>
-
+        <!-- graphs -->
         <dependency>
             <groupId>org.jfree</groupId>
             <artifactId>jfreechart</artifactId>
             <version>1.0.19</version>
         </dependency>
+
+        <!-- event date picker -->
         <dependency>
             <groupId>net.sourceforge.jdatepicker</groupId>
             <artifactId>jdatepicker</artifactId>
             <version>1.3.2</version>
         </dependency>
+
+        <!-- mime file type detection -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>1.6</version>
+        </dependency>
+
+        <!-- event log pdf export -->
+        <dependency>
+            <groupId>net.sourceforge.dynamicreports</groupId>
+            <artifactId>dynamicreports-core</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>

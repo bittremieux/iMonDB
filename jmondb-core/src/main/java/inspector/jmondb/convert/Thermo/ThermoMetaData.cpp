@@ -35,7 +35,6 @@ int main(int argc, const char* argv[])
 		
 		std::cout << "Sample date\t" << rawFile->getCreationDate() << std::endl;
 		std::cout << "Instrument model CV-term\tMS:" << detail::translateAsInstrumentModel(rawFile->getInstrumentModel()) << std::endl;
-		std::cout << "SeqRowComment\t" << rawFile->value(thermo::SeqRowComment) << std::endl << std::endl;
     }
     catch(std::exception& e)
     {

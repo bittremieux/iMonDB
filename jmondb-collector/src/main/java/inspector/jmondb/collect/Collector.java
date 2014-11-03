@@ -1,24 +1,27 @@
 package inspector.jmondb.collect;
 
+import com.google.common.collect.ImmutableMap;
+import inspector.jmondb.config.ConfigFile;
+import inspector.jmondb.config.MetadataMapper;
 import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
+import inspector.jmondb.model.CV;
+import inspector.jmondb.model.Instrument;
+import inspector.jmondb.model.InstrumentModel;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.filefilter.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.ini4j.Ini;
 
 import javax.persistence.EntityManagerFactory;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.sql.Timestamp;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -31,11 +34,11 @@ public class Collector {
 
 	protected static final Logger logger = LogManager.getLogger(Collector.class);
 
-	/** Config file containing all the settings to collect the raw files and store the instrument data */
-	private Ini config;
+	/** a YAML configuration file */
+	private ConfigFile config;
 
-	/** Date formatter to convert to and from date strings */
-	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+	//TODO: unify cv handling??
+	private static CV cvMS = new CV("MS", "PSI MS controlled vocabulary", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
 
 	/**
 	 * Creates a collector that will collect the instrument data for all raw files and store it in the iMonDB.
@@ -43,76 +46,77 @@ public class Collector {
 	 * Specific settings are read from the associated config file.
 	 */
 	public Collector() {
-		config = initializeConfig();
+		config = initializeConfigReader();
 	}
 
 	/**
 	 * Collects the instrument data for all the raw files based on the settings in the config file.
 	 */
 	public void collect() {
-		logger.info("Executing the Collector");
+		logger.info("Executing the collector");
 
 		EntityManagerFactory emf = null;
 
 		try {
 			// create database connection
-			emf = getEntityManagerFactory(config);
+			emf = getEntityManagerFactory();
 			IMonDBReader dbReader = new IMonDBReader(emf);
 			IMonDBWriter dbWriter = new IMonDBWriter(emf);
 
 			// raw file extractor
 			ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+			MetadataMapper metadataMapper = config.getMetadataMapper();
 
-			// read project folders
-			Map<String, String> projects = config.get("projects");
+			// read the general information from the config file
+			Timestamp newestTimestamp = config.getLastDate();
 
-			// read the cut-off date and regex used to match files
-			Date newestDate = getLastDate(config);
-			Timestamp newestTimestamp = new Timestamp(newestDate.getTime());
-
-			String matchFile = getMatchFile(config);
-			String renameMask = getRenameMask(config);
+			boolean forceUnique = config.getForceUniqueFileNames();
+			String matchFile = config.getMatchFile();
 
 			// thread pool
-			int nrOfThreads = getNumberOfThreads(config);
+			int nrOfThreads = config.getNumberOfThreads();
 			ExecutorService threadPool = Executors.newFixedThreadPool(nrOfThreads);
 			CompletionService<Timestamp> pool = new ExecutorCompletionService<>(threadPool);
 			int threadsSubmitted = 0;
 
-			// browse all folders and find new raw files
-			for(Map.Entry<String, String> entry : projects.entrySet()) {
-				String projectLabel = entry.getKey();
-				String projectDir = entry.getValue();
+			// make sure all required instruments are present in the database
+			addNewInstruments(dbReader, dbWriter, config.getInstruments());
 
-				File baseDir = new File(projectDir);
-				if(!projectLabel.equals("dummy") && baseDir.isDirectory()) {
-					logger.info("Process project <{}>", projectLabel);
+			// browse the start directory and underlying directories to find new raw files
+			File startDir = config.getStartDirectory();
+			try {
+				logger.debug("Process directory <{}>", startDir.getCanonicalPath());
 
-					// retrieve all files that were created after the specified date, and matching the specified regex
-					Collection<File> files = FileUtils.listFiles(baseDir,
-							new AndFileFilter(new AgeFileFilter(newestDate, false),
-									new RegexFileFilter(matchFile, IOCase.INSENSITIVE)),
-							DirectoryFileFilter.DIRECTORY);
+				// retrieve all files that were created after the specified date, and matching the specified regex
+				Collection<File> files = FileUtils.listFiles(startDir,
+						new AndFileFilter(new AgeFileFilter(new Date(newestTimestamp.getTime()), false),
+							new RegexFileFilter(matchFile, IOCase.INSENSITIVE)),
+						DirectoryFileFilter.DIRECTORY);
 
-					// process all found files
-					for(File file : files) {
-						pool.submit(new FileProcessor(dbReader, dbWriter, extractor, renameMask, projectLabel, file));
+				// process all found files
+				for(File file : files) {
+					// retrieve the instrument name from the file name and path based on the configuration
+					String instrumentName = config.getInstrumentNameForFile(file);
+
+					if(instrumentName != null) {
+						logger.trace("Add file <{}> for instrument <{}> to the thread pool", file.getCanonicalPath(), instrumentName);
+						pool.submit(new FileProcessor(dbReader, dbWriter, extractor, metadataMapper, file, instrumentName, forceUnique));
 						threadsSubmitted++;
 					}
-
-				} else if(!projectLabel.equals("dummy")) {
-					logger.error("Path <{}> is not a valid directory for project <{}>", projectDir, projectLabel);
-					throw new IllegalArgumentException("Path <" + projectDir + "> is not a valid directory");
 				}
+			} catch(IOException e) {
+				logger.fatal("IO error: {}", e.getMessage());
+				throw new IllegalArgumentException("IO error: " + e.getMessage());
 			}
 
 			// process all the submitted threads and retrieve the sample dates
 			for(int i = 0; i < threadsSubmitted; i++) {
 				try {
+					logger.info("Processing file {} out of a total of {} queued files", (i+1), threadsSubmitted);
 					Timestamp runTimestamp = pool.take().get();
 					newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
 				} catch(Exception e) {	// catch all possible exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
-					logger.error("Error while executing a thread: {}", e.getMessage());
+					logger.error("Error while executing a thread: {}", e.getMessage(), e);
 				}
 			}
 
@@ -122,7 +126,7 @@ public class Collector {
 			threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 
 			// save the date of the newest processed file to the config file
-			config.put("general", "last_date", DATE_FORMAT.format(newestTimestamp));
+			config.setLastDate(newestTimestamp);
 
 		} catch(InterruptedException e) {
 			logger.error("Thread execution was interrupted: {}", e.getMessage());
@@ -130,138 +134,75 @@ public class Collector {
 			// close the database connection
 			if(emf != null)
 				emf.close();
-			// make sure the config file is copied to the user directory
-			if(config != null)
-				try {
-					config.store();
-				} catch(IOException e) {
-					logger.error("Error while writing the updated config file: {}", e.getMessage());
-				}
+			// save the (updated) config file to the user directory
+			config.store();
 		}
 	}
 
 	/**
-	 * Loads the config file.
+	 * Loads a {@link ConfigFile}.
 	 *
 	 * If a user-specific config file exists, this one is used. Otherwise the (incomplete) standard config file is used.
 	 *
-	 * @return An {@link Ini} config file
+	 * @return the loaded {@code ConfigFile}
 	 */
-	private Ini initializeConfig() {
+	private ConfigFile initializeConfigReader() {
 		try {
+			InputStream inputStream;
 			// check whether an explicit config file exists in the current directory
-			File config = new File("config.ini");
-			if(config.exists())
-				return new Ini(config);
+			File config = new File("config.yaml");
+			if(config.exists()) {
+				logger.debug("Load user-specific config file");
+				inputStream = new FileInputStream(config);
+			}
 			else {
 				// else load the standard config file
-				logger.info("No user-specific config file found, loading the standard config file");
-
-				Ini configStd = new Ini(Collector.class.getResourceAsStream("/config.ini"));
-				configStd.setFile(new File("config.ini"));	// set the file to be able to store changes later on
-				return configStd;
+				logger.debug("No user-specific config file found, loading the standard config file");
+				inputStream = Collector.class.getResourceAsStream("/config.yaml");
 			}
+
+			ConfigFile configFile = new ConfigFile(inputStream);
+			inputStream.close();
+
+			return configFile;
 
 		} catch(IOException e) {
-			logger.error("Error while reading the config file: {}", e.getMessage());
-			throw new IllegalStateException("Error while reading the config file: " + e.getMessage());
+			logger.error("Error while loading the config file: {}", e.getMessage());
+			throw new IllegalStateException("Error while loading the config file: " + e.getMessage());
 		}
 	}
 
 	/**
-	 * Creates an {@link EntityManagerFactory} using the connection settings in the specified config file.
+	 * Creates an {@link EntityManagerFactory} to connect to the database based on the information in the config file.
 	 *
-	 * @param config  An {@link Ini} config file containing the database connection settings
-	 * @return An EntityManagerFactory used to connect to the iMonDB
+	 * @return an {@code EntityManagerFactory} to connect to the database
 	 */
-	private EntityManagerFactory getEntityManagerFactory(Ini config) {
-		String host = config.get("sql", "host");
-		host = host == null || host.equals("") ? null : host;
-
-		String port = config.get("sql", "port");
-		port = port == null || port.equals("") ? null : port;
-
-		String database = config.get("sql", "database");
-		if(database == null || database.equals("")) {
-			logger.error("The MySQL database must be specified in the config file");
-			throw new IllegalStateException("The MySQL database must be specified in the config file");
-		}
-
-		String user = config.get("sql", "user");
-		if(user == null || user.equals("")) {
-			logger.error("The MySQL user name must be specified in the config file");
-			throw new IllegalStateException("The MySQL user name must be specified in the config file");
-		}
-
-		String password = config.get("sql", "password");
-		password = password == null || password.equals("") ? null : password;
-
-		return IMonDBManagerFactory.createMySQLFactory(host, port, database, user, password);
+	private EntityManagerFactory getEntityManagerFactory() {
+		return IMonDBManagerFactory.createMySQLFactory(config.getDatabaseHost(), config.getDatabasePort(),
+				config.getDatabaseName(), config.getDatabaseUser(), config.getDatabasePassword());
 	}
 
 	/**
-	 * Retrieves the last date from the given config file.
+	 * Makes sure that all {@link Instrument}s that are defined in the config file are present in the database.
 	 *
-	 * @param config  An {@link Ini} config file
-	 * @return The last date specified in the config file, or 1970-01-01 if not available
-	 */
-	private Date getLastDate(Ini config) {
-		String lastDate = config.get("general", "last_date");
-
-		if(lastDate == null || lastDate.equals("")) {
-			logger.info("No cut-off date specified, retrieving all eligible files");
-			return new Date(0);
-		}
-		else {
-			try {
-				return DATE_FORMAT.parse(lastDate);
-			} catch(ParseException e) {
-				logger.error("Invalid cut-off date <{}> specified: ", lastDate, e.getMessage());
-				throw new IllegalStateException("Invalid cut-off date specified: " + e.getMessage());
-			}
-		}
-	}
-
-	/**
-	 * Retrieves the run rename mask from the given config file.
+	 * If a specific {@code Instrument} is not in the database yet, it will be added.
 	 *
-	 * @param config  An {@link Ini} config file
-	 * @return The run rename mask specified in the config file, or %p_%dn_%fn if not available
+	 * @param reader  the {@link IMonDBReader} used to check whether an {@code Instrument} is already in the database
+	 * @param writer  the {@link IMonDBWriter} used to write a new {@code Instrument} to the database
+	 * @param instruments  a {@code List} of {@code Map}s where each {@code Map} contains information about a single {@code Instrument}
 	 */
-	private String getRenameMask(Ini config) {
-		String renameMask = config.get("general", "rename_run");
-		if(renameMask == null || renameMask.equals("")) {
-			renameMask = "%p_%dn_%fn";
-			logger.info("No run rename mask specified, using default '{}'", renameMask);
-		}
-		return renameMask;
-	}
+	private void addNewInstruments(IMonDBReader reader, IMonDBWriter writer, List<Map<String, String>> instruments) {
+		for(Map<String, String> instrument : instruments) {
+			// check if the instrument is already in the database
+			Map<String, String> parameters = ImmutableMap.of("name", instrument.get("name"));
+			String query = "SELECT COUNT(inst) FROM Instrument inst WHERE inst.name = :name";
+			boolean exists = reader.getFromCustomQuery(query, Long.class, parameters).get(0).equals(1L);
 
-	/**
-	 * Retrieves the number of worker threads from the given config file.
-	 *
-	 * @param config  An {@link Ini} config file
-	 * @return The number of worker threads specified in the config file, or 1 if not available
-	 */
-	private int getNumberOfThreads(Ini config) {
-		String nrStr = config.get("general", "num_threads");
-		if(nrStr == null || nrStr.equals(""))
-			return 1;
-		else return Integer.parseInt(nrStr);
-	}
-
-	/**
-	 * Retrieves the regex used to match the raw files from the given config file.
-	 *
-	 * @param config  An {@link Ini} config file
-	 * @return The regex used to match the raw files specified in the config file
-	 */
-	private String getMatchFile(Ini config) {
-		String matchFile = config.get("general", "match_file");
-		if(matchFile == null || matchFile.equals("")) {
-			logger.error("The 'match_file' regex must be specified in the config file");
-			throw new IllegalStateException("The 'match_file' regex must be specified in the config file");
+			// else, add it to the database
+			if(!exists)
+				writer.writeInstrument(new Instrument(instrument.get("name"), InstrumentModel.fromString(instrument.get("type")), cvMS));
+			else
+				logger.trace("Instrument <{}> found in the database", instrument.get("name"));
 		}
-		return matchFile;
 	}
 }

@@ -1,16 +1,18 @@
 package inspector.jmondb.convert;
 
+import inspector.jmondb.model.InstrumentModel;
+
 import java.sql.Timestamp;
 
 /**
  * Helper class to group raw file meta data, such as the sample date and the instrument model.
  */
-public class RawFileMetaData {
+public class RawFileMetadata {
 
 	private final Timestamp date;
 	private final InstrumentModel model;
 
-	public RawFileMetaData(Timestamp date, InstrumentModel model) {
+	public RawFileMetadata(Timestamp date, InstrumentModel model) {
 		this.date = date;
 		this.model = model;
 	}

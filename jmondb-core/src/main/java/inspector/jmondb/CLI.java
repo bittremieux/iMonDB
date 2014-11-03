@@ -5,8 +5,12 @@ import inspector.jmondb.io.IMonDBManagerFactory;
 import inspector.jmondb.io.IMonDBWriter;
 import inspector.jmondb.model.Run;
 import org.apache.commons.cli.*;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 
 import javax.persistence.EntityManagerFactory;
 
@@ -29,9 +33,21 @@ public class CLI {
 
 			// help
 			if(cmd.hasOption("?"))
-				new HelpFormatter().printHelp("jMonDB-core", options);
+				new HelpFormatter().printHelp("jMonDB-core", options, true);
 			else {
 				boolean error = false;
+
+				// logging verbosity
+				if(cmd.hasOption("v") || cmd.hasOption("vv")) {
+					LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+					Configuration config = ctx.getConfiguration();
+					LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+					if(cmd.hasOption("v"))
+						loggerConfig.setLevel(Level.INFO);
+					else if(cmd.hasOption("vv"))
+						loggerConfig.setLevel(Level.DEBUG);
+					ctx.updateLoggers();
+				}
 
 				// database information
 				String host = null;
@@ -47,35 +63,31 @@ public class CLI {
 					database = cmd.getOptionValue("db");
 				else {
 					error = true;
-					logger.error("No database provided");
-					System.err.println("No database provided");
+					logger.fatal("No database provided");
 				}
 				if(cmd.hasOption("u"))
 					user = cmd.getOptionValue("u");
 				else {
 					error = true;
-					logger.error("No user name provided");
-					System.err.println("No user name provided");
+					logger.fatal("No user name provided");
 				}
 				if(cmd.hasOption("pw"))
 					pass = cmd.getOptionValue("pw");
 
 				// raw file information
 				String rawFile = null;
-				String projectLabel = null;
+				String instrumentName = null;
 				if(cmd.hasOption("f"))
 					rawFile = cmd.getOptionValue("f");
 				else {
 					error = true;
-					logger.error("No raw file provided");
-					System.err.println("No raw file provided");
+					logger.fatal("No raw file provided");
 				}
-				if(cmd.hasOption("pr"))
-					projectLabel = cmd.getOptionValue("pr");
+				if(cmd.hasOption("i"))
+					instrumentName = cmd.getOptionValue("i");
 				else {
 					error = true;
-					logger.error("No project label provided");
-					System.err.println("No project label provided");
+					logger.fatal("No instrument name provided");
 				}
 
 				if(!error) {
@@ -84,17 +96,16 @@ public class CLI {
 					IMonDBWriter writer = new IMonDBWriter(emf);
 
 					// store raw file in the database
-					Run run = new ThermoRawFileExtractor().extractInstrumentData(rawFile);
-					writer.writeRun(run, projectLabel);
+					Run run = new ThermoRawFileExtractor().extractInstrumentData(rawFile, null, instrumentName);
+					writer.writeRun(run);
 				}
 				else
-					new HelpFormatter().printHelp("jMonDB-core", options);
+					new HelpFormatter().printHelp("jMonDB-core", options, true);
 			}
 
 		} catch (ParseException e) {
-			logger.error("Error while parsing the command-line arguments: {}", e.getMessage());
-			System.err.println("Error while parsing the command-line arguments: " + e.getMessage());
-			new HelpFormatter().printHelp("jMonDB-core", options);
+			logger.fatal("Error while parsing the command-line arguments: {}", e.getMessage());
+			new HelpFormatter().printHelp("jMonDB-core", options, true);
 		}
 		finally {
 			if(emf != null)
@@ -106,6 +117,11 @@ public class CLI {
 		Options options = new Options();
 		// help
 		options.addOption("?", "help", false, "show help");
+		// logging verbosity
+		OptionGroup logging = new OptionGroup();
+		logging.addOption(new Option("v", "verbose", false, "verbose logging"));
+		logging.addOption(new Option("vv", "very-verbose", false, "extremely verbose logging"));
+		options.addOptionGroup(logging);
 		// MySQL connection options
 		options.addOption(new Option("h", "host", true, "the iMonDB MySQL host"));
 		options.addOption(new Option("p", "port", true, "the iMonDB MySQL port"));
@@ -114,7 +130,7 @@ public class CLI {
 		options.addOption(new Option("pw", "password", true, "the iMonDB MySQL password"));
 		// raw file options
 		options.addOption(new Option("f", "file", true, "the raw file to store in the iMonDB"));
-		options.addOption(new Option("pr", "project", true, "the project label to which the raw file belongs"));
+		options.addOption(new Option("i", "instrument", true, "the name of the instrument on which the raw file was obtained (this instrument should be in the iMonDB already)"));
 
 		return options;
 	}

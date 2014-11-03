@@ -37,6 +37,10 @@ int main(int argc, const char* argv[])
     {
         // read raw file
         thermo::RawFilePtr rawFile = thermo::RawFile::create(argv[1]);
+
+		// initialize raw file access
+		rawFile->getInstrumentModel();
+
         // read all segments
         for(long segment = 0; /* end loop in catch */; ++segment)
         {
@@ -46,9 +50,12 @@ int main(int argc, const char* argv[])
                 
                 for(int i = 0; i < tuneData->size(); ++i)
                     std::cout << tuneData->label(i) << '\t' << tuneData->value(i) << std::endl;
+
+                std::cout << "--END_OF_SEGMENT_" << segment << std::endl;
             }
-            catch(thermo::RawEgg&)
+            catch(thermo::RawEgg& e)
             {
+				//std::cerr << "Error: " << e.what() << std::endl;
                 break;
             }
         }        

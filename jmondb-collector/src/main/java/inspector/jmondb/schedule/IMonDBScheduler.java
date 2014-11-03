@@ -30,7 +30,7 @@ public class IMonDBScheduler {
 			scheduler = schedulerFactory.getScheduler();
 			scheduler.start();
 		} catch(SchedulerException e) {
-			logger.error("Exception while running the job scheduler: {}", e);
+			logger.error("Exception while running the job scheduler: {}", e.getMessage());
 		}
 	}
 

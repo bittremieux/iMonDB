@@ -3,8 +3,12 @@ package inspector.jmondb;
 import inspector.jmondb.collect.Collector;
 import inspector.jmondb.schedule.IMonDBScheduler;
 import org.apache.commons.cli.*;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.quartz.DateBuilder;
 import org.quartz.SchedulerException;
 
@@ -23,8 +27,20 @@ public class CLI {
 
 			// help
 			if(cmd.hasOption("?"))
-				new HelpFormatter().printHelp("jMonDB-collector", options);
+				new HelpFormatter().printHelp("jMonDB-collector", options, true);
 			else {
+				// logging verbosity
+				if(cmd.hasOption("v") || cmd.hasOption("vv")) {
+					LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+					Configuration config = ctx.getConfiguration();
+					LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+					if(cmd.hasOption("v"))
+						loggerConfig.setLevel(Level.INFO);
+					else if(cmd.hasOption("vv"))
+						loggerConfig.setLevel(Level.DEBUG);
+					ctx.updateLoggers();
+				}
+
 				// immediate execution
 				if(cmd.hasOption("rn")) {
 					Collector collector = new Collector();
@@ -40,15 +56,13 @@ public class CLI {
 						hour = Integer.parseInt(cmd.getOptionValue("h"));
 					else {
 						error = true;
-						logger.error("No hour provided");
-						System.err.println("No hour provided");
+						logger.fatal("No hour provided");
 					}
 					if(cmd.hasOption("m"))
 						minute = Integer.parseInt(cmd.getOptionValue("m"));
 					else {
 						error = true;
-						logger.error("No minute provided");
-						System.err.println("No minute provided");
+						logger.fatal("No minute provided");
 					}
 
 					if(!error && cmd.hasOption("rd")) {
@@ -90,28 +104,24 @@ public class CLI {
 						}
 						else {
 							error = true;
-							logger.error("No day provided");
-							System.err.println("No day provided");
+							logger.fatal("No day provided");
 						}
 					}
 
 					if(error)
-						new HelpFormatter().printHelp("jMonDB-collector", options);
+						new HelpFormatter().printHelp("jMonDB-collector", options, true);
 				}
 				else {
-					logger.error("No schedule information provided");
-					System.err.println("No schedule information provided");
-					new HelpFormatter().printHelp("jMonDB-collector", options);
+					logger.fatal("No schedule information provided");
+					new HelpFormatter().printHelp("jMonDB-collector", options, true);
 				}
 			}
 
 		} catch (ParseException e) {
-			logger.error("Error while parsing the command-line arguments: {}", e.getMessage());
-			System.err.println("Error while parsing the command-line arguments: " + e.getMessage());
-			new HelpFormatter().printHelp("jMonDB-collector", options);
+			logger.fatal("Error while parsing the command-line arguments: {}", e.getMessage());
+			new HelpFormatter().printHelp("jMonDB-collector", options, true);
 		} catch(SchedulerException e) {
-			logger.error("Error while executing the scheduler: {}", e.getMessage());
-			System.err.println("Error while executing the scheduler: " + e.getMessage());
+			logger.fatal("Error while executing the scheduler: {}", e.getMessage());
 		}
 	}
 
@@ -119,6 +129,11 @@ public class CLI {
 		Options options = new Options();
 		// help
 		options.addOption("?", "help", false, "show help");
+		// logging verbosity
+		OptionGroup logging = new OptionGroup();
+		logging.addOption(new Option("v", "verbose", false, "verbose logging"));
+		logging.addOption(new Option("vv", "very-verbose", false, "extremely verbose logging"));
+		options.addOptionGroup(logging);
 		// scheduler options
 		OptionGroup executionTime = new OptionGroup();
 		executionTime.addOption(new Option("rn", "run-now", false, "run the jMonDB collector scheduler immediately"));
