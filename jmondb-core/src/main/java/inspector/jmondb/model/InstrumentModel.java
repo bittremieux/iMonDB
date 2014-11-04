@@ -3,6 +3,7 @@ package inspector.jmondb.model;
 public enum InstrumentModel {
 
 	/* Thermo instruments */
+	THERMO_LTQ("MS:1000447"),
 	THERMO_LTQ_ORBITRAP("MS:1000449"),
 	THERMO_ORBITRAP_XL("MS:1000556"),
 	THERMO_LTQ_VELOS("MS:1000855"),
