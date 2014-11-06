@@ -45,6 +45,8 @@ public class Viewer extends JPanel {
 	private static ImageIcon iconConnected = new ImageIcon(Viewer.class.getResource("/images/ok.png"), "connected");
 
 	// events information
+	private DefaultMutableTreeNode nodeUndefined;
+	private HashMap<Date, ValueMarker> markerUndefined;
 	private DefaultMutableTreeNode nodeCalibration;
 	private HashMap<Date, ValueMarker> markerCalibration;
 	private DefaultMutableTreeNode nodeMaintenance;
@@ -54,6 +56,7 @@ public class Viewer extends JPanel {
 
 	private JTree treeEvents;
 
+	private JCheckBox checkBoxUndefined;
 	private JCheckBox checkBoxCalibration;
 	private JCheckBox checkBoxMaintenace;
 	private JCheckBox checkBoxIncident;
@@ -121,6 +124,7 @@ public class Viewer extends JPanel {
 		createDbConnectionPanel(panelDbConnection);
 
 		// events panel
+		markerUndefined = new HashMap<>();
 		markerCalibration = new HashMap<>();
 		markerMaintenance = new HashMap<>();
 		markerIncident = new HashMap<>();
@@ -230,6 +234,9 @@ public class Viewer extends JPanel {
 		// create checkboxes
 		JPanel panelCheckBoxes = new JPanel(new GridLayout(0, 1));
 		panelCheckBoxes.add(new JLabel("Show events:"));
+		checkBoxUndefined = new JCheckBox("Undefined");
+		checkBoxUndefined.setSelected(true);
+		panelCheckBoxes.add(checkBoxUndefined);
 		checkBoxCalibration = new JCheckBox("Calibration");
 		checkBoxCalibration.setSelected(true);
 		panelCheckBoxes.add(checkBoxCalibration);
@@ -241,6 +248,7 @@ public class Viewer extends JPanel {
 		panelCheckBoxes.add(checkBoxIncident);
 
 		ItemListener checkBoxListener = new ListenerCheckBox();
+		checkBoxUndefined.addItemListener(checkBoxListener);
 		checkBoxCalibration.addItemListener(checkBoxListener);
 		checkBoxMaintenace.addItemListener(checkBoxListener);
 		checkBoxIncident.addItemListener(checkBoxListener);
@@ -280,6 +288,7 @@ public class Viewer extends JPanel {
 			}
 		});
 		ImageIcon eventIcon = new ImageIcon(Viewer.class.getResource("/images/event.png"));
+		ImageIcon undefinedIcon = new ImageIcon(Viewer.class.getResource("/images/undefined.png"));
 		ImageIcon calibrationIcon = new ImageIcon(Viewer.class.getResource("/images/calibration.png"));
 		ImageIcon maintenanceIcon = new ImageIcon(Viewer.class.getResource("/images/maintenance.png"));
 		ImageIcon incidentIcon = new ImageIcon(Viewer.class.getResource("/images/incident.png"));
@@ -292,6 +301,10 @@ public class Viewer extends JPanel {
 				// and the icons have to be set after calling super
 				String s = value.toString();
 				switch(s) {
+					case "Undefined":
+						setTextNonSelectionColor(Color.ORANGE);
+						setTextSelectionColor(Color.ORANGE);
+						break;
 					case "Calibration":
 						setTextNonSelectionColor(Color.GREEN);
 						setTextSelectionColor(Color.GREEN);
@@ -315,6 +328,11 @@ public class Viewer extends JPanel {
 						setIcon(eventIcon);
 						setClosedIcon(eventIcon);
 						setOpenIcon(eventIcon);
+						break;
+					case "Undefined":
+						setIcon(undefinedIcon);
+						setClosedIcon(undefinedIcon);
+						setOpenIcon(undefinedIcon);
 						break;
 					case "Calibration":
 						setIcon(calibrationIcon);
@@ -341,6 +359,8 @@ public class Viewer extends JPanel {
 
 		JScrollPane scrollPaneEvents = new JScrollPane(treeEvents);
 
+		nodeUndefined = new DefaultMutableTreeNode("Undefined");
+		nodeEvents.add(nodeUndefined);
 		nodeCalibration = new DefaultMutableTreeNode("Calibration");
 		nodeEvents.add(nodeCalibration);
 		nodeMaintenance = new DefaultMutableTreeNode("Maintenance");
@@ -400,6 +420,10 @@ public class Viewer extends JPanel {
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
 
+			if(checkBoxUndefined.isSelected())
+				markerUndefined.values().forEach(plot::addDomainMarker);
+			else
+				markerUndefined.values().forEach(plot::removeDomainMarker);
 			if(checkBoxCalibration.isSelected())
 				markerCalibration.values().forEach(plot::addDomainMarker);
 			else
@@ -419,6 +443,7 @@ public class Viewer extends JPanel {
 		// remove from graph
 		if(chartPanel != null) {
 			XYPlot plot = (XYPlot) chartPanel.getChart().getPlot();
+			markerUndefined.values().forEach(plot::removeDomainMarker);
 			markerCalibration.values().forEach(plot::removeDomainMarker);
 			markerMaintenance.values().forEach(plot::removeDomainMarker);
 			markerIncident.values().forEach(plot::removeDomainMarker);
@@ -428,12 +453,14 @@ public class Viewer extends JPanel {
 		nodeIncident.removeAllChildren();
 		nodeMaintenance.removeAllChildren();
 		nodeCalibration.removeAllChildren();
+		nodeUndefined.removeAllChildren();
 		DefaultTreeModel treeModel = ((DefaultTreeModel) treeEvents.getModel());
 		treeModel.reload();
 		// remove markers
 		markerIncident.clear();
 		markerMaintenance.clear();
 		markerCalibration.clear();
+		markerUndefined.clear();
 	}
 
 	private void sortEvents(DefaultMutableTreeNode parent) {
@@ -447,6 +474,8 @@ public class Viewer extends JPanel {
 
 	private ValueMarker removeMarker(Event event) {
 		switch(event.getType()) {
+			case UNDEFINED:
+				return markerUndefined.remove(event.getDate());
 			case CALIBRATION:
 				return markerCalibration.remove(event.getDate());
 			case MAINTENANCE:
@@ -566,6 +595,10 @@ public class Viewer extends JPanel {
 
 							// add to the correct event type
 							switch(event.getType()) {
+								case UNDEFINED:
+									nodeUndefined.add(node);
+									markerUndefined.put(event.getDate(), new ValueMarker(event.getDate().getTime(), Color.ORANGE, new BasicStroke(1)));
+									break;
 								case CALIBRATION:
 									nodeCalibration.add(node);
 									markerCalibration.put(event.getDate(), new ValueMarker(event.getDate().getTime(), Color.GREEN, new BasicStroke(1)));
@@ -792,6 +825,14 @@ public class Viewer extends JPanel {
 						ValueMarker marker = null;
 						boolean toDraw = false;
 						switch(event.getType()) {
+							case UNDEFINED:
+								nodeUndefined.add(new EventNode(event));
+								sortEvents(nodeUndefined);
+
+								marker = new ValueMarker(event.getDate().getTime(), Color.ORANGE, new BasicStroke(1));
+								markerUndefined.put(event.getDate(), marker);
+								toDraw = checkBoxUndefined.isSelected();
+								break;
 							case CALIBRATION:
 								nodeCalibration.add(new EventNode(event));
 								sortEvents(nodeCalibration);
@@ -926,6 +967,10 @@ public class Viewer extends JPanel {
 
 				if(option == JOptionPane.OK_OPTION) {
 					// remove the events from the database
+					for(int i = 0; i < nodeUndefined.getChildCount(); i++) {
+						Event event = ((EventNode) nodeUndefined.getChildAt(i)).getEvent();
+						dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
+					}
 					for(int i = 0; i < nodeCalibration.getChildCount(); i++) {
 						Event event = ((EventNode) nodeCalibration.getChildAt(i)).getEvent();
 						dbWriter.removeEvent(event.getInstrument().getName(), event.getDate());
@@ -955,19 +1000,25 @@ public class Viewer extends JPanel {
 
 				Object source = e.getItemSelectable();
 				// show or hide the specific events
-				if(source == checkBoxCalibration) {
+				if(source == checkBoxUndefined) {
+					if(e.getStateChange() == ItemEvent.DESELECTED)
+						markerUndefined.values().forEach(plot::removeDomainMarker);
+					else
+						markerUndefined.values().forEach(plot::addDomainMarker);
+				}
+				else if(source == checkBoxCalibration) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
 						markerCalibration.values().forEach(plot::removeDomainMarker);
 					else
 						markerCalibration.values().forEach(plot::addDomainMarker);
 				}
-				if(source == checkBoxMaintenace) {
+				else if(source == checkBoxMaintenace) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
 						markerMaintenance.values().forEach(plot::removeDomainMarker);
 					else
 						markerMaintenance.values().forEach(plot::addDomainMarker);
 				}
-				if(source == checkBoxIncident) {
+				else if(source == checkBoxIncident) {
 					if(e.getStateChange() == ItemEvent.DESELECTED)
 						markerIncident.values().forEach(plot::removeDomainMarker);
 					else

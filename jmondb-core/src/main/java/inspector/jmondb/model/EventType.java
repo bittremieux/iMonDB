@@ -2,6 +2,7 @@ package inspector.jmondb.model;
 
 public enum EventType {
 
+	UNDEFINED("undefined"),
 	CALIBRATION("calibration"),
 	MAINTENANCE("maintenance"),
 	INCIDENT("incident");
