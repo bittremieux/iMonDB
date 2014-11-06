@@ -192,6 +192,7 @@ public class Viewer extends JPanel {
 		JLabel labelInstrument = new JLabel("Instrument");
 		panelSelection.add(labelInstrument);
 		comboBoxInstrument = new JComboBox<>();
+		comboBoxInstrument.addActionListener(new ListenerClearGraph());
 		comboBoxInstrument.addActionListener(new ListenerLoadInstrumentEvents());
 		comboBoxInstrument.addActionListener(new ListenerCreateAdvancedSearchDialog());
 		comboBoxInstrument.setPreferredSize(new Dimension(250, 25));
@@ -660,6 +661,16 @@ public class Viewer extends JPanel {
 						setProperties();
 				}
 			}
+		}
+	}
+
+	private class ListenerClearGraph implements ActionListener {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			panelGraph.removeAll();
+			panelGraph.revalidate();
+			panelGraph.repaint();
 		}
 	}
 
