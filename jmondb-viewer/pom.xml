@@ -13,7 +13,7 @@
     <groupId>inspector.jmondb.jmondb-viewer</groupId>
     <artifactId>jmondb-viewer</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <name>jMonDB Viewer</name>
     <url>https://bitbucket.org/proteinspector/jmondb</url>
@@ -35,7 +35,7 @@
         <dependency>
             <groupId>inspector.jmondb.jmondb-core</groupId>
             <artifactId>jmondb-core</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1</version>
         </dependency>
 
         <!-- graphs -->
