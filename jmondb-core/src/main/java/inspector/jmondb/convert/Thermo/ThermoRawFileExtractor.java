@@ -426,6 +426,7 @@ public class ThermoRawFileExtractor {
 			return false;
 		else {
 			switch(model) {
+				case THERMO_LTQ:
 				case THERMO_LTQ_ORBITRAP:
 				case THERMO_ORBITRAP_XL:
 				case THERMO_LTQ_VELOS:
@@ -465,6 +466,7 @@ public class ThermoRawFileExtractor {
 		line = line.trim();
 
 		switch(model) {
+			case THERMO_LTQ:
 			case THERMO_LTQ_ORBITRAP:
 			case THERMO_ORBITRAP_XL:
 			case THERMO_LTQ_VELOS:
@@ -515,6 +517,7 @@ public class ThermoRawFileExtractor {
 		String[] values = line.split("\t");
 
 		switch(model) {
+			case THERMO_LTQ:
 			case THERMO_LTQ_ORBITRAP:
 			case THERMO_ORBITRAP_XL:
 			case THERMO_LTQ_VELOS:
