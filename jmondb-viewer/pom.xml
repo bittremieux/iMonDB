@@ -143,6 +143,30 @@
                     <mainClass>inspector.jmondb.viewer.Viewer</mainClass>
                 </configuration>
             </plugin>
+
+            <!-- add license information -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>1.7</version>
+                <configuration>
+                    <licenseName>apache_v2</licenseName>
+                    <verbose>false</verbose>
+                    <roots>
+                        <root>src/main/java</root>
+                        <root>src/test/java</root>
+                    </roots>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>first</id>
+                        <goals>
+                            <goal>update-file-header</goal>
+                        </goals>
+                        <phase>process-sources</phase>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
