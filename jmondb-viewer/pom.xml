@@ -161,6 +161,7 @@
                     <execution>
                         <id>first</id>
                         <goals>
+                            <goal>update-project-license</goal>
                             <goal>update-file-header</goal>
                         </goals>
                         <phase>process-sources</phase>
