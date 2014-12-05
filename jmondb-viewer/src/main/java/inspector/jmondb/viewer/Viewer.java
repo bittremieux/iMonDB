@@ -149,6 +149,13 @@ public class Viewer extends JPanel {
 		markerMaintenance = new HashMap<>();
 		markerIncident = new HashMap<>();
 		createEventsPanel(panelEvents);
+
+		// auto connect to the database if applicable
+		if(SettingsHandler.getSettings().getDatabaseAutoConnect()) {
+			connectToDatabase(SettingsHandler.getSettings().getDatabaseHost(), SettingsHandler.getSettings().getDatabasePort(),
+					SettingsHandler.getSettings().getDatabaseUserName(), SettingsHandler.getSettings().getDatabasePassword(),
+					SettingsHandler.getSettings().getDatabaseName());
+		}
 	}
 
 	private JMenuBar createMenuBar() {
@@ -171,6 +178,12 @@ public class Viewer extends JPanel {
 		JMenuItem menuItemExportEvents = new JMenuItem("Export event log as...");
 		menuItemExportEvents.addActionListener(new ListenerExportEvents());
 		menuFile.add(menuItemExportEvents);
+
+		menuFile.addSeparator();
+
+		JMenuItem menuItemSettings = new JMenuItem("Settings");
+		menuItemSettings.addActionListener(new ListenerSettings());
+		menuFile.add(menuItemSettings);
 
 		menuFile.addSeparator();
 
@@ -518,45 +531,49 @@ public class Viewer extends JPanel {
 			int option = JOptionPane.showConfirmDialog(frameParent, connectionDialog, "Connect to the database", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
 			if(option == JOptionPane.OK_OPTION) {
-				Thread dbConnector = new Thread() {
-					public void run() {
-						try {
-							frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-							// first close an existing connection
-							closeDbConnection();
-
-							// create the new connection
-							String password = !connectionDialog.getPassword().equals("") ? connectionDialog.getPassword() : null;
-							emf = IMonDBManagerFactory.createMySQLFactory(connectionDialog.getHost(), connectionDialog.getPort(),
-									connectionDialog.getDatabase(), connectionDialog.getUserName(), password);
-							dbReader = new IMonDBReader(emf);
-							dbWriter = new IMonDBWriter(emf);
-
-							// fill in possible instruments in the combo box
-							comboBoxInstrument.removeAllItems();
-							List<String> instrumentNames = dbReader.getFromCustomQuery("SELECT inst.name FROM Instrument inst ORDER BY inst.name", String.class);
-							instrumentNames.forEach(comboBoxInstrument::addItem);
-
-							// create advanced search settings
-							createAdvancedSearchDialog();
-							// fill in possible properties in the combo box
-							setProperties();
-
-							// show the connection information
-							labelDbConnection.setText("Connected to " + connectionDialog.getUserName() + "@" + connectionDialog.getHost() + "/" + connectionDialog.getDatabase());
-							labelDbIcon.setIcon(iconConnected);
-						} catch(Exception e1) {
-							closeDbConnection();
-							JOptionPane.showMessageDialog(frameParent, "<html><b>Could not connect to the database</b></html>\n" + e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-						} finally {
-							frameParent.setCursor(Cursor.getDefaultCursor());
-						}
-					}
-				};
-				dbConnector.start();
+				String password = !connectionDialog.getPassword().equals("") ? connectionDialog.getPassword() : null;
+				connectToDatabase(connectionDialog.getHost(), connectionDialog.getPort(), connectionDialog.getDatabase(),
+						connectionDialog.getUserName(), password);
 			}
 		}
+	}
+
+	private void connectToDatabase(String host, String port, String userName, String password, String database) {
+		Thread dbConnector = new Thread() {
+			public void run() {
+				try {
+					frameParent.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+					// first close an existing connection
+					closeDbConnection();
+
+					emf = IMonDBManagerFactory.createMySQLFactory(host, port, database, userName, password);
+					dbReader = new IMonDBReader(emf);
+					dbWriter = new IMonDBWriter(emf);
+
+					// fill in possible instruments in the combo box
+					comboBoxInstrument.removeAllItems();
+					List<String> instrumentNames = dbReader.getFromCustomQuery("SELECT inst.name FROM Instrument inst ORDER BY inst.name", String.class);
+					instrumentNames.forEach(comboBoxInstrument::addItem);
+
+					// create advanced search settings
+					createAdvancedSearchDialog();
+					// fill in possible properties in the combo box
+					setProperties();
+
+					// show the connection information
+					labelDbConnection.setText("Connected to " + userName + "@" + host + "/" + database);
+					labelDbIcon.setIcon(iconConnected);
+
+				} catch(Exception e1) {
+					closeDbConnection();
+					JOptionPane.showMessageDialog(frameParent, "<html><b>Could not connect to the database</b></html>\n" + e1.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+				} finally {
+					frameParent.setCursor(Cursor.getDefaultCursor());
+				}
+			}
+		};
+		dbConnector.start();
 	}
 
 	private void createAdvancedSearchDialog() {
@@ -1055,6 +1072,20 @@ public class Viewer extends JPanel {
 					else
 						markerIncident.values().forEach(plot::addDomainMarker);
 				}
+			}
+		}
+	}
+
+	private class ListenerSettings implements ActionListener {
+
+		public void actionPerformed(ActionEvent e) {
+			// create settings dialog
+			SettingsDialog dialog = new SettingsDialog();
+
+			int option = JOptionPane.showConfirmDialog(frameParent, dialog, "Settings", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+			if(option == JOptionPane.OK_OPTION) {
+				// save settings
+				dialog.saveDatabasePreferences();
 			}
 		}
 	}

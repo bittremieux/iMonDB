@@ -21,6 +21,7 @@ package inspector.jmondb.viewer;
  */
 
 import javax.swing.*;
+import java.awt.*;
 
 public class DatabaseConnectionDialog extends JPanel {
 
@@ -66,6 +67,16 @@ public class DatabaseConnectionDialog extends JPanel {
 		SpringUtilities.makeCompactGrid(this, 5, 2, 6, 6, 6, 6);
 	}
 
+	public DatabaseConnectionDialog(String host, String port, String username, String password, String database) {
+		this();
+
+		textFieldHost.setText(host);
+		textFieldPort.setText(port);
+		textFieldUser.setText(username);
+		passwordField.setText(password);
+		textFieldDatabase.setText(database);
+	}
+
 	public String getHost() {
 		return textFieldHost.getText();
 	}
@@ -84,5 +95,19 @@ public class DatabaseConnectionDialog extends JPanel {
 
 	public String getDatabase() {
 		return textFieldDatabase.getText();
+	}
+
+	@Override
+	public void setEnabled(boolean enabled) {
+		super.setEnabled(enabled);
+		this.setEnabledRecursive(this, enabled);
+	}
+
+	protected void setEnabledRecursive(Component component, boolean enabled) {
+		if(component instanceof Container) {
+			for(Component child : ((Container) component).getComponents()) {
+				child.setEnabled(enabled);
+			}
+		}
 	}
 }
