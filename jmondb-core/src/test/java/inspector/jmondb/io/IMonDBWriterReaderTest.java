@@ -395,12 +395,12 @@ public class IMonDBWriterReaderTest {
 	@Test
 	public void getFromCustomQuery_nullQuery() {
 		IMonDBReader reader = new IMonDBReader(emf);
-		assertNull(reader.getFromCustomQuery(null, Instrument.class));
+		assertTrue(reader.getFromCustomQuery(null, Instrument.class).isEmpty());
 	}
 
 	@Test
 	public void getFromCustomQuery_nullClass() {
 		IMonDBReader reader = new IMonDBReader(emf);
-		assertNull(reader.getFromCustomQuery("SELECT inst FROM Instrument inst", null));
+		assertTrue(reader.getFromCustomQuery("SELECT inst FROM Instrument inst", null).isEmpty());
 	}
 }

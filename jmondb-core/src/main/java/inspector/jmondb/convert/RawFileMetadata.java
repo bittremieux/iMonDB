@@ -29,19 +29,19 @@ import java.sql.Timestamp;
  */
 public class RawFileMetadata {
 
-	private final Timestamp date;
-	private final InstrumentModel model;
+    private final Timestamp date;
+    private final InstrumentModel model;
 
-	public RawFileMetadata(Timestamp date, InstrumentModel model) {
-		this.date = date;
-		this.model = model;
-	}
+    public RawFileMetadata(Timestamp date, InstrumentModel model) {
+        this.date = new Timestamp(date.getTime());
+        this.model = model;
+    }
 
-	public Timestamp getDate() {
-		return date;
-	}
+    public Timestamp getDate() {
+        return new Timestamp(date.getTime());
+    }
 
-	public InstrumentModel getModel() {
-		return model;
-	}
+    public InstrumentModel getModel() {
+        return model;
+    }
 }

@@ -22,7 +22,7 @@ package inspector.jmondb.collect;
 
 import com.google.common.collect.ImmutableMap;
 import inspector.jmondb.config.MetadataMapper;
-import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
+import inspector.jmondb.convert.thermo.ThermoRawFileExtractor;
 import inspector.jmondb.io.IMonDBReader;
 import inspector.jmondb.io.IMonDBWriter;
 import inspector.jmondb.model.Run;

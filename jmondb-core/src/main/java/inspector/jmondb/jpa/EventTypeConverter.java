@@ -28,13 +28,13 @@ import javax.persistence.Converter;
 @Converter(autoApply=true)
 public class EventTypeConverter implements AttributeConverter<EventType, String> {
 
-	@Override
-	public String convertToDatabaseColumn(EventType eventType) {
-		return eventType.toString();
-	}
+    @Override
+    public String convertToDatabaseColumn(EventType eventType) {
+        return eventType.toString();
+    }
 
-	@Override
-	public EventType convertToEntityAttribute(String s) {
-		return EventType.fromString(s);
-	}
+    @Override
+    public EventType convertToEntityAttribute(String s) {
+        return EventType.fromString(s);
+    }
 }

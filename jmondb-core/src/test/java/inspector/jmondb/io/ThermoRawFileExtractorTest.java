@@ -20,7 +20,7 @@ package inspector.jmondb.io;
  * #L%
  */
 
-import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
+import inspector.jmondb.convert.thermo.ThermoRawFileExtractor;
 import inspector.jmondb.model.CV;
 import inspector.jmondb.model.Instrument;
 import inspector.jmondb.model.InstrumentModel;
