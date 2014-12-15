@@ -193,7 +193,7 @@ public class Event {
     }
 
     public byte[] getAttachmentContent() {
-        return attachmentBytes.clone();
+        return attachmentBytes != null ? attachmentBytes.clone() : null;
     }
 
     public void setAttachmentName(String name) {
@@ -201,7 +201,7 @@ public class Event {
     }
 
     public void setAttachmentContent(byte[] content) {
-        attachmentBytes = content.clone();
+        attachmentBytes = content != null ? content.clone() : null;
     }
 
     public void setAttachment(File attachment) {
@@ -211,8 +211,12 @@ public class Event {
                 setAttachmentName(attachment.getName());
                 setAttachmentContent(FileUtils.readFileToByteArray(attachment));
             } catch(IOException e) {
-                LOGGER.warn("Unable to set file <{}> as an attachment", attachmentFileName);
-                throw new IllegalArgumentException("Unable to set file <" + attachmentFileName +  "> as an attachment", e);
+                // reset file content
+                attachmentFileName = null;
+                attachmentBytes = null;
+
+                LOGGER.warn("Unable to set file <{}> as an attachment", attachment.getName());
+                throw new IllegalArgumentException("Unable to set file <" + attachment.getName() +  "> as an attachment", e);
             }
         } else {
             // reset file content
