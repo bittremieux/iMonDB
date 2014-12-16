@@ -36,13 +36,15 @@ import java.io.*;
 
 import static org.junit.Assert.assertEquals;
 
-public class ThermoRawFileExtractorTest {
+public class ThermoRawFileExtractorIT {
+
+	private static final String PORT = System.getProperty("mysql.port");
 
 	private EntityManagerFactory emf;
 
 	@Before
 	public void setUp() {
-		emf = IMonDBManagerFactory.createMySQLFactory(null, null, "iMonDBtest", "iMonDB", "iMonDB");
+		emf = IMonDBManagerFactory.createMySQLFactory("localhost", PORT, "root", "root", "root");
 	}
 
 	@After

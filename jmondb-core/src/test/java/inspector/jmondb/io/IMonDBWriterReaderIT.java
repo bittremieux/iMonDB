@@ -35,7 +35,9 @@ import java.util.Iterator;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
-public class IMonDBWriterReaderTest {
+public class IMonDBWriterReaderIT {
+
+	private static final String PORT = System.getProperty("mysql.port");
 
 	private EntityManagerFactory emf;
 
@@ -43,7 +45,7 @@ public class IMonDBWriterReaderTest {
 
 	@Before
 	public void setUp() {
-		emf = IMonDBManagerFactory.createMySQLFactory(null, null, "iMonDBtest", "iMonDB", "iMonDB");
+		emf = IMonDBManagerFactory.createMySQLFactory("localhost", PORT, "root", "root", "root");
 
 		instruments = new ArrayList<>();
 
