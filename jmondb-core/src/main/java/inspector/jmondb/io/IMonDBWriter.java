@@ -449,6 +449,14 @@ public class IMonDBWriter {
         }
     }
 
+    /**
+     * Remove the {@link Event} that occurred on the {@link Instrument} with the given name on the given date from the database.
+     *
+     * If there is no {@code Event} in the database with these characteristics, nothing is removed from the database.
+     *
+     * @param instrumentName  the name of the {@code Instrument} on which the {@code Event} occurred
+     * @param eventDate  the date on which the {@code Event} occurred
+     */
     public void removeEvent(String instrumentName, Timestamp eventDate) {
         if(instrumentName != null && eventDate != null) {
             LOGGER.debug("Remove event <{}> for instrument <{}>", eventDate, instrumentName);
@@ -469,7 +477,6 @@ public class IMonDBWriter {
 
             } catch(NoResultException e) {
                 LOGGER.debug("Event <{}> for instrument <{}> not found in the database", eventDate, instrumentName);
-                throw new IllegalArgumentException("Event <" + eventDate + "> for instrument <" + instrumentName + "> not found in the database", e);
             } catch(RollbackException e) {
                 LOGGER.error("Unable to remove event <{}> for instrument <{}>: {}", eventDate, instrumentName, e.getMessage());
                 throw new IllegalArgumentException("Unable to remove event <" + eventDate + ">", e);

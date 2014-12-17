@@ -131,6 +131,7 @@ public class IMonDBWriterReaderIT {
 		for(Instrument inst : instruments) {
 			Instrument instRead = reader.getInstrument(inst.getName(), true, true);
 			assertNotNull(instRead);
+			assertFalse(instRead.getRunIterator().hasNext());
 			// verify that the properties are the same
 			for(Iterator<Property> it = instRead.getPropertyIterator(); it.hasNext(); ) {
 				Property prop = it.next();
@@ -313,6 +314,101 @@ public class IMonDBWriterReaderIT {
 		IMonDBWriter writer = new IMonDBWriter(emf);
 		writer.writeCv(instruments.get(0).getCv());
 		writer.writeCv(instruments.get(0).getCv());
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void removeEvent_nullInstrument() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		for(Iterator<Event> it = instruments.get(0).getEventIterator(); it.hasNext(); ) {
+			writer.writeOrUpdateEvent(it.next());
+		}
+		Event event = instruments.get(0).getEventIterator().next();
+		writer.removeEvent(null, event.getDate());
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void removeEvent_nullDate() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		for(Iterator<Event> it = instruments.get(0).getEventIterator(); it.hasNext(); ) {
+			writer.writeOrUpdateEvent(it.next());
+		}
+		Event event = instruments.get(0).getEventIterator().next();
+		writer.removeEvent(event.getInstrument().getName(), null);
+	}
+
+	@Test
+	public void removeEvent_nonExistingInstrument() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		for(Iterator<Event> it = instruments.get(0).getEventIterator(); it.hasNext(); ) {
+			writer.writeOrUpdateEvent(it.next());
+		}
+		IMonDBReader reader = new IMonDBReader(emf);
+		Event event = instruments.get(0).getEventIterator().next();
+
+		int nrOfEventsOld = 0;
+		for(Iterator<Event> it = reader.getInstrument(event.getInstrument().getName(), true, false).getEventIterator(); it.hasNext(); ) {
+			it.next();
+			nrOfEventsOld++;
+		}
+		writer.removeEvent("non-existing instrument", event.getDate());
+		int nrOfEventsNew = 0;
+		for(Iterator<Event> it = reader.getInstrument(event.getInstrument().getName(), true, false).getEventIterator(); it.hasNext(); ) {
+			it.next();
+			nrOfEventsNew++;
+		}
+		assertEquals(nrOfEventsOld, nrOfEventsNew);
+	}
+
+	@Test
+	public void removeEvent_nonExistingDate() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		for(Iterator<Event> it = instruments.get(0).getEventIterator(); it.hasNext(); ) {
+			writer.writeOrUpdateEvent(it.next());
+		}
+		IMonDBReader reader = new IMonDBReader(emf);
+		Event event = instruments.get(0).getEventIterator().next();
+
+		int nrOfEventsOld = 0;
+		for(Iterator<Event> it = reader.getInstrument(event.getInstrument().getName(), true, false).getEventIterator(); it.hasNext(); ) {
+			it.next();
+			nrOfEventsOld++;
+		}
+		writer.removeEvent(event.getInstrument().getName(), new Timestamp(0));
+		int nrOfEventsNew = 0;
+		for(Iterator<Event> it = reader.getInstrument(event.getInstrument().getName(), true, false).getEventIterator(); it.hasNext(); ) {
+			it.next();
+			nrOfEventsNew++;
+		}
+		assertEquals(nrOfEventsOld, nrOfEventsNew);
+	}
+
+	@Test
+	public void removeEvent() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		for(Iterator<Event> it = instruments.get(0).getEventIterator(); it.hasNext(); ) {
+				writer.writeOrUpdateEvent(it.next());
+		}
+		IMonDBReader reader = new IMonDBReader(emf);
+		Event event = instruments.get(0).getEventIterator().next();
+
+		int nrOfEventsOld = 0;
+		for(Iterator<Event> it = reader.getInstrument(event.getInstrument().getName(), true, false).getEventIterator(); it.hasNext(); ) {
+			it.next();
+			nrOfEventsOld++;
+		}
+		writer.removeEvent(event.getInstrument().getName(), event.getDate());
+		int nrOfEventsNew = 0;
+		for(Iterator<Event> it = reader.getInstrument(event.getInstrument().getName(), true, false).getEventIterator(); it.hasNext(); ) {
+			it.next();
+			nrOfEventsNew++;
+		}
+		assertEquals(nrOfEventsOld - 1, nrOfEventsNew);
+		assertNull(reader.getInstrument(event.getInstrument().getName(), true, false).getEvent(event.getDate()));
 	}
 
 	@Test
