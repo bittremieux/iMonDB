@@ -31,8 +31,7 @@ import org.junit.Test;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
-
-import java.io.*;
+import java.io.File;
 
 import static org.junit.Assert.assertEquals;
 
@@ -44,6 +43,8 @@ public class ThermoRawFileExtractorIT {
 
 	@Before
 	public void setUp() {
+		System.clearProperty("exclusion.properties");
+
 		emf = IMonDBManagerFactory.createMySQLFactory("localhost", PORT, "root", "root", "root");
 	}
 
@@ -66,6 +67,48 @@ public class ThermoRawFileExtractorIT {
 		em.getTransaction().commit();
 
 		emf.close();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void init_nonExistingExclusionProperties() {
+		System.setProperty("exclusion.properties", "non/existing/file");
+		new ThermoRawFileExtractor();
+	}
+
+	@Test
+	public void init_existingExclusionProperties() {
+		System.setProperty("exclusion.properties", getClass().getResource("/exclusion.properties").getFile());
+		new ThermoRawFileExtractor();
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void extract_nullFile() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData(null, "run", "instrument");
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void extract_nonRawFile() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData(new File(getClass().getResource("/attachment.jpg").getFile()).getAbsolutePath(), "run", "instrument");
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void extract_nonExistingFile() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData("non existing file", "run", "instrument");
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void extract_illegalRawFile() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData(new File(getClass().getResource("/IllegalFile.raw").getFile()).getAbsolutePath(), null, null);
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void extract_nullInstrument() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData(new File(getClass().getResource("/LtqOrbitrap.raw").getFile()).getAbsolutePath(), null, null);
 	}
 
 	@Test

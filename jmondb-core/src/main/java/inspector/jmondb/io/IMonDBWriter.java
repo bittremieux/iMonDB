@@ -476,7 +476,7 @@ public class IMonDBWriter {
                 entityManager.getTransaction().commit();
 
             } catch(NoResultException e) {
-                LOGGER.debug("Event <{}> for instrument <{}> not found in the database", eventDate, instrumentName);
+                LOGGER.debug("Event <{}> for instrument <{}> not found in the database", eventDate, instrumentName, e);
             } catch(RollbackException e) {
                 LOGGER.error("Unable to remove event <{}> for instrument <{}>: {}", eventDate, instrumentName, e.getMessage());
                 throw new IllegalArgumentException("Unable to remove event <" + eventDate + ">", e);
