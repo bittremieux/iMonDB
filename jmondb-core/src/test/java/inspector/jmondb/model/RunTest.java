@@ -108,6 +108,7 @@ public class RunTest {
 		Value newValue = new ValueBuilder().setFirstValue(Double.toString(Math.random()*1000)).setDefiningProperty(property).setOriginatingRun(run).createValue();
 
 		assertNotEquals(oldValue, run.getValue(property));
+		assertNotEquals(oldValue, property.getValue(run));
 	}
 
 	@Test

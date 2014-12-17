@@ -191,7 +191,7 @@ public class Run {
             if(!Hibernate.isInitialized(runValues)) {
                 runValues = new HashMap<>(DEFAULT_RUN_CAPACITY);
             }
-            // add the value to the run
+            // add the value to the run (existing values will be overwritten)
             runValues.put(value.getDefiningProperty(), value);
             // add the value's defining property to the instrument
             instrument.assignProperty(value.getDefiningProperty());

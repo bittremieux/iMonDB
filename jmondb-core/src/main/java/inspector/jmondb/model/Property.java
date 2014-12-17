@@ -221,10 +221,26 @@ public class Property {
                 propertyValues = new ArrayList<>(DEFAULT_VALUE_CAPACITY);
             }
             //propertyValues.put(value.getOriginatingRun(), value);
+
+            // if a value from the same run already exists, remove it
+            removeValue(value.getOriginatingRun());
+            // add the new value
             propertyValues.add(value);
         } else {
             LOGGER.error("Can't add a <null> value to the property");
             throw new NullPointerException("Can't add a <null> value to the property");
+        }
+    }
+
+    private void removeValue(Run run) {
+        boolean isRemoved = false;
+        if(run != null && Hibernate.isInitialized(propertyValues)) {
+            for(int i = 0; i < propertyValues.size() && !isRemoved; i++) {
+                if(run.equals(propertyValues.get(i).getOriginatingRun())) {
+                    propertyValues.remove(i);
+                    isRemoved = true;
+                }
+            }
         }
     }
 
