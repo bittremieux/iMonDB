@@ -22,6 +22,7 @@ package inspector.jmondb.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.Hibernate;
 import org.hibernate.proxy.HibernateProxyHelper;
 
 import javax.persistence.*;
@@ -63,9 +64,14 @@ public class Property {
     private Boolean isNumeric;
 
     /** all {@link Value}s that are represented by this property */
+    //FIXME: the following is the ideal solution, but is unfortunately impossible because of Hibernate bug(s)
+    /*@OneToMany(cascade=CascadeType.REMOVE, fetch=FetchType.LAZY, mappedBy="definingProperty")
+    @MapKeyJoinColumn(name="l_imon_run_id", referencedColumnName="id")
+    @MapKeyClass(Run.class)
+    private Map<Run, Value> propertyValues;*/
+    //FIXME: alternative solution
     @OneToMany(cascade=CascadeType.REMOVE, fetch=FetchType.LAZY, mappedBy="definingProperty")
-    @MapKey(name="id")
-    private Map<Run, Value> propertyValues;
+    private List<Value> propertyValues;
 
     /** a sensible default capacity to reduce rehashing */
     private static final int DEFAULT_VALUE_CAPACITY = 512;
@@ -75,7 +81,8 @@ public class Property {
      * Protected access modification to enforce that client code uses the constructor that sets the required member variables.
      */
     protected Property() {
-        propertyValues = new HashMap<>(DEFAULT_VALUE_CAPACITY);
+        //propertyValues = new HashMap<>(DEFAULT_VALUE_CAPACITY);
+        propertyValues = new ArrayList<>(DEFAULT_VALUE_CAPACITY);
     }
 
     /**
@@ -177,7 +184,15 @@ public class Property {
      * @return the {@code Value} that is defined by this {@code Property} and that originates from the given {@code Run} if it exists, {@code null} otherwise
      */
     public Value getValue(Run run) {
-        return run != null ? propertyValues.get(run) : null;
+        //return run != null && Hibernate.isInitialized(propertyValues) ? propertyValues.get(run) : null;
+        if(run != null && Hibernate.isInitialized(propertyValues)) {
+            for(Value value : propertyValues) {
+                if(value.getOriginatingRun().equals(run)) {
+                    return value;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -186,7 +201,8 @@ public class Property {
      * @return an {@code Iterator} over all {@code Value}s that are defined by this {@code Property}
      */
     public Iterator<Value> getValueIterator() {
-        return propertyValues.values().iterator();
+        //return Hibernate.isInitialized(propertyValues) ? propertyValues.values().iterator() : Collections.emptyIterator();
+        return Hibernate.isInitialized(propertyValues) ? propertyValues.iterator() : Collections.emptyIterator();
     }
 
     /**
@@ -200,11 +216,26 @@ public class Property {
      */
     void assignValue(Value value) {
         if(value != null) {
-            propertyValues.put(value.getOriginatingRun(), value);
+            if(!Hibernate.isInitialized(propertyValues)) {
+                //propertyValues = new HashMap<>(DEFAULT_VALUE_CAPACITY);
+                propertyValues = new ArrayList<>(DEFAULT_VALUE_CAPACITY);
+            }
+            //propertyValues.put(value.getOriginatingRun(), value);
+            propertyValues.add(value);
         } else {
             LOGGER.error("Can't add a <null> value to the property");
             throw new NullPointerException("Can't add a <null> value to the property");
         }
+    }
+
+    /**
+     * Explicitly initializes containers that are loaded lazily.
+     *
+     * Initializing the containers is only possible if the {@code Property} is still attached to the JPA session that was used to retrieve it from a database.
+     * Otherwise, this method has no effect.
+     */
+    public void initializeContainers() {
+        propertyValues.size();
     }
 
     @Override

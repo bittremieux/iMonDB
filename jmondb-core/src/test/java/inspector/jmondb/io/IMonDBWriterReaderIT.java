@@ -21,7 +21,6 @@ package inspector.jmondb.io;
  */
 
 import inspector.jmondb.model.*;
-import org.hibernate.LazyInitializationException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,11 +28,9 @@ import org.junit.Test;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.*;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public class IMonDBWriterReaderIT {
 
@@ -43,6 +40,8 @@ public class IMonDBWriterReaderIT {
 
 	private ArrayList<Instrument> instruments;
 
+	private final CV cvImon = new CV("IMon", "IMonDB to be created controlled vocabulary", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
+
 	@Before
 	public void setUp() {
 		emf = IMonDBManagerFactory.createMySQLFactory("localhost", PORT, "root", "root", "root");
@@ -51,7 +50,6 @@ public class IMonDBWriterReaderIT {
 
 		// create fully populated objects
 		CV cvInstr = new CV("MS", "PSI MS controlled vocabulary", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
-		CV cvImon = new CV("IMon", "IMonDB to be created controlled vocabulary", "https://bitbucket.org/proteinspector/jmondb/", "0.0.1");
 
 		ArrayList<Property> properties = new ArrayList<>(1009);
 		for(int p = 0; p < 1009; p++) {
@@ -109,6 +107,16 @@ public class IMonDBWriterReaderIT {
 	}
 
 	@Test(expected = NullPointerException.class)
+	public void iMonDBReader_null() {
+		new IMonDBReader(null);
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void iMonDBWriter_null() {
+		new IMonDBWriter(null);
+	}
+
+	@Test(expected = NullPointerException.class)
 	public void writeInstrument_null() {
 		IMonDBWriter writer = new IMonDBWriter(emf);
 		writer.writeInstrument(null);
@@ -121,12 +129,17 @@ public class IMonDBWriterReaderIT {
 
 		IMonDBReader reader = new IMonDBReader(emf);
 		for(Instrument inst : instruments) {
-			Instrument instRead = reader.getInstrument(inst.getName(), false, true);
+			Instrument instRead = reader.getInstrument(inst.getName(), true, true);
 			assertNotNull(instRead);
 			// verify that the properties are the same
 			for(Iterator<Property> it = instRead.getPropertyIterator(); it.hasNext(); ) {
 				Property prop = it.next();
 				assertEquals(inst.getProperty(prop.getAccession()), prop);
+			}
+			// verify that the events are the same
+			for(Iterator<Event> it = instRead.getEventIterator(); it.hasNext(); ) {
+				Event event = it.next();
+				assertEquals(inst.getEvent(event.getDate()), event);
 			}
 		}
 	}
@@ -149,18 +162,6 @@ public class IMonDBWriterReaderIT {
 	public void writeEvent_noInstrument() {
 		IMonDBWriter writer = new IMonDBWriter(emf);
 		writer.writeOrUpdateEvent(instruments.get(0).getEventIterator().next());
-	}
-
-	@Test(expected = LazyInitializationException.class)
-	public void writeEvent_newLazyException() {
-		IMonDBWriter writer = new IMonDBWriter(emf);
-		writer.writeInstrument(instruments.get(0));
-
-		for(Iterator<Event> eventIt = instruments.get(0).getEventIterator(); eventIt.hasNext(); )
-			writer.writeOrUpdateEvent(eventIt.next());
-
-		IMonDBReader reader = new IMonDBReader(emf);
-		reader.getInstrument(instruments.get(0).getName(), false, false).getEventIterator().hasNext();
 	}
 
 	@Test
@@ -335,6 +336,100 @@ public class IMonDBWriterReaderIT {
 	}
 
 	@Test
+	public void getInstrument_noRun() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		writer.writeRun(instruments.get(0).getRunIterator().next());
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		Instrument instrument = reader.getInstrument(instruments.get(0).getName(), false, false);
+		assertNotNull(instrument);
+		assertFalse(instrument.getRunIterator().hasNext());
+		assertNull(instrument.getRun(instruments.get(0).getRunIterator().next().getSampleDate()));
+		Timestamp now = new Timestamp(new Date().getTime());
+		assertTrue(instrument.getRunRange(new Timestamp(1264978800000L), now).isEmpty());
+
+		Run run = new Run("run", "path", new Timestamp(now.getTime() - 10000), instrument);
+
+		assertTrue(instrument.getRunIterator().hasNext());
+		assertNotNull(instrument.getRun(run.getSampleDate()));
+		assertFalse(instrument.getRunRange(new Timestamp(1264978800000L), now).isEmpty());
+	}
+
+	@Test
+	public void getInstrument_excludeEvents() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		writer.writeRun(instruments.get(0).getRunIterator().next());
+		for(Iterator<Event> eventIt = instruments.get(0).getEventIterator(); eventIt.hasNext(); )
+			writer.writeOrUpdateEvent(eventIt.next());
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		Instrument instrument = reader.getInstrument(instruments.get(0).getName(), false, false);
+		assertNotNull(instrument);
+		assertFalse(instrument.getEventIterator().hasNext());
+		assertNull(instrument.getEvent(instruments.get(0).getEventIterator().next().getDate()));
+		Timestamp now = new Timestamp(new Date().getTime());
+		assertTrue(instrument.getEventRange(new Timestamp(1264978800000L), now).isEmpty());
+
+		Event event = new Event(instrument, new Timestamp(now.getTime() - 10000), EventType.UNDEFINED);
+
+		assertTrue(instrument.getEventIterator().hasNext());
+		assertNotNull(instrument.getEvent(event.getDate()));
+		assertFalse(instrument.getEventRange(new Timestamp(1264978800000L), now).isEmpty());
+	}
+
+	@Test
+	public void getInstrument_includeEvents() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		writer.writeRun(instruments.get(0).getRunIterator().next());
+		for(Iterator<Event> eventIt = instruments.get(0).getEventIterator(); eventIt.hasNext(); )
+			writer.writeOrUpdateEvent(eventIt.next());
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		Instrument instrument = reader.getInstrument(instruments.get(0).getName(), true, false);
+		assertNotNull(instrument);
+		assertTrue(instrument.getEventIterator().hasNext());
+		for(Iterator<Event> eventIt = instruments.get(0).getEventIterator(); eventIt.hasNext(); )
+			assertNotNull(instrument.getEvent(eventIt.next().getDate()));
+	}
+
+	@Test
+	public void getInstrument_excludeProperties() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		writer.writeRun(instruments.get(0).getRunIterator().next());
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		Instrument instrument = reader.getInstrument(instruments.get(0).getName(), false, false);
+		assertNotNull(instrument);
+		assertFalse(instrument.getPropertyIterator().hasNext());
+		assertNull(instrument.getProperty(instruments.get(0).getPropertyIterator().next().getAccession()));
+
+		Property property = new Property("property", "test", "accession", cvImon, true);
+		Run run = new Run("run", "path", new Timestamp(new Date().getTime()), instrument);
+		new ValueBuilder().setFirstValue("value").setDefiningProperty(property).setOriginatingRun(run).createValue();
+
+		assertTrue(instrument.getPropertyIterator().hasNext());
+		assertNotNull(instrument.getProperty("accession"));
+	}
+
+	@Test
+	public void getInstrument_includeProperties() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		writer.writeRun(instruments.get(0).getRunIterator().next());
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		Instrument instrument = reader.getInstrument(instruments.get(0).getName(), false, true);
+		assertNotNull(instrument);
+		assertTrue(instrument.getPropertyIterator().hasNext());
+		for(Iterator<Property> it = instruments.get(0).getPropertyIterator(); it.hasNext(); )
+			assertNotNull(instrument.getProperty(it.next().getAccession()));
+	}
+
+	@Test
 	public void getRun_nullRun() {
 		IMonDBWriter writer = new IMonDBWriter(emf);
 		writer.writeInstrument(instruments.get(0));
@@ -375,6 +470,30 @@ public class IMonDBWriterReaderIT {
 	}
 
 	@Test
+	public void getRun() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		writer.writeRun(instruments.get(0).getRunIterator().next());
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		Run run = reader.getRun(instruments.get(0).getRunIterator().next().getName(), instruments.get(0).getName());
+
+		assertNotNull(run);
+		assertNotNull(run.getInstrument());
+		assertEquals(run.getInstrument(), instruments.get(0));
+		for(Iterator<Value> it = instruments.get(0).getRunIterator().next().getValueIterator(); it.hasNext(); ) {
+			Property old = it.next().getDefiningProperty();
+
+			Value value = run.getValue(old);
+			assertNotNull(value);
+			assertNotNull(value.getDefiningProperty());
+			assertEquals(value.getDefiningProperty(), old);
+			assertFalse(value.getDefiningProperty().getValueIterator().hasNext());
+			assertEquals(run, value.getOriginatingRun());
+		}
+	}
+
+	@Test
 	public void getProperty_null() {
 		IMonDBWriter writer = new IMonDBWriter(emf);
 		writer.writeInstrument(instruments.get(0));
@@ -395,14 +514,94 @@ public class IMonDBWriterReaderIT {
 	}
 
 	@Test
+	public void getProperty() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+		writer.writeRun(instruments.get(0).getRunIterator().next());
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		for(Iterator<Value> it = instruments.get(0).getRunIterator().next().getValueIterator(); it.hasNext(); ) {
+			Value oldValue = it.next();
+			Property oldProp = oldValue.getDefiningProperty();
+
+			Property property = reader.getProperty(oldProp.getAccession());
+			Value value = property.getValue(oldValue.getOriginatingRun());
+
+			assertNotNull(property);
+			assertEquals(property, oldProp);
+			assertEquals(property, value.getDefiningProperty());
+
+			assertNotNull(value);
+			assertNotNull(value.getOriginatingRun());
+			assertEquals(value.getOriginatingRun(), oldValue.getOriginatingRun());
+			assertNotNull(value.getOriginatingRun().getInstrument());
+			assertEquals(value.getOriginatingRun().getInstrument(), oldValue.getOriginatingRun().getInstrument());
+		}
+	}
+
+	@Test
 	public void getFromCustomQuery_nullQuery() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+
 		IMonDBReader reader = new IMonDBReader(emf);
 		assertTrue(reader.getFromCustomQuery(null, Instrument.class).isEmpty());
 	}
 
 	@Test
 	public void getFromCustomQuery_nullClass() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+
 		IMonDBReader reader = new IMonDBReader(emf);
 		assertTrue(reader.getFromCustomQuery("SELECT inst FROM Instrument inst", null).isEmpty());
+	}
+
+	@Test
+	public void getFromCustomQuery_noParameters() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		List<Instrument> results = reader.getFromCustomQuery("SELECT inst FROM Instrument inst", Instrument.class);
+
+		assertFalse(results.isEmpty());
+	}
+
+	@Test
+	public void getFromCustomQuery_nullParameters() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		List<Instrument> results = reader.getFromCustomQuery("SELECT inst FROM Instrument inst", Instrument.class, null);
+
+		assertFalse(results.isEmpty());
+	}
+
+	@Test
+	public void getFromCustomQuery_emptyParameters() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		List<Instrument> results = reader.getFromCustomQuery("SELECT inst FROM Instrument inst", Instrument.class, new HashMap<>());
+
+		assertFalse(results.isEmpty());
+	}
+
+	@Test
+	public void getFromCustomQuery() {
+		IMonDBWriter writer = new IMonDBWriter(emf);
+		writer.writeInstrument(instruments.get(0));
+
+		IMonDBReader reader = new IMonDBReader(emf);
+		List<Instrument> results = reader.getFromCustomQuery("SELECT inst FROM Instrument inst", Instrument.class, new HashMap<>());
+
+		assertFalse(results.isEmpty());
+		Instrument instrument = results.get(0);
+		assertFalse(instrument.getRunIterator().hasNext());
+		assertFalse(instrument.getEventIterator().hasNext());
+		assertFalse(instrument.getPropertyIterator().hasNext());
 	}
 }

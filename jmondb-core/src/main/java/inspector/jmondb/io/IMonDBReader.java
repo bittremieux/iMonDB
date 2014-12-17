@@ -23,8 +23,6 @@ package inspector.jmondb.io;
 import inspector.jmondb.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hibernate.proxy.HibernateProxy;
-import org.hibernate.proxy.LazyInitializer;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -109,22 +107,8 @@ public class IMonDBReader {
             Instrument instrument = query.getSingleResult();
             LOGGER.debug("Instrument <{}> retrieved from the database", name);
 
-            // explicitly load all events if requested (lazy loading)
-            if(includeEvents) {
-                LOGGER.debug("Load all events for instrument <{}>", name);
-                for(Iterator<Event> it = instrument.getEventIterator(); it.hasNext(); ) {
-                    Event event = it.next();
-                    LOGGER.trace("Event <{}> retrieved", event.getDate());
-                }
-            }
-            // explicitly load all properties if requested (lazy loading)
-            if(includeProperties) {
-                LOGGER.debug("Load all properties assigned to instrument <{}>", name);
-                for(Iterator<Property> it = instrument.getPropertyIterator(); it.hasNext(); ) {
-                    Property property = it.next();
-                    LOGGER.trace("Property <{}> retrieved", property.getName());
-                }
-            }
+            // lazy-load the requested elements
+            instrument.initializeContainers(includeEvents, includeProperties);
 
             return instrument;
         } catch(NoResultException e) {
@@ -157,10 +141,7 @@ public class IMonDBReader {
             LOGGER.debug("Run <{}> retrieved from the database", runName);
 
             // explicitly load all values and associated properties (lazy loading)
-            LOGGER.debug("Load all values and associated properties from run <{}>", runName);
-            for(Iterator<Value> valIt = run.getValueIterator(); valIt.hasNext(); ) {
-                LOGGER.trace("Value and property <{}> retrieved", valIt.next().getDefiningProperty().getAccession());
-            }
+            run.initializeContainers();
 
             // explicitly load the run's instrument
             LOGGER.debug("Load the instrument on which run <{}> was performed", runName);
@@ -194,11 +175,12 @@ public class IMonDBReader {
             Property property = query.getSingleResult();
             LOGGER.debug("Property <{}> retrieved from the database", accession);
 
-            // explicitly retrieve all values and associated runs for the property
+            // explicitly retrieve all runs and instruments associated to a value for the property
+            property.initializeContainers();
             LOGGER.debug("Load all values and associated runs for property <{}>", accession);
             for(Iterator<Value> valIt = property.getValueIterator(); valIt.hasNext(); ) {
                 Run run = valIt.next().getOriginatingRun();
-                run.getInstrument().hashCode();
+                run.getInstrument().initializeContainers(false, false);
                 LOGGER.trace("Value and run <{}> retrieved", run.getName());
             }
 
@@ -266,22 +248,5 @@ public class IMonDBReader {
             LOGGER.debug("Unable to execute <null> query");
             return Collections.emptyList();
         }
-    }
-
-    private static <T> T deproxy(T obj) {
-        if(obj == null) {
-            return obj;
-        } else if(obj instanceof HibernateProxy) {
-            // unwrap proxy
-            HibernateProxy proxy = (HibernateProxy) obj;
-            LazyInitializer li = proxy.getHibernateLazyInitializer();
-            return (T) li.getImplementation();
-        } else {
-            return obj;
-        }
-    }
-
-    private static boolean isProxy(Object obj) {
-        return obj instanceof HibernateProxy;
     }
 }

@@ -20,8 +20,10 @@ package inspector.jmondb.model;
  * #L%
  */
 
+import com.google.common.collect.ImmutableSortedMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.Hibernate;
 import org.hibernate.annotations.SortNatural;
 import org.hibernate.proxy.HibernateProxyHelper;
 
@@ -159,7 +161,8 @@ public class Instrument {
      * @return the {@code Run} that was performed on this {@code Instrument} at the given time
      */
     public Run getRun(Timestamp time) {
-        return time != null ? runsPerformedOnInstrument.get(time) : null;
+        return time != null && Hibernate.isInitialized(runsPerformedOnInstrument) ?
+                runsPerformedOnInstrument.get(time) : null;
     }
 
     /**
@@ -168,7 +171,8 @@ public class Instrument {
      * @return an {@link Iterator} over all {@link Run}s that were performed on this {@code Instrument}
      */
     public Iterator<Run> getRunIterator() {
-        return runsPerformedOnInstrument.values().iterator();
+        return Hibernate.isInitialized(runsPerformedOnInstrument) ?
+                runsPerformedOnInstrument.values().iterator(): Collections.emptyIterator();
     }
 
     /**
@@ -184,7 +188,11 @@ public class Instrument {
      */
     public SortedMap<Timestamp, Run> getRunRange(Timestamp startTime, Timestamp stopTime) {
         if(startTime != null && stopTime != null) {
-            return runsPerformedOnInstrument.subMap(startTime, stopTime);
+            if(Hibernate.isInitialized(runsPerformedOnInstrument)) {
+                return runsPerformedOnInstrument.subMap(startTime, stopTime);
+            } else {
+                return ImmutableSortedMap.of();
+            }
         } else {
             if(startTime == null) {
                 LOGGER.error("The start time is not allowed to be <null>");
@@ -207,6 +215,9 @@ public class Instrument {
      */
     void addRun(Run run) {
         if(run != null) {
+            if(!Hibernate.isInitialized(runsPerformedOnInstrument)) {
+                runsPerformedOnInstrument = new TreeMap<>();
+            }
             runsPerformedOnInstrument.put(run.getSampleDate(), run);
         } else {
             LOGGER.error("Can't add a <null> run to the instrument");
@@ -221,7 +232,7 @@ public class Instrument {
      * @return the {@code Event} that occurred on this {@code Instrument} at the given time
      */
     public Event getEvent(Timestamp time) {
-        return time != null ? events.get(time) : null;
+        return time != null && Hibernate.isInitialized(events) ? events.get(time) : null;
     }
 
     /**
@@ -230,7 +241,7 @@ public class Instrument {
      * @return an {@link Iterator} over all {@link Event}s that occurred on this {@code Instrument}
      */
     public Iterator<Event> getEventIterator() {
-        return events.values().iterator();
+        return Hibernate.isInitialized(events) ? events.values().iterator() : Collections.emptyIterator();
     }
 
     /**
@@ -246,7 +257,11 @@ public class Instrument {
      */
     public SortedMap<Timestamp, Event> getEventRange(Timestamp startTime, Timestamp stopTime) {
         if(startTime != null && stopTime != null) {
-            return events.subMap(startTime, stopTime);
+            if(Hibernate.isInitialized(events)) {
+                return events.subMap(startTime, stopTime);
+            } else {
+                return ImmutableSortedMap.of();
+            }
         } else {
             if(startTime == null) {
                 LOGGER.error("The start time is not allowed to be <null>");
@@ -269,6 +284,9 @@ public class Instrument {
      */
     void addEvent(Event event) {
         if(event != null) {
+            if(!Hibernate.isInitialized(events)) {
+                events = new TreeMap<>();
+            }
             events.put(event.getDate(), event);
         } else {
             LOGGER.error("Can't add a <null> event to the instrument");
@@ -283,7 +301,7 @@ public class Instrument {
      * @return the {@code Property} with the given accession that was assigned to this {@code Instrument}
      */
     public Property getProperty(String accession) {
-        return accession != null ? properties.get(accession) : null;
+        return accession != null && Hibernate.isInitialized(properties) ? properties.get(accession) : null;
     }
 
     /**
@@ -292,7 +310,7 @@ public class Instrument {
      * @return an {@link Iterator} over all {@link Property}s that are assigned to this {@code Instrument}
      */
     public Iterator<Property> getPropertyIterator() {
-        return properties.values().iterator();
+        return Hibernate.isInitialized(properties) ? properties.values().iterator() : Collections.emptyIterator();
     }
 
     /**
@@ -306,10 +324,31 @@ public class Instrument {
      */
     void assignProperty(Property property) {
         if(property != null) {
+            if(!Hibernate.isInitialized(properties)) {
+                properties = new HashMap<>();
+            }
             properties.put(property.getAccession(), property);
         } else {
             LOGGER.error("Can't assign a <null> property to the instrument");
             throw new NullPointerException("Can't assign a <null> property to the instrument");
+        }
+    }
+
+    /**
+     * Explicitly initializes containers that are loaded lazily.
+     *
+     * Initializing the containers is only possible if the {@code Instrument} is still attached to the JPA session that was used to retrieve it from a database.
+     * Otherwise, this method has no effect.
+     *
+     * @param initializeEvents  indicates whether the {@link Event} container has to be initialized
+     * @param initializeProperties  indicates whether the {@link Property} container has to be initialized
+     */
+    public void initializeContainers(boolean initializeEvents, boolean initializeProperties) {
+        if(initializeEvents) {
+            events.size();
+        }
+        if(initializeProperties) {
+            properties.size();
         }
     }
 

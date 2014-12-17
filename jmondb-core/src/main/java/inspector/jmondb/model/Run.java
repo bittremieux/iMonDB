@@ -22,14 +22,12 @@ package inspector.jmondb.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.Hibernate;
 import org.hibernate.proxy.HibernateProxyHelper;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * A {@code Run} represents a single experimental run (signified by a single raw file), and can contain several {@link Value}s.
@@ -167,7 +165,7 @@ public class Run {
      * @return the {@code Value} that originates from this {@code Run} and that is defined by the given {@link Property} if it exists, {@code null} otherwise
      */
     public Value getValue(Property property) {
-        return property != null ? runValues.get(property) : null;
+        return property != null && Hibernate.isInitialized(runValues) ? runValues.get(property) : null;
     }
 
     /**
@@ -176,7 +174,7 @@ public class Run {
      * @return an {@code Iterator} over all {@code Value}s that originate from this {@code Run}
      */
     public Iterator<Value> getValueIterator() {
-        return runValues.values().iterator();
+        return Hibernate.isInitialized(runValues) ? runValues.values().iterator() : Collections.emptyIterator();
     }
 
     /**
@@ -190,6 +188,9 @@ public class Run {
      */
     void addValue(Value value) {
         if(value != null) {
+            if(!Hibernate.isInitialized(runValues)) {
+                runValues = new HashMap<>(DEFAULT_RUN_CAPACITY);
+            }
             // add the value to the run
             runValues.put(value.getDefiningProperty(), value);
             // add the value's defining property to the instrument
@@ -235,6 +236,16 @@ public class Run {
             LOGGER.error("Can't add <null> metadata to the run");
             throw new NullPointerException("Can't add <null> metadata to the run");
         }
+    }
+
+    /**
+     * Explicitly initializes containers that are loaded lazily.
+     *
+     * Initializing the containers is only possible if the {@code Run} is still attached to the JPA session that was used to retrieve it from a database.
+     * Otherwise, this method has no effect.
+     */
+    public void initializeContainers() {
+        runValues.size();
     }
 
     @Override
