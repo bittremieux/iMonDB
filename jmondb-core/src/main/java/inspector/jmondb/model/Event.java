@@ -94,6 +94,8 @@ public class Event {
      * @param type  the {@link EventType}
      */
     public Event(Instrument instrument, Timestamp date, EventType type) {
+        this();
+
         setDate(date);
         setType(type);
         setInstrument(instrument);

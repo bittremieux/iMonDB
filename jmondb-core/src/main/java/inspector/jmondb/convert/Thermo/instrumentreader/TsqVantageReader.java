@@ -45,9 +45,9 @@ public class TsqVantageReader extends DefaultInstrumentReader {
 
         if("\"".equals(line.substring(0, 1)) && blockHeader.length() > 0) {
             String result = blockHeader + " - " + line;
-            return new String(result.getBytes(EXE_TEXT_ENCODING), Charset.forName(EXE_TEXT_ENCODING));
+            return new String(result.getBytes(textEncoding), Charset.forName(textEncoding));
         } else {
-            return new String(line.getBytes(EXE_TEXT_ENCODING), Charset.forName(EXE_TEXT_ENCODING));
+            return new String(line.getBytes(textEncoding), Charset.forName(textEncoding));
         }
     }
 
@@ -55,6 +55,6 @@ public class TsqVantageReader extends DefaultInstrumentReader {
         String[] values = line.split("\t");
 
         String value = values.length > 1 ? values[1].trim() : "";
-        return new String[] { new String(values[0].getBytes(EXE_TEXT_ENCODING), Charset.forName(EXE_TEXT_ENCODING)), value };
+        return new String[] { new String(values[0].getBytes(textEncoding), Charset.forName(textEncoding)), value };
     }
 }

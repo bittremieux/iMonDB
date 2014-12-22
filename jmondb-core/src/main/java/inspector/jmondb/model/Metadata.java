@@ -65,6 +65,8 @@ public class Metadata {
     }
 
     public Metadata(String name, String value, Run run) {
+        this();
+
         setName(name);
         setValue(value);
         setRun(run);

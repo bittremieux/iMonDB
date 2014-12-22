@@ -96,7 +96,7 @@ public class ThermoRawFileExtractorIT {
 	@Test(expected = IllegalArgumentException.class)
 	public void extract_nonExistingFile() {
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		extractor.extractInstrumentData("non existing file", "run", "instrument");
+		extractor.extractInstrumentData("non existing file.raw", "run", "instrument");
 	}
 
 	@Test(expected = NullPointerException.class)

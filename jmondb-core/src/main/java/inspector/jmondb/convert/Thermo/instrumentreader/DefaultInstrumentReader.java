@@ -24,10 +24,10 @@ import java.io.UnsupportedEncodingException;
 
 public class DefaultInstrumentReader implements InstrumentReader {
 
-    protected final String EXE_TEXT_ENCODING;
+    protected final String textEncoding;
 
     public DefaultInstrumentReader(String encoding) {
-        EXE_TEXT_ENCODING = encoding;
+        textEncoding = encoding;
     }
 
     public boolean isHeader(String line) {

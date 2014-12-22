@@ -72,6 +72,11 @@ public class PropertyTest {
 		new Property("name", "test", "accession", null, true);
 	}
 
+	@Test(expected = NullPointerException.class)
+	public void setNumeric_null() {
+		new Property("name", "test", "accession", cv, null);
+	}
+
 	@Test
 	public void getValue_null() {
 		assertNull(property.getValue(null));

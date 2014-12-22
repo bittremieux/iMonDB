@@ -42,7 +42,7 @@ public class QExactiveReader extends DefaultInstrumentReader {
 
     public String getHeader(String line, String oldHeader) throws UnsupportedEncodingException {
         String result = line.substring(line.indexOf(' '), line.indexOf(':')).trim();
-        return new String(result.getBytes(EXE_TEXT_ENCODING), Charset.forName(EXE_TEXT_ENCODING));
+        return new String(result.getBytes(textEncoding), Charset.forName(textEncoding));
     }
 
     public String[] getNameAndValue(String line) throws UnsupportedEncodingException {
@@ -54,6 +54,6 @@ public class QExactiveReader extends DefaultInstrumentReader {
         }
         String value = values.length > 1 ? values[1].trim() : "";
 
-        return new String[] { new String(name.getBytes(EXE_TEXT_ENCODING), Charset.forName(EXE_TEXT_ENCODING)), value };
+        return new String[] { new String(name.getBytes(textEncoding), Charset.forName(textEncoding)), value };
     }
 }

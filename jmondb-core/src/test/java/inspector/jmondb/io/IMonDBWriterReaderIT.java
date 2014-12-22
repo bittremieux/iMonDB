@@ -20,6 +20,7 @@ package inspector.jmondb.io;
  * #L%
  */
 
+import com.google.common.collect.ImmutableMap;
 import inspector.jmondb.model.*;
 import org.junit.After;
 import org.junit.Before;
@@ -692,10 +693,14 @@ public class IMonDBWriterReaderIT {
 		writer.writeInstrument(instruments.get(0));
 
 		IMonDBReader reader = new IMonDBReader(emf);
-		List<Instrument> results = reader.getFromCustomQuery("SELECT inst FROM Instrument inst", Instrument.class, new HashMap<>());
+		Map<String, String> params = ImmutableMap.of("name", "instrument_0");
+		List<Instrument> results = reader.getFromCustomQuery("SELECT inst FROM Instrument inst WHERE inst.name = :name", Instrument.class, params);
 
-		assertFalse(results.isEmpty());
+		assertEquals(1, results.size());
+
 		Instrument instrument = results.get(0);
+		assertEquals(instruments.get(0), instrument);
+
 		assertFalse(instrument.getRunIterator().hasNext());
 		assertFalse(instrument.getEventIterator().hasNext());
 		assertFalse(instrument.getPropertyIterator().hasNext());

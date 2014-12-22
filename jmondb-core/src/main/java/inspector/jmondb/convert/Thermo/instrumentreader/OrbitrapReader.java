@@ -44,7 +44,7 @@ public class OrbitrapReader extends DefaultInstrumentReader {
 
     @Override
     public String getHeader(String line, String oldHeader) throws UnsupportedEncodingException {
-        return new String(line.trim().getBytes(EXE_TEXT_ENCODING), Charset.forName(EXE_TEXT_ENCODING));
+        return new String(line.trim().getBytes(textEncoding), Charset.forName(textEncoding));
     }
 
     @Override
@@ -55,6 +55,6 @@ public class OrbitrapReader extends DefaultInstrumentReader {
         name = name.substring(0, name.lastIndexOf(':'));
         String value = values.length > 1 ? values[1].trim() : "";
 
-        return new String[] { new String(name.getBytes(EXE_TEXT_ENCODING), Charset.forName(EXE_TEXT_ENCODING)), value };
+        return new String[] { new String(name.getBytes(textEncoding), Charset.forName(textEncoding)), value };
     }
 }

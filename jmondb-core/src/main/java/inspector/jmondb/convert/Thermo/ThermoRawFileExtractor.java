@@ -69,7 +69,7 @@ public class ThermoRawFileExtractor {
     /** properties containing a list of value names that have to be excluded */
     private PropertiesConfiguration exclusionProperties;
 
-    private final static String EXE_TEXT_ENCODING = "Cp1252";
+    private static final String EXE_TEXT_ENCODING = "Cp1252";
 
     //TODO: correctly specify the used cv
     //TODO: maybe we can even re-use some terms from the PSI-MS cv?
