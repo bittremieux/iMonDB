@@ -12,7 +12,7 @@
 	<groupId>inspector.jmondb.jmondb-core</groupId>
 	<artifactId>jmondb-core</artifactId>
 	<packaging>jar</packaging>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 
     <name>jMonDB Core</name>
     <description>The jMonDB core API</description>
