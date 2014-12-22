@@ -23,6 +23,7 @@ package inspector.jmondb.convert.thermo;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import inspector.jmondb.convert.RawFileMetadata;
+import inspector.jmondb.convert.thermo.instrumentreader.*;
 import inspector.jmondb.model.*;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
@@ -67,6 +68,8 @@ public class ThermoRawFileExtractor {
 
     /** properties containing a list of value names that have to be excluded */
     private PropertiesConfiguration exclusionProperties;
+
+    private final static String EXE_TEXT_ENCODING = "Cp1252";
 
     //TODO: correctly specify the used cv
     //TODO: maybe we can even re-use some terms from the PSI-MS cv?
@@ -270,7 +273,7 @@ public class ThermoRawFileExtractor {
 
         try {
             // read the CLI output data
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), Charset.forName("Cp1252")));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), Charset.forName(EXE_TEXT_ENCODING)));
 
             // the first line contains the experiment date
             Timestamp date = readDate(reader);
@@ -318,10 +321,10 @@ public class ThermoRawFileExtractor {
 
         try {
             // read the CLI output data
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), Charset.forName("Cp1252")));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), Charset.forName(EXE_TEXT_ENCODING)));
 
             // read all the raw values
-            Table<String, String, ArrayList<String>> rawValues = readRawValues(reader, model);
+            Table<String, String, ArrayList<String>> rawValues = readRawValues(reader, getInstrumentReader(model));
 
             // make sure the process has finished
             process.waitFor();
@@ -341,6 +344,33 @@ public class ThermoRawFileExtractor {
             LOGGER.error("Error while extracting the raw file: {}", e.getMessage());
             throw new IllegalStateException("Error while extracting the raw file: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Creates an {@link InstrumentReader} for the given {@link InstrumentModel}.
+     *
+     * @param model  the {@code InstrumentModel} for which an {@code InstrumentReader} is created
+     * @return the {@code InstrumentReader} for the given {@code InstrumentModel}
+     */
+    private InstrumentReader getInstrumentReader(InstrumentModel model) {
+        switch(model) {
+            case THERMO_LTQ:
+            case THERMO_LTQ_ORBITRAP:
+            case THERMO_ORBITRAP_XL:
+            case THERMO_LTQ_VELOS:
+            case THERMO_ORBITRAP_VELOS:
+                return new OrbitrapReader(EXE_TEXT_ENCODING);
+            case THERMO_TSQ_VANTAGE:
+                return new TsqVantageReader(EXE_TEXT_ENCODING);
+            case THERMO_Q_EXACTIVE:
+                return new QExactiveReader(EXE_TEXT_ENCODING);
+            case THERMO_ORBITRAP_FUSION:
+                return new FusionReader(EXE_TEXT_ENCODING);
+            case UNKNOWN_MODEL:
+            default:
+                return new DefaultInstrumentReader(EXE_TEXT_ENCODING);
+        }
+
     }
 
     /**
@@ -400,10 +430,10 @@ public class ThermoRawFileExtractor {
      * Reads the instrument data from the given reader.
      *
      * @param reader  a {@link BufferedReader} to read the instrument data, not {@code null}
-     * @param model  the mass spectrometer {@link InstrumentModel}, not {@code null}
+     * @param instrumentReader  an {@link InstrumentReader} used to parse the instrument settings
      * @return a {@link Table} with as key a possible header and the property name, and a list of values for each property
      */
-    private Table<String, String, ArrayList<String>> readRawValues(BufferedReader reader, InstrumentModel model) {
+    private Table<String, String, ArrayList<String>> readRawValues(BufferedReader reader, InstrumentReader instrumentReader) {
         try {
             Table<String, String, ArrayList<String>> data = HashBasedTable.create();
 
@@ -415,12 +445,12 @@ public class ThermoRawFileExtractor {
                 if(isSeparator(line)) {
                     // reset header
                     header = "";
-                } else if(isHeader(line, model)) {
+                } else if(instrumentReader.isHeader(line)) {
                     // get the header
-                    header = getHeader(line.trim(), header, model);
+                    header = instrumentReader.getHeader(line.trim(), header);
                 } else {
                     // extract the value
-                    String[] nameValue = getNameAndValue(line.trim(), model);
+                    String[] nameValue = instrumentReader.getNameAndValue(line.trim());
 
                     // save the value
                     if(!data.contains(header, nameValue[0])) {
@@ -438,139 +468,14 @@ public class ThermoRawFileExtractor {
         }
     }
 
+    /**
+     * Specifies whether the line indicates a separator (i.e. to indicate a new scan or a new segment).
+     *
+     * @param line  the line that will be checked for being a separator
+     * @return  {@code true} if the line indicates a separator, {@code false} if not
+     */
     private boolean isSeparator(String line) {
         return line.trim().isEmpty() || line.startsWith("--END_OF_");
-    }
-
-    private boolean isHeader(String line, InstrumentModel model) {
-        String[] lineSplit = line.split("\t");
-
-        if(lineSplit.length > 1) {
-            return false;
-        } else {
-            switch(model) {
-                case THERMO_LTQ:
-                case THERMO_LTQ_ORBITRAP:
-                case THERMO_ORBITRAP_XL:
-                case THERMO_LTQ_VELOS:
-                case THERMO_ORBITRAP_VELOS:
-                    return isHeaderOrbitrap(lineSplit[0]);
-                case THERMO_TSQ_VANTAGE:
-                    return isHeaderTsqVantage(lineSplit[0]);
-                case THERMO_Q_EXACTIVE:
-                    return isHeaderQExactive(lineSplit[0]);
-                case THERMO_ORBITRAP_FUSION:
-                    return isHeaderOrbitrapFusion(lineSplit[0]);
-                case UNKNOWN_MODEL:
-                default:
-                    return false;
-            }
-        }
-    }
-
-    private boolean isHeaderOrbitrap(String line) {
-        return !line.contains(":");
-    }
-
-    @SuppressWarnings("unused")
-    private boolean isHeaderTsqVantage(String line) {
-        return true;
-    }
-
-    private boolean isHeaderQExactive(String line) {
-        return line.contains("===");
-    }
-
-    private boolean isHeaderOrbitrapFusion(String line) {
-        return !line.contains(":");
-    }
-
-    private String getHeader(String line, String oldHeader, InstrumentModel model) throws UnsupportedEncodingException {
-        switch(model) {
-            case THERMO_LTQ:
-            case THERMO_LTQ_ORBITRAP:
-            case THERMO_ORBITRAP_XL:
-            case THERMO_LTQ_VELOS:
-            case THERMO_ORBITRAP_VELOS:
-                return headerOrbitrap(line);
-            case THERMO_TSQ_VANTAGE:
-                return headerTsqVantage(line, oldHeader);
-            case THERMO_Q_EXACTIVE:
-                return headerQExactive(line);
-            case THERMO_ORBITRAP_FUSION:
-                return headerOrbitrapFusion(line, oldHeader);
-            case UNKNOWN_MODEL:
-            default:
-                return line;
-        }
-    }
-
-    private String headerOrbitrap(String header) throws UnsupportedEncodingException {
-        return new String(header.trim().getBytes("Cp1252"), Charset.forName("Cp1252"));
-    }
-
-    private String headerTsqVantage(String newHeader, String oldHeader) throws UnsupportedEncodingException {
-        String blockHeader = oldHeader.contains("-") ? oldHeader.substring(0, oldHeader.indexOf('-')).trim() : oldHeader;
-
-        if("\"".equals(newHeader.substring(0, 1)) && blockHeader.length() > 0) {
-            String result = blockHeader + " - " + newHeader;
-            return new String(result.getBytes("Cp1252"), Charset.forName("Cp1252"));
-        } else {
-            return new String(newHeader.getBytes("Cp1252"), Charset.forName("Cp1252"));
-        }
-    }
-
-    private String headerQExactive(String header) throws UnsupportedEncodingException {
-        String result = header.substring(header.indexOf(' '), header.indexOf(':')).trim();
-        return new String(result.getBytes("Cp1252"), Charset.forName("Cp1252"));
-    }
-
-    private String headerOrbitrapFusion(String newHeader, String oldHeader) throws UnsupportedEncodingException {
-        return newHeader.contains(":") ? oldHeader : new String(newHeader.trim().getBytes("Cp1252"), Charset.forName("Cp1252"));
-    }
-
-    private String[] getNameAndValue(String line, InstrumentModel model) throws UnsupportedEncodingException {
-        String[] values = line.split("\t");
-
-        switch(model) {
-            case THERMO_LTQ:
-            case THERMO_LTQ_ORBITRAP:
-            case THERMO_ORBITRAP_XL:
-            case THERMO_LTQ_VELOS:
-            case THERMO_ORBITRAP_VELOS:
-                return valueOrbitrap(values);
-            case THERMO_TSQ_VANTAGE:
-                return valueTsqVantage(values);
-            case THERMO_Q_EXACTIVE:
-            case THERMO_ORBITRAP_FUSION:
-                return valueQExactiveFusion(values);
-            case UNKNOWN_MODEL:
-            default:
-                return values;
-        }
-    }
-
-    private String[] valueOrbitrap(String[] line) throws UnsupportedEncodingException {
-        String name = line[0].trim();
-        name = name.substring(0, name.lastIndexOf(':'));
-        String value = line.length > 1 ? line[1].trim() : "";
-
-        return new String[] { new String(name.getBytes("Cp1252"), Charset.forName("Cp1252")), value };
-    }
-
-    private String[] valueTsqVantage(String[] line) throws UnsupportedEncodingException {
-        String value = line.length > 1 ? line[1].trim() : "";
-        return new String[] { new String(line[0].getBytes("Cp1252"), Charset.forName("Cp1252")), value };
-    }
-
-    private String[] valueQExactiveFusion(String[] line) throws UnsupportedEncodingException {
-        String name = line[0].trim();
-        if(name.contains(":")) {
-            name = name.substring(0, name.lastIndexOf(':'));
-        }
-        String value = line.length > 1 ? line[1].trim() : "";
-
-        return new String[] { new String(name.getBytes("Cp1252"), Charset.forName("Cp1252")), value };
     }
 
     /**
