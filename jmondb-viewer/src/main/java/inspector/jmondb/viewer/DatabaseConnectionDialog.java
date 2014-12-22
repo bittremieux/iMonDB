@@ -1,6 +1,27 @@
 package inspector.jmondb.viewer;
 
+/*
+ * #%L
+ * jMonDB Viewer
+ * %%
+ * Copyright (C) 2014 InSPECtor
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import javax.swing.*;
+import java.awt.*;
 
 public class DatabaseConnectionDialog extends JPanel {
 
@@ -46,6 +67,16 @@ public class DatabaseConnectionDialog extends JPanel {
 		SpringUtilities.makeCompactGrid(this, 5, 2, 6, 6, 6, 6);
 	}
 
+	public DatabaseConnectionDialog(String host, String port, String username, String password, String database) {
+		this();
+
+		textFieldHost.setText(host);
+		textFieldPort.setText(port);
+		textFieldUser.setText(username);
+		passwordField.setText(password);
+		textFieldDatabase.setText(database);
+	}
+
 	public String getHost() {
 		return textFieldHost.getText();
 	}
@@ -64,5 +95,19 @@ public class DatabaseConnectionDialog extends JPanel {
 
 	public String getDatabase() {
 		return textFieldDatabase.getText();
+	}
+
+	@Override
+	public void setEnabled(boolean enabled) {
+		super.setEnabled(enabled);
+		this.setEnabledRecursive(this, enabled);
+	}
+
+	protected void setEnabledRecursive(Component component, boolean enabled) {
+		if(component instanceof Container) {
+			for(Component child : ((Container) component).getComponents()) {
+				child.setEnabled(enabled);
+			}
+		}
 	}
 }

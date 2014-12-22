@@ -1,6 +1,26 @@
 package inspector.jmondb.io;
 
-import inspector.jmondb.convert.Thermo.ThermoRawFileExtractor;
+/*
+ * #%L
+ * jMonDB Core
+ * %%
+ * Copyright (C) 2014 InSPECtor
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
+import inspector.jmondb.convert.thermo.ThermoRawFileExtractor;
 import inspector.jmondb.model.CV;
 import inspector.jmondb.model.Instrument;
 import inspector.jmondb.model.InstrumentModel;
@@ -11,18 +31,21 @@ import org.junit.Test;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
-
-import java.io.*;
+import java.io.File;
 
 import static org.junit.Assert.assertEquals;
 
-public class ThermoRawFileExtractorTest {
+public class ThermoRawFileExtractorIT {
+
+	private static final String PORT = System.getProperty("mysql.port");
 
 	private EntityManagerFactory emf;
 
 	@Before
 	public void setUp() {
-		emf = IMonDBManagerFactory.createMySQLFactory(null, null, "iMonDBtest", "iMonDB", "iMonDB");
+		System.clearProperty("exclusion.properties");
+
+		emf = IMonDBManagerFactory.createMySQLFactory("localhost", PORT, "root", "root", "root");
 	}
 
 	@After
@@ -44,6 +67,48 @@ public class ThermoRawFileExtractorTest {
 		em.getTransaction().commit();
 
 		emf.close();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void init_nonExistingExclusionProperties() {
+		System.setProperty("exclusion.properties", "non/existing/file");
+		new ThermoRawFileExtractor();
+	}
+
+	@Test
+	public void init_existingExclusionProperties() {
+		System.setProperty("exclusion.properties", getClass().getResource("/exclusion.properties").getFile());
+		new ThermoRawFileExtractor();
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void extract_nullFile() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData(null, "run", "instrument");
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void extract_nonRawFile() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData(new File(getClass().getResource("/attachment.jpg").getFile()).getAbsolutePath(), "run", "instrument");
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void extract_nonExistingFile() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData("non existing file.raw", "run", "instrument");
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void extract_illegalRawFile() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData(new File(getClass().getResource("/IllegalFile.raw").getFile()).getAbsolutePath(), null, null);
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void extract_nullInstrument() {
+		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+		extractor.extractInstrumentData(new File(getClass().getResource("/LtqOrbitrap.raw").getFile()).getAbsolutePath(), null, null);
 	}
 
 	@Test

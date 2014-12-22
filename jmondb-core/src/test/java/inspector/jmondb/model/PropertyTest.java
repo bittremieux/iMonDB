@@ -1,5 +1,25 @@
 package inspector.jmondb.model;
 
+/*
+ * #%L
+ * jMonDB Core
+ * %%
+ * Copyright (C) 2014 InSPECtor
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -7,9 +27,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 public class PropertyTest {
 
@@ -32,6 +50,31 @@ public class PropertyTest {
 			runs.add(run);
 			new ValueBuilder().setFirstValue(Double.toString(Math.random() * 1000)).setDefiningProperty(property).setOriginatingRun(run).createValue();
 		}
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void setName_null() {
+		new Property(null, "test", "accession", cv, true);
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void setType_null() {
+		new Property("name", null, "accession", cv, true);
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void setAccession_null() {
+		new Property("name", "test", null, cv, true);
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void setCv_null() {
+		new Property("name", "test", "accession", null, true);
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void setNumeric_null() {
+		new Property("name", "test", "accession", cv, null);
 	}
 
 	@Test
@@ -75,5 +118,25 @@ public class PropertyTest {
 		new ValueBuilder().setFirstValue(Double.toString(Math.random()*1000)).setDefiningProperty(property).setOriginatingRun(run).createValue();
 
 		assertNotNull(property.getValue(run));
+	}
+
+	@Test
+	public void equals() {
+		Property propertyName = new Property("other name", "test", "accession", cv, true);
+		Property propertyType = new Property("property", "other type", "accession", cv, true);
+		Property propertyAccession = new Property("property", "test", "other accession", cv, true);
+		Property propertyCv = new Property("property", "test", "accession", new CV("other cv", "cv", "uri", "1"), true);
+		Property propertyNumeric = new Property("property", "test", "accession", cv, false);
+		Property propertyIdentical = new Property("property", "test", "accession", cv, true);
+
+		assertEquals(property, property);
+		assertNotEquals(property, null);
+		assertNotEquals(property, new Object());
+		assertNotEquals(property, propertyName);
+		assertNotEquals(property, propertyType);
+		assertNotEquals(property, propertyAccession);
+		assertNotEquals(property, propertyCv);
+		assertNotEquals(property, propertyNumeric);
+		assertEquals(property, propertyIdentical);
 	}
 }

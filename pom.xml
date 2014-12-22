@@ -11,6 +11,12 @@
 	<name>jMonDB</name>
 	<url>https://bitbucket.org/proteinspector/jmondb</url>
 	<description>jMonDB is a Java API and a collection of helper tools to work with an iMonDB.</description>
+    <inceptionYear>2014</inceptionYear>
+
+    <organization>
+        <name>InSPECtor</name>
+        <url>http://www.proteinspector.com/</url>
+    </organization>
 
 	<!-- License -->
 	<licenses>

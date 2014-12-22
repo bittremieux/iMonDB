@@ -1,4 +1,4 @@
-package inspector.jmondb.model;
+package inspector.jmondb.convert.thermo.instrumentreader;
 
 /*
  * #%L
@@ -20,33 +20,25 @@ package inspector.jmondb.model;
  * #L%
  */
 
-public enum EventType {
+import java.io.UnsupportedEncodingException;
 
-    UNDEFINED("undefined"),
-    CALIBRATION("calibration"),
-    MAINTENANCE("maintenance"),
-    INCIDENT("incident");
+public class DefaultInstrumentReader implements InstrumentReader {
 
-    private final String type;
+    protected final String textEncoding;
 
-    EventType(String type) {
-        this.type = type;
+    public DefaultInstrumentReader(String encoding) {
+        textEncoding = encoding;
     }
 
-    @Override
-    public String toString() {
-        return type;
+    public boolean isHeader(String line) {
+        return false;
     }
 
-    public static EventType fromString(String text) {
-        if(text != null) {
-            for(EventType event : values()) {
-                if(text.equals(event.toString())) {
-                    return event;
-                }
-            }
-        }
+    public String getHeader(String line, String oldHeader) throws UnsupportedEncodingException {
+        return line;
+    }
 
-        return null;
+    public String[] getNameAndValue(String line) throws UnsupportedEncodingException {
+        return line.split("\t");
     }
 }
