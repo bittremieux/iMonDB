@@ -1,6 +1,7 @@
 package inspector.jmondb.viewer.controller.listeners;
 
 import inspector.jmondb.viewer.controller.DatabaseController;
+import inspector.jmondb.viewer.controller.SearchSettingsController;
 import inspector.jmondb.viewer.view.gui.DatabaseConnectionPanel;
 import inspector.jmondb.viewer.view.gui.ViewerFrame;
 
@@ -14,9 +15,13 @@ public class DatabaseConnectListener implements ActionListener {
 
     private DatabaseController databaseController;
 
-    public DatabaseConnectListener(ViewerFrame viewerFrame, DatabaseController databaseController) {
+    private SearchSettingsController searchSettingsController;
+
+    public DatabaseConnectListener(ViewerFrame viewerFrame, DatabaseController databaseController,
+                                   SearchSettingsController searchSettingsController) {
         this.viewerFrame = viewerFrame;
         this.databaseController = databaseController;
+        this.searchSettingsController = searchSettingsController;
     }
 
     @Override
@@ -34,9 +39,20 @@ public class DatabaseConnectListener implements ActionListener {
                 viewerFrame.getDatabasePanel().setConnected(connectionPanel.getHost(),
                         connectionPanel.getDatabase(), connectionPanel.getUserName());
 
+                // enable graph advance buttons
+                viewerFrame.getGraphPanel().setNextButtonEnabled(searchSettingsController.hasNextProperty());
+                viewerFrame.getGraphPanel().setPreviousButtonEnabled(searchSettingsController.hasPreviousProperty());
+
             } catch(Exception ex) {
                 // something went wrong, disconnect to free up the resources
                 databaseController.disconnect();
+
+                // indicate not connected status
+                viewerFrame.getDatabasePanel().setNotConnected();
+
+                // disable graph advance buttons
+                viewerFrame.getGraphPanel().setNextButtonEnabled(false);
+                viewerFrame.getGraphPanel().setPreviousButtonEnabled(false);
 
                 JOptionPane.showMessageDialog(viewerFrame.getFrame(),
                         "<html><b>Could not connect to the database</b></html>\n" + ex.getMessage(),

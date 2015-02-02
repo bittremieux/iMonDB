@@ -127,12 +127,20 @@ public class ViewerFrame {
         buttonShowGraph.addActionListener(listener);
     }
 
+    public void addGraphAdvancer(ActionListener listener) {
+        panelGraph.addGraphAdvancer(listener);
+    }
+
     public void addGraphSaver(ActionListener listener) {
         menuItemSaveGraph.addActionListener(listener);
     }
 
     public void addInstrumentChangeListener(ActionListener listener) {
         propertySelectionPanel.addInstrumentChangeListener(listener);
+    }
+
+    public void addPropertyChangeListener(ActionListener listener) {
+        propertySelectionPanel.addPropertyChangeListener(listener);
     }
 
     public void addEventCheckBoxListener(ItemListener listener) {

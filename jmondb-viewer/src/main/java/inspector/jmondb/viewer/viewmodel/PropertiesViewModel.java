@@ -39,4 +39,16 @@ public class PropertiesViewModel {
     public String getActivePropertyAccession() {
         return propertySelectionPanel.getSelectedPropertyAccession();
     }
+
+    public boolean hasNext() {
+        return propertySelectionPanel.hasNext();
+    }
+
+    public boolean hasPrevious() {
+        return propertySelectionPanel.hasPrevious();
+    }
+
+    public void advanceProperty(boolean forward) {
+        propertySelectionPanel.advanceProperty(forward);
+    }
 }

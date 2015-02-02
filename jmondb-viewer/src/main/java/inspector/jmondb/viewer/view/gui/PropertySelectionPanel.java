@@ -60,6 +60,22 @@ public class PropertySelectionPanel {
         return ((PropertyComboBoxItem) comboBoxProperty.getSelectedItem()).getAccession();
     }
 
+    public boolean hasNext() {
+        return comboBoxProperty.getSelectedIndex() < comboBoxProperty.getItemCount() - 1;
+    }
+
+    public boolean hasPrevious() {
+        return comboBoxProperty.getSelectedIndex() > 0;
+    }
+
+    public void advanceProperty(boolean forward) {
+        if(forward && hasNext()) {
+            comboBoxProperty.setSelectedIndex(comboBoxProperty.getSelectedIndex() + 1);
+        } else if(!forward && hasPrevious()) {
+            comboBoxProperty.setSelectedIndex(comboBoxProperty.getSelectedIndex() - 1);
+        }
+    }
+
     public void clearInstruments() {
         comboBoxInstrument.removeAllItems();
     }
@@ -70,6 +86,10 @@ public class PropertySelectionPanel {
 
     public void addInstrumentChangeListener(ActionListener listener) {
         comboBoxInstrument.addActionListener(listener);
+    }
+
+    public void addPropertyChangeListener(ActionListener listener) {
+        comboBoxProperty.addActionListener(listener);
     }
 
     public void addAdvancedSearchListener(ActionListener listener) {

@@ -34,6 +34,18 @@ public class SearchSettingsController {
         propertiesViewModel.setPropertyFilter(null);
     }
 
+    public boolean hasNextProperty() {
+        return propertiesViewModel.hasNext();
+    }
+
+    public boolean hasPreviousProperty() {
+        return propertiesViewModel.hasPrevious();
+    }
+
+    public void advanceProperty(boolean forward) {
+        propertiesViewModel.advanceProperty(forward);
+    }
+
     public void clearMetadata() {
         metadataViewModel.clearAll();
     }

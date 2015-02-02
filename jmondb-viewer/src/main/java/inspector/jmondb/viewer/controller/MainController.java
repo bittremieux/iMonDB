@@ -38,14 +38,16 @@ public class MainController {
         viewer.addExitAction(new ExitAction(databaseController));
         viewer.addAboutDisplayer(new AboutListener(viewer));
 
-        viewer.addDatabaseConnector(new DatabaseConnectListener(viewer, databaseController));
+        viewer.addDatabaseConnector(new DatabaseConnectListener(viewer, databaseController, searchSettingsController));
         viewer.addDatabaseDisconnector(new DatabaseDisconnectListener(viewer, databaseController));
 
         viewer.addGraphDisplayer(new GraphShowListener(viewer, graphController));
+        viewer.addGraphAdvancer(new GraphAdvanceListener(viewer, searchSettingsController, graphController));
         viewer.addGraphSaver(new GraphSaveListener(viewer));
 
         viewer.addInstrumentChangeListener(new InstrumentChangeListener(
                 searchSettingsController, eventController, graphController));
+        viewer.addPropertyChangeListener(new PropertyChangeListener(viewer, searchSettingsController));
         viewer.addEventCheckBoxListener(new EventCategoryDisplayer(viewer, graphController));
 
         viewer.addEventCreator(new EventCreateListener(viewer, instrumentsViewModel, eventController));

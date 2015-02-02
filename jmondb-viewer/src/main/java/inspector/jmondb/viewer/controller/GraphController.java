@@ -65,16 +65,22 @@ public class GraphController {
 
     public void clear() {
         graphPanel.clearChart();
+        graphPanel.setTitle("");
+
+        // disable graph advance buttons
+        graphPanel.setNextButtonEnabled(false);
+        graphPanel.setPreviousButtonEnabled(false);
     }
 
     public void display(JFreeChart chart) {
         chart.setTitle(propertiesViewModel.getActivePropertyName());
         graphPanel.displayChart(chart);
+        graphPanel.setTitle(propertiesViewModel.getActivePropertyName());
     }
 
     public void displayEvents() {
-        if(graphPanel.getPanel().getChart() != null) {
-            ((XYPlot) graphPanel.getPanel().getChart().getPlot()).clearDomainMarkers();
+        if(graphPanel.getChartPanel().getChart() != null) {
+            ((XYPlot) graphPanel.getChartPanel().getChart().getPlot()).clearDomainMarkers();
 
             for(EventType type : eventsViewModel.getDisplayedEventTypes()) {
                 displayEventCategory(type, true);
@@ -83,8 +89,8 @@ public class GraphController {
     }
 
     public void displayEventCategory(EventType type, boolean display) {
-        if(graphPanel.getPanel().getChart() != null) {
-            XYPlot plot = (XYPlot) graphPanel.getPanel().getChart().getPlot();
+        if(graphPanel.getChartPanel().getChart() != null) {
+            XYPlot plot = (XYPlot) graphPanel.getChartPanel().getChart().getPlot();
             Collection activeMarkers = plot.getDomainMarkers(Layer.FOREGROUND);
 
             for(ValueMarker marker : eventsViewModel.getMarkers().getMarkers(type)) {

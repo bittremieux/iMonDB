@@ -17,12 +17,12 @@ public class GraphSaveListener implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if(viewerFrame.getGraphPanel().getPanel().getChart() != null) {
+        if(viewerFrame.getGraphPanel().getChartPanel().getChart() != null) {
             Thread graphSaver = new Thread() {
                 @Override
                 public void run() {
                     try {
-                        viewerFrame.getGraphPanel().getPanel().doSaveAs();
+                        viewerFrame.getGraphPanel().getChartPanel().doSaveAs();
                     } catch(IOException ex) {
                         JOptionPane.showMessageDialog(viewerFrame.getFrame(),
                                 "<html><b>Could not save the graph</b></html>\n" + ex.getMessage(),
