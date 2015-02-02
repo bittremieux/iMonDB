@@ -1,4 +1,4 @@
-package inspector.jmondb.viewer;
+package inspector.jmondb.viewer.view.gui;
 
 /*
  * #%L
@@ -29,9 +29,9 @@ import java.net.URISyntaxException;
 import java.util.concurrent.ExecutionException;
 
 /**
- * Adapted from https://stackoverflow.com/questions/527719/how-to-add-hyperlink-in-jlabel/8387251#8387251
+ * Adapted from: https://stackoverflow.com/a/8387251
  */
-public class JLabelLink extends JPanel {
+public class JLabelLink {
 
 	private static final String A_HREF = "<a href=\"";
 	private static final String HREF_CLOSED = "\">";
@@ -39,21 +39,30 @@ public class JLabelLink extends JPanel {
 	private static final String HTML = "<html>";
 	private static final String HTML_END = "</html>";
 
+	private JPanel panel;
+
 	public JLabelLink(String textBefore, String textLink, String link, String textAfter) {
+		panel = new JPanel();
+
 		if(textBefore != null) {
 			JLabel labelBefore = new JLabel(textBefore);
-			add(labelBefore);
+			panel.add(labelBefore);
 		}
 
 		JLabel labelLink = new JLabel(textLink);
-		add(labelLink);
-		if(isBrowsingSupported())
+		panel.add(labelLink);
+		if(isBrowsingSupported()) {
 			makeLinkable(labelLink, link, new LinkMouseListener());
+		}
 
 		if(textAfter != null) {
 			JLabel labelAfter = new JLabel(textAfter);
-			add(labelAfter);
+			panel.add(labelAfter);
 		}
+	}
+
+	public JPanel getPanel() {
+		return panel;
 	}
 
 	private static boolean isBrowsingSupported() {
@@ -117,7 +126,9 @@ public class JLabelLink extends JPanel {
 			try {
 				get();
 			} catch(ExecutionException | InterruptedException ee) {
-				JOptionPane.showMessageDialog(null, "A problem occurred while trying to open link <" + uri + "> in your system's standard browser.", "Error", JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(panel,
+                        "A problem occurred while trying to open link <" + uri + "> in your system's standard browser.",
+                        "Error", JOptionPane.ERROR_MESSAGE);
 			}
 		}
 	}

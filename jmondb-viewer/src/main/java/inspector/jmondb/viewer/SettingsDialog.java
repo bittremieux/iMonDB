@@ -20,6 +20,8 @@ package inspector.jmondb.viewer;
  * #L%
  */
 
+import inspector.jmondb.viewer.view.gui.DatabaseConnectionPanel;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ItemEvent;
@@ -27,7 +29,7 @@ import java.awt.event.ItemEvent;
 public class SettingsDialog extends JPanel {
 
 	private JCheckBox checkBoxAutoConnect;
-	private DatabaseConnectionDialog databaseDialog;
+	private DatabaseConnectionPanel databaseDialog;
 
 	public SettingsDialog() {
 		setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
@@ -54,9 +56,9 @@ public class SettingsDialog extends JPanel {
 		String password = SettingsHandler.getSettings().getDatabasePassword();
 		String database = SettingsHandler.getSettings().getDatabaseName();
 
-		databaseDialog = new DatabaseConnectionDialog(host, port, username, password, database);
-		add(databaseDialog);
-		databaseDialog.setMaximumSize(databaseDialog.getPreferredSize());
+		databaseDialog = new DatabaseConnectionPanel(host, port, username, password, database);
+		add(databaseDialog.getPanel());
+		databaseDialog.getPanel().setMaximumSize(databaseDialog.getPanel().getPreferredSize());
 		databaseDialog.setEnabled(SettingsHandler.getSettings().getDatabaseAutoConnect());
 	}
 

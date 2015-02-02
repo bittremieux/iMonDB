@@ -1,4 +1,4 @@
-package inspector.jmondb.viewer;
+package inspector.jmondb.viewer.view.gui;
 
 /*
  * #%L
@@ -20,31 +20,37 @@ package inspector.jmondb.viewer;
  * #L%
  */
 
-public class PropertyComboBoxItem implements Comparable<PropertyComboBoxItem> {
+import inspector.jmondb.model.Event;
 
-	private String name;
-	private String accession;
+import javax.swing.tree.DefaultMutableTreeNode;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
-	public PropertyComboBoxItem(String name, String accession) {
-		this.name = name;
-		this.accession = accession;
+public class EventNode extends DefaultMutableTreeNode implements Comparable<EventNode> {
+
+	private Event event;
+
+	public EventNode(Event i) {
+		super();
+		setEvent(i);
 	}
 
-	public String getName() {
-		return name;
+	public Event getEvent() {
+		return event;
 	}
 
-	public String getAccession() {
-		return accession;
+	public void setEvent(Event i) {
+		this.event = i;
 	}
 
 	@Override
 	public String toString() {
-		return name + " (" + accession + ")";
+		DateFormat df = new SimpleDateFormat("dd/MM/yyyy");
+		return df.format(event.getDate());
 	}
 
 	@Override
-	public int compareTo(PropertyComboBoxItem o) {
-		return getName().compareTo(o.getName());
+	public int compareTo(EventNode o) {
+		return getEvent().getDate().compareTo(o.getEvent().getDate());
 	}
 }

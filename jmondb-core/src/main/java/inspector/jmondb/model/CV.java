@@ -28,7 +28,7 @@ import javax.persistence.*;
 import java.util.Objects;
 
 /**
- * A {code CV} represents a controlled vocabulary which contains a formal definition for some {@link Property}s.
+ * A {@code CV} represents a controlled vocabulary which contains a formal definition for some {@link Property}s.
  */
 @Entity
 @Access(AccessType.FIELD)

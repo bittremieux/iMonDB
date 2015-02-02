@@ -26,8 +26,8 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 
 /**
- * Parses instrument settings for the {@link InstrumentModel#LTQ}, {@link InstrumentModel#LTQ_ORBITRAP},
- * {@link InstrumentModel#ORBITRAP_XL}, {@link InstrumentModel#LTQ_VELOS} and {@link InstrumentModel#ORBITRAP_VELOS} instrument.
+ * Parses instrument settings for the {@link InstrumentModel#THERMO_LTQ}, {@link InstrumentModel#THERMO_LTQ_ORBITRAP},
+ * {@link InstrumentModel#THERMO_ORBITRAP_XL}, {@link InstrumentModel#THERMO_LTQ_VELOS} and {@link InstrumentModel#THERMO_ORBITRAP_VELOS} instrument.
  */
 public class OrbitrapReader extends DefaultInstrumentReader {
 

@@ -1,4 +1,4 @@
-package inspector.jmondb.viewer;
+package inspector.jmondb.viewer.view;
 
 /*
  * #%L
@@ -27,11 +27,12 @@ import net.sf.dynamicreports.report.builder.component.HorizontalListBuilder;
 import net.sf.dynamicreports.report.builder.component.TextFieldBuilder;
 import net.sf.dynamicreports.report.builder.component.VerticalListBuilder;
 import net.sf.dynamicreports.report.builder.style.StyleBuilder;
-import net.sf.dynamicreports.report.constant.*;
+import net.sf.dynamicreports.report.constant.HorizontalAlignment;
+import net.sf.dynamicreports.report.constant.LineSpacing;
+import net.sf.dynamicreports.report.constant.PageType;
+import net.sf.dynamicreports.report.constant.VerticalAlignment;
 import net.sf.dynamicreports.report.exception.DRException;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
-
-import static net.sf.dynamicreports.report.builder.DynamicReports.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,6 +40,8 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+
+import static net.sf.dynamicreports.report.builder.DynamicReports.*;
 
 public class EventsReportWriter {
 
