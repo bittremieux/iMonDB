@@ -41,8 +41,7 @@ public class MainController {
         viewer.addDatabaseConnector(new DatabaseConnectListener(viewer, databaseController, searchSettingsController));
         viewer.addDatabaseDisconnector(new DatabaseDisconnectListener(viewer, databaseController));
 
-        viewer.addGraphDisplayer(new GraphShowListener(viewer, graphController));
-        viewer.addGraphAdvancer(new GraphAdvanceListener(viewer, searchSettingsController, graphController));
+        viewer.addGraphDisplayer(new GraphShowListener(viewer, searchSettingsController, graphController));
         viewer.addGraphSaver(new GraphSaveListener(viewer));
 
         viewer.addInstrumentChangeListener(new InstrumentChangeListener(

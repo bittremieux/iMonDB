@@ -37,7 +37,6 @@ public class ViewerFrame {
     private JMenuItem menuItemAbout;
 
     private JButton buttonConnectToDatabase;
-    private JButton buttonShowGraph;
 
     // editable panels
     private DatabasePanel panelDatabase;
@@ -124,10 +123,7 @@ public class ViewerFrame {
     }
 
     public void addGraphDisplayer(ActionListener listener) {
-        buttonShowGraph.addActionListener(listener);
-    }
-
-    public void addGraphAdvancer(ActionListener listener) {
+        propertySelectionPanel.addPropertyChangeListener(listener);
         panelGraph.addGraphAdvancer(listener);
     }
 
@@ -234,9 +230,6 @@ public class ViewerFrame {
 
         propertySelectionPanel = new PropertySelectionPanel();
         panelTop.add(propertySelectionPanel.getPanel());
-
-        buttonShowGraph = new JButton("Show graph");
-        panelTop.add(buttonShowGraph);
 
         return panelTop;
     }

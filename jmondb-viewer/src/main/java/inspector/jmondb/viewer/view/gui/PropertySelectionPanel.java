@@ -27,6 +27,7 @@ public class PropertySelectionPanel {
         panel.add(labelProperty);
         ComboBoxModel<PropertyComboBoxItem> sortedComboBoxModel = new SortedComboBoxModel<>();
         comboBoxProperty = new JComboBox<>(sortedComboBoxModel);
+        comboBoxProperty.setActionCommand("propertyChanged");
         comboBoxProperty.setPreferredSize(new Dimension(450, 25));
         comboBoxProperty.setMaximumSize(new Dimension(450, 25));
         panel.add(comboBoxProperty);
@@ -45,7 +46,9 @@ public class PropertySelectionPanel {
     }
 
     public void addProperty(String propertyName, String propertyAccession) {
+        comboBoxProperty.setActionCommand("ignore");
         comboBoxProperty.addItem(new PropertyComboBoxItem(propertyName, propertyAccession));
+        comboBoxProperty.setActionCommand("propertyChanged");
     }
 
     public String getSelectedInstrument() {
@@ -58,6 +61,11 @@ public class PropertySelectionPanel {
 
     public String getSelectedPropertyAccession() {
         return ((PropertyComboBoxItem) comboBoxProperty.getSelectedItem()).getAccession();
+    }
+
+    public boolean hasValidPropertyIndex() {
+        return comboBoxProperty.getSelectedIndex() >= 0 &&
+                comboBoxProperty.getSelectedIndex() < comboBoxProperty.getItemCount();
     }
 
     public boolean hasNext() {
@@ -74,6 +82,10 @@ public class PropertySelectionPanel {
         } else if(!forward && hasPrevious()) {
             comboBoxProperty.setSelectedIndex(comboBoxProperty.getSelectedIndex() - 1);
         }
+    }
+
+    public void initializeEmptyProperty() {
+        comboBoxProperty.setSelectedIndex(-1);
     }
 
     public void clearInstruments() {

@@ -35,11 +35,11 @@ public class SearchSettingsController {
     }
 
     public boolean hasNextProperty() {
-        return propertiesViewModel.hasNext();
+        return propertiesViewModel.hasValidProperty() && propertiesViewModel.hasNext();
     }
 
     public boolean hasPreviousProperty() {
-        return propertiesViewModel.hasPrevious();
+        return propertiesViewModel.hasValidProperty() && propertiesViewModel.hasPrevious();
     }
 
     public void advanceProperty(boolean forward) {
@@ -66,6 +66,7 @@ public class SearchSettingsController {
         // set the properties for the active instrument
         List<Property> properties = getProperties(instrumentsViewModel.getActiveInstrument());
         properties.forEach(propertiesViewModel::add);
+        propertiesViewModel.initializeEmptyProperty();
     }
 
     private List<Property> getProperties(String instrumentName) {

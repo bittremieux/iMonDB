@@ -38,7 +38,7 @@ public class GraphController {
     }
 
     public List<Object[]> queryValues() {
-        if(DatabaseConnection.getConnection().isActive() && propertiesViewModel.getActivePropertyName() != null) {
+        if(DatabaseConnection.getConnection().isActive() && propertiesViewModel.hasValidProperty()) {
             // load all values for the property and instrument
             StringBuilder querySelectFrom = new StringBuilder(
                     "SELECT val, val.originatingRun.sampleDate FROM Value val");

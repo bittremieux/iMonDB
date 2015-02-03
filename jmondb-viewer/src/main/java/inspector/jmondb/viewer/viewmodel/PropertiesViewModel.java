@@ -33,11 +33,15 @@ public class PropertiesViewModel {
     }
 
     public String getActivePropertyName() {
-        return propertySelectionPanel.getSelectedPropertyName();
+        return hasValidProperty() ? propertySelectionPanel.getSelectedPropertyName() : null;
     }
 
     public String getActivePropertyAccession() {
-        return propertySelectionPanel.getSelectedPropertyAccession();
+        return hasValidProperty() ? propertySelectionPanel.getSelectedPropertyAccession() : null;
+    }
+
+    public boolean hasValidProperty() {
+        return propertySelectionPanel.hasValidPropertyIndex();
     }
 
     public boolean hasNext() {
@@ -50,5 +54,9 @@ public class PropertiesViewModel {
 
     public void advanceProperty(boolean forward) {
         propertySelectionPanel.advanceProperty(forward);
+    }
+
+    public void initializeEmptyProperty() {
+        propertySelectionPanel.initializeEmptyProperty();
     }
 }
