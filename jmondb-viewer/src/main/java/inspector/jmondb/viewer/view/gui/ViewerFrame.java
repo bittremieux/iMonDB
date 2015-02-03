@@ -61,6 +61,11 @@ public class ViewerFrame {
         panelParent.add(createTopPanel(), BorderLayout.PAGE_START);
         panelParent.add(panelDatabase.getPanel(), BorderLayout.PAGE_END);
         panelParent.add(panelEvent.getPanel(), BorderLayout.LINE_END);
+
+        panelDatabase.getPanel().setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(5, 0, 0, 0),
+                BorderFactory.createMatteBorder(1, 0, 0, 0, Color.LIGHT_GRAY)));
+        panelEvent.getPanel().setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
     }
 
     public JFrame getFrame() {
