@@ -29,7 +29,7 @@ public class MetadataViewModel {
 
     public void clearAll() {
         metadataOptions.clear();
-        metadataFilter = null;
+        reset();
     }
 
     public List<Metadata> getMetadataOptions() {

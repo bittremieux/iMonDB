@@ -10,8 +10,9 @@ import inspector.jmondb.viewer.viewmodel.PropertiesViewModel;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Observable;
 
-public class AdvancedSearchListener implements ActionListener {
+public class AdvancedSearchListener extends Observable implements ActionListener {
 
     private ViewerFrame viewerFrame;
 
@@ -20,13 +21,16 @@ public class AdvancedSearchListener implements ActionListener {
 
     private SearchSettingsController searchSettingsController;
 
-    public AdvancedSearchListener(ViewerFrame viewerFrame, PropertiesViewModel propertiesViewModel, MetadataViewModel metadataViewModel,
-                                  SearchSettingsController searchSettingsController) {
+    public AdvancedSearchListener(ViewerFrame viewerFrame, PropertiesViewModel propertiesViewModel,
+                                  MetadataViewModel metadataViewModel,
+                                  SearchSettingsController searchSettingsController, GraphShowListener graphShowListener) {
         this.viewerFrame = viewerFrame;
         this.propertiesViewModel = propertiesViewModel;
         this.metadataViewModel = metadataViewModel;
 
         this.searchSettingsController = searchSettingsController;
+
+        addObserver(graphShowListener);
     }
 
     @Override
@@ -45,12 +49,17 @@ public class AdvancedSearchListener implements ActionListener {
                 // apply filter settings
                 searchSettingsController.setPropertyFilter(searchDialog.getPropertyFilter());
                 searchSettingsController.setMetadataFilter(searchDialog.getMetadata());
+                // notify metadata observers
+                setChanged();
             }
             else if(option == JOptionPane.CANCEL_OPTION) {
                 // reset search settings
                 searchSettingsController.resetPropertyFilter();
                 searchSettingsController.resetMetadataFilter();
+                // notify metadata observers
+                setChanged();
             }
+            notifyObservers();
         }
     }
 }

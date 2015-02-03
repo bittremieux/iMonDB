@@ -11,8 +11,10 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 
-public class GraphShowListener implements ActionListener {
+public class GraphShowListener implements ActionListener, Observer {
 
     private ViewerFrame viewerFrame;
 
@@ -35,27 +37,36 @@ public class GraphShowListener implements ActionListener {
             } else if(e.getActionCommand().equals("Previous") && searchSettingsController.hasPreviousProperty()) {
                 searchSettingsController.advanceProperty(false);
             } else if(e.getActionCommand().equals("propertyChanged")) {
-                Thread graphThread = new Thread() {
-                    public void run() {
-                        List<Object[]> values = graphController.queryValues();
-
-                        if(values != null) {
-                            if(values.size() == 0) {
-                                JOptionPane.showMessageDialog(viewerFrame.getFrame(), "No matching values found.",
-                                        "Warning", JOptionPane.WARNING_MESSAGE);
-                            } else {
-                                ValuePlot plot = new ValuePlot(values);
-                                JFreeChart chart = new JFreeChart(plot.getPlot());
-                                chart.removeLegend();
-
-                                graphController.display(chart);
-                                graphController.displayEvents();
-                            }
-                        }
-                    }
-                };
-                graphThread.start();
+                showGraph();
             }
         }
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        showGraph();
+    }
+
+    private void showGraph() {
+        Thread graphThread = new Thread() {
+            public void run() {
+                List<Object[]> values = graphController.queryValues();
+
+                if(values != null) {
+                    if(values.size() == 0) {
+                        JOptionPane.showMessageDialog(viewerFrame.getFrame(), "No matching values found.",
+                                "Warning", JOptionPane.WARNING_MESSAGE);
+                    } else {
+                        ValuePlot plot = new ValuePlot(values);
+                        JFreeChart chart = new JFreeChart(plot.getPlot());
+                        chart.removeLegend();
+
+                        graphController.display(chart);
+                        graphController.displayEvents();
+                    }
+                }
+            }
+        };
+        graphThread.start();
     }
 }

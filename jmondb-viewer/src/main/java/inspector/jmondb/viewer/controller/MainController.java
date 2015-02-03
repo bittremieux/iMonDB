@@ -41,7 +41,8 @@ public class MainController {
         viewer.addDatabaseConnector(new DatabaseConnectListener(viewer, databaseController, searchSettingsController));
         viewer.addDatabaseDisconnector(new DatabaseDisconnectListener(viewer, databaseController));
 
-        viewer.addGraphDisplayer(new GraphShowListener(viewer, searchSettingsController, graphController));
+        GraphShowListener graphShowListener = new GraphShowListener(viewer, searchSettingsController, graphController);
+        viewer.addGraphDisplayer(graphShowListener);
         viewer.addGraphSaver(new GraphSaveListener(viewer));
 
         viewer.addInstrumentChangeListener(new InstrumentChangeListener(
@@ -56,7 +57,7 @@ public class MainController {
         viewer.addEventExporter(new EventExportListener(viewer, eventController));
 
         viewer.addAdvancedSearchDisplayer(new AdvancedSearchListener(viewer,
-                propertiesViewModel, metadataViewModel, searchSettingsController));
+                propertiesViewModel, metadataViewModel, searchSettingsController, graphShowListener));
     }
 
     public static void main(String[] args) {
