@@ -46,6 +46,7 @@ public class ViewerFrame {
 
     public ViewerFrame() {
         frame = new JFrame("iMonDB Viewer");
+        frame.setIconImage(new ImageIcon(getClass().getResource("/images/logo-small.png")).getImage());
 
         JPanel panelParent = new JPanel(new BorderLayout());
         frame.setContentPane(panelParent);

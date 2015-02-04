@@ -15,6 +15,8 @@ public class GraphPanel {
 
     private ChartPanel chartPanel;
 
+    private JLabel logoLabel;
+
     private JButton previous;
     private JButton next;
     private JLabel propertyLabel;
@@ -22,8 +24,12 @@ public class GraphPanel {
     public GraphPanel() {
         panel = new JPanel(new BorderLayout());
 
+
         // chart
         chartPanel = new ChartPanel(null);
+        chartPanel.setLayout(new BorderLayout());
+        logoLabel = new JLabel(new AlphaIcon(new ImageIcon(getClass().getResource("/images/logo.png")), 0.1F));
+        chartPanel.add(logoLabel, BorderLayout.CENTER);
         panel.add(chartPanel, BorderLayout.CENTER);
 
         // previous next buttons
@@ -75,9 +81,11 @@ public class GraphPanel {
 
     public void clearChart() {
         chartPanel.setChart(null);
+        logoLabel.setVisible(true);
     }
 
     public void displayChart(JFreeChart chart) {
+        logoLabel.setVisible(false);
         chartPanel.setChart(chart);
     }
 
