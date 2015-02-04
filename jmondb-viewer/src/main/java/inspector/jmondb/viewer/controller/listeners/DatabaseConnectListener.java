@@ -2,12 +2,15 @@ package inspector.jmondb.viewer.controller.listeners;
 
 import inspector.jmondb.viewer.controller.DatabaseController;
 import inspector.jmondb.viewer.controller.SearchSettingsController;
+import inspector.jmondb.viewer.view.gui.DatabaseConnectionDialog;
 import inspector.jmondb.viewer.view.gui.DatabaseConnectionPanel;
 import inspector.jmondb.viewer.view.gui.ViewerFrame;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 
 public class DatabaseConnectListener implements ActionListener {
 
@@ -31,19 +34,42 @@ public class DatabaseConnectListener implements ActionListener {
                 "Connect to the database", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
         if(option == JOptionPane.OK_OPTION) {
-            try {
-                databaseController.connect(connectionPanel.getHost(), connectionPanel.getPort(),
-                        connectionPanel.getDatabase(), connectionPanel.getUserName(), connectionPanel.getPassword());
+            DatabaseConnectionDialog dialog = new DatabaseConnectionDialog(viewerFrame.getFrame(),
+                    connectionPanel.getHost(), connectionPanel.getDatabase(), connectionPanel.getUserName());
 
-                // show the connection information
-                viewerFrame.getDatabasePanel().setConnected(connectionPanel.getHost(),
-                        connectionPanel.getDatabase(), connectionPanel.getUserName());
+            SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    databaseController.connect(connectionPanel.getHost(), connectionPanel.getPort(),
+                            connectionPanel.getDatabase(), connectionPanel.getUserName(), connectionPanel.getPassword());
 
-                // enable graph advance buttons
-                viewerFrame.getGraphPanel().setNextButtonEnabled(searchSettingsController.hasNextProperty());
-                viewerFrame.getGraphPanel().setPreviousButtonEnabled(searchSettingsController.hasPreviousProperty());
+                    return null;
+                }
 
-            } catch(Exception ex) {
+                @Override
+                protected void done() {
+                    try {
+                        get();
+
+                        dialog.hideDialog(false);
+                    } catch(InterruptedException | ExecutionException ex) {
+                        dialog.hideDialog(true);
+
+                        JOptionPane.showMessageDialog(viewerFrame.getFrame(),
+                                "<html><b>Could not connect to the database</b></html>\n" + ex.getMessage(),
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                    } catch(CancellationException ignored) {
+                    }
+                }
+            };
+
+            // establish the connection
+            worker.execute();
+
+            // show a progress bar dialog
+            if(dialog.showDialog()) {
+                worker.cancel(true);
+
                 // something went wrong, disconnect to free up the resources
                 databaseController.disconnect();
 
@@ -53,10 +79,14 @@ public class DatabaseConnectListener implements ActionListener {
                 // disable graph advance buttons
                 viewerFrame.getGraphPanel().setNextButtonEnabled(false);
                 viewerFrame.getGraphPanel().setPreviousButtonEnabled(false);
+            } else {
+                // show the connection information
+                viewerFrame.getDatabasePanel().setConnected(connectionPanel.getHost(),
+                        connectionPanel.getDatabase(), connectionPanel.getUserName());
 
-                JOptionPane.showMessageDialog(viewerFrame.getFrame(),
-                        "<html><b>Could not connect to the database</b></html>\n" + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                // enable graph advance buttons
+                viewerFrame.getGraphPanel().setNextButtonEnabled(searchSettingsController.hasNextProperty());
+                viewerFrame.getGraphPanel().setPreviousButtonEnabled(searchSettingsController.hasPreviousProperty());
             }
         }
     }
