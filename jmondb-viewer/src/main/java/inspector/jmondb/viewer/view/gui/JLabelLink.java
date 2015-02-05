@@ -23,6 +23,7 @@ package inspector.jmondb.viewer.view.gui;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -39,39 +40,38 @@ public class JLabelLink {
 	private static final String HTML = "<html>";
 	private static final String HTML_END = "</html>";
 
-	private JPanel panel;
+	private JLabel label;
 
 	public JLabelLink(String textBefore, String textLink, String link, String textAfter) {
-		panel = new JPanel();
+        StringBuilder textBuilder = new StringBuilder();
 
 		if(textBefore != null) {
-			JLabel labelBefore = new JLabel(textBefore);
-			panel.add(labelBefore);
+            textBuilder.append(textBefore);
 		}
 
-		JLabel labelLink = new JLabel(textLink);
-		panel.add(labelLink);
 		if(isBrowsingSupported()) {
-			makeLinkable(labelLink, link, new LinkMouseListener());
-		}
+            textBuilder.append(linkIfy(textLink, link));
+        }
 
 		if(textAfter != null) {
-			JLabel labelAfter = new JLabel(textAfter);
-			panel.add(labelAfter);
+			textBuilder.append(textAfter);
 		}
+
+        String text = htmlIfy(textBuilder.toString());
+        label = new JLabel(text);
+        makeLinkable(label, new LinkMouseListener());
 	}
 
-	public JPanel getPanel() {
-		return panel;
+	public JLabel getLabel() {
+		return label;
 	}
 
 	private static boolean isBrowsingSupported() {
 		return Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE);
 	}
 
-	private void makeLinkable(JLabel label, String link, MouseListener ml) {
-		label.setText(htmlIfy(linkIfy(label.getText(), link)));
-		label.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+	private void makeLinkable(JLabel label, MouseListener ml) {
+		label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		label.addMouseListener(ml);
 	}
 
@@ -88,7 +88,7 @@ public class JLabelLink {
 	private class LinkMouseListener extends MouseAdapter {
 
 		@Override
-		public void mouseClicked(java.awt.event.MouseEvent evt) {
+		public void mouseClicked(MouseEvent evt) {
 			JLabel l = (JLabel) evt.getSource();
 			try {
 				URI uri = new java.net.URI(getPlainLink(l.getText()));
@@ -126,7 +126,7 @@ public class JLabelLink {
 			try {
 				get();
 			} catch(ExecutionException | InterruptedException ee) {
-				JOptionPane.showMessageDialog(panel,
+				JOptionPane.showMessageDialog(label,
                         "A problem occurred while trying to open link <" + uri + "> in your system's standard browser.",
                         "Error", JOptionPane.ERROR_MESSAGE);
 			}

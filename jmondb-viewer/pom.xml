@@ -83,6 +83,7 @@
 
             <!-- Davy's packing method puts the dependencies in a lib folder alongside
                 the jar, and adds this folder to the manifest -->
+            <!-- also add the version number to the manifest -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -90,9 +91,11 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>inspector.jmondb.viewer.view.gui.ViewerFrame</mainClass>
+                            <mainClass>inspector.jmondb.viewer.controller.MainController</mainClass>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib</classpathPrefix>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                         </manifest>
                     </archive>
                     <outputDirectory>${project.build.directory}</outputDirectory>
