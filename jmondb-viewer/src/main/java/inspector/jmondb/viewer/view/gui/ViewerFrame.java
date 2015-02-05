@@ -34,6 +34,7 @@ public class ViewerFrame {
     private JMenuItem menuItemSaveGraph;
     private JMenuItem menuItemExportEvents;
     private JMenuItem menuItemExit;
+    private JMenuItem menuItemUpdate;
     private JMenuItem menuItemAbout;
 
     private JButton buttonConnectToDatabase;
@@ -67,6 +68,13 @@ public class ViewerFrame {
                 BorderFactory.createEmptyBorder(5, 0, 0, 0),
                 BorderFactory.createMatteBorder(1, 0, 0, 0, Color.LIGHT_GRAY)));
         panelEvent.getPanel().setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
+    }
+
+    public void initialize() {
+        // check for updates on startup
+        for(ActionListener a : menuItemUpdate.getActionListeners()) {
+            a.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Initialization update check"));
+        }
     }
 
     public JFrame getFrame() {
@@ -175,6 +183,10 @@ public class ViewerFrame {
         propertySelectionPanel.addAdvancedSearchListener(listener);
     }
 
+    public void addUpdateChecker(ActionListener listener) {
+        menuItemUpdate.addActionListener(listener);
+    }
+
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
@@ -217,6 +229,9 @@ public class ViewerFrame {
 
         // help menu
         JMenu menuHelp = new JMenu("Help");
+        menuItemUpdate = new JMenuItem("Check for updates");
+        menuItemUpdate.setMnemonic(KeyEvent.VK_U);
+        menuHelp.add(menuItemUpdate);
         menuHelp.setMnemonic(KeyEvent.VK_H);
         menuItemAbout = new JMenuItem("About");
         menuItemAbout.setMnemonic(KeyEvent.VK_A);

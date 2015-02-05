@@ -78,6 +78,8 @@ public class MainController {
 
         viewer.addAdvancedSearchDisplayer(new AdvancedSearchListener(viewer,
                 propertiesViewModel, metadataViewModel, searchSettingsController, graphShowListener));
+
+        viewer.addUpdateChecker(new UpdateListener(viewer));
     }
 
     public static void main(String[] args) {
@@ -86,6 +88,7 @@ public class MainController {
         // start viewer
         SwingUtilities.invokeLater(() -> {
             MainController controller = new MainController();
+            controller.viewer.initialize();
             controller.viewer.display();
         });
     }

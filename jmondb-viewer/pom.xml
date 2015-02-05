@@ -66,6 +66,13 @@
             <version>3.2.1</version>
         </dependency>
 
+        <!-- HTML parser -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.8.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>
