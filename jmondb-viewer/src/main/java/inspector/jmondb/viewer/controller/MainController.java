@@ -20,6 +20,7 @@ package inspector.jmondb.viewer.controller;
  * #L%
  */
 
+import com.jtattoo.plaf.fast.FastLookAndFeel;
 import inspector.jmondb.viewer.controller.listeners.*;
 import inspector.jmondb.viewer.model.VisualizationConfiguration;
 import inspector.jmondb.viewer.view.gui.ViewerFrame;
@@ -29,6 +30,7 @@ import inspector.jmondb.viewer.viewmodel.MetadataViewModel;
 import inspector.jmondb.viewer.viewmodel.PropertiesViewModel;
 
 import javax.swing.*;
+import java.util.Properties;
 
 public class MainController {
 
@@ -98,18 +100,16 @@ public class MainController {
 
     private static void setLookAndFeel() {
         try {
-            // Nimbus look and feel
-            for(UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                if("Nimbus".equals(info.getName())) {
-                    UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
+            // JTattoo fast look and feel
+            Properties properties = new Properties();
+            properties.put("logoString", "");
+            FastLookAndFeel.setCurrentTheme(properties);
+            UIManager.setLookAndFeel("com.jtattoo.plaf.fast.FastLookAndFeel");
         } catch (Exception e) {
-            // if Nimbus is not available, fall back to cross-platform
+            // fall back to cross-platform
             try {
                 UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-            } catch (Exception ignored) {
+            } catch(Exception ignored) {
             }
         }
     }

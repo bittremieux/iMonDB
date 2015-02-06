@@ -38,6 +38,13 @@
             <version>1.0.2</version>
         </dependency>
 
+        <!-- look and feel -->
+        <dependency>
+            <groupId>com.jtattoo</groupId>
+            <artifactId>JTattoo</artifactId>
+            <version>1.6.11</version>
+        </dependency>
+
         <!-- graphs -->
         <dependency>
             <groupId>org.jfree</groupId>
