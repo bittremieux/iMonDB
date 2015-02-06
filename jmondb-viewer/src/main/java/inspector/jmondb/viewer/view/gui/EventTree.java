@@ -165,4 +165,8 @@ public class EventTree {
 
         ((DefaultTreeModel) treeEvents.getModel()).reload();
     }
+
+    public void refreshColor() {
+        treeEvents.repaint();
+    }
 }

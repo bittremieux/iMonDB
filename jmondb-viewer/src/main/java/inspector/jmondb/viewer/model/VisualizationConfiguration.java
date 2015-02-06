@@ -24,4 +24,17 @@ public class VisualizationConfiguration extends Configuration {
         int def = colorDefaults.containsKey(key) ? colorDefaults.get(key) : Color.BLACK.getRGB();
         return new Color(PREFERENCES.getInt(key, def));
     }
+
+    public void setColor(EventType type, Color color) {
+        if(type != null) {
+            String key = "color." + type.toString();
+            PREFERENCES.putInt(key, color.getRGB());
+        }
+    }
+
+    public void reset() {
+        for(Map.Entry<String, Integer> entry : colorDefaults.entrySet()) {
+            PREFERENCES.putInt(entry.getKey(), entry.getValue());
+        }
+    }
 }

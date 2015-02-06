@@ -35,6 +35,7 @@ public class ViewerFrame {
     private JMenuItem menuItemDisconnectFromDb;
     private JMenuItem menuItemSaveGraph;
     private JMenuItem menuItemExportEvents;
+    private JMenuItem menuItemPreferences;
     private JMenuItem menuItemExit;
     private JMenuItem menuItemUpdate;
     private JMenuItem menuItemAbout;
@@ -189,6 +190,10 @@ public class ViewerFrame {
         menuItemUpdate.addActionListener(listener);
     }
 
+    public void addPreferencesDisplayer(ActionListener listener) {
+        menuItemPreferences.addActionListener(listener);
+    }
+
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
@@ -215,7 +220,7 @@ public class ViewerFrame {
 
         menuFile.addSeparator();
 
-        JMenuItem menuItemPreferences = new JMenuItem("Preferences");
+        menuItemPreferences = new JMenuItem("Preferences");
         menuItemPreferences.setMnemonic(KeyEvent.VK_I);
         menuItemPreferences.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_I, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
         menuFile.add(menuItemPreferences);

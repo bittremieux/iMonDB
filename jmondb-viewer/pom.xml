@@ -80,6 +80,12 @@
             <version>1.8.1</version>
         </dependency>
 
+        <!-- color picker -->
+        <dependency>
+            <groupId>com.bric.javagraphics</groupId>
+            <artifactId>Colors</artifactId>
+            <version>1.0</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -85,6 +85,8 @@ public class MainController {
                 propertiesViewModel, metadataViewModel, searchSettingsController, graphShowListener));
 
         viewer.addUpdateChecker(new UpdateListener(viewer));
+
+        viewer.addPreferencesDisplayer(new PreferencesListener(viewer, visualizationConfiguration));
     }
 
     public static void main(String[] args) {

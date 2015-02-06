@@ -71,8 +71,7 @@ public class AdvancedSearchListener extends Observable implements ActionListener
                 searchSettingsController.setMetadataFilter(searchDialog.getMetadata());
                 // notify metadata observers
                 setChanged();
-            }
-            else if(option == JOptionPane.CANCEL_OPTION) {
+            } else if(option == JOptionPane.CANCEL_OPTION) {
                 // reset search settings
                 searchSettingsController.resetPropertyFilter();
                 searchSettingsController.resetMetadataFilter();

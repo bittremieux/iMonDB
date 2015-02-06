@@ -78,4 +78,12 @@ public class EventMarkers {
             markers.get(type).clear();
         }
     }
+
+    public void refreshColor() {
+        for(EventType type : EventType.values()) {
+            for(ValueMarker marker : markers.get(type).values()) {
+                marker.setPaint(configuration.getColor(type));
+            }
+        }
+    }
 }
