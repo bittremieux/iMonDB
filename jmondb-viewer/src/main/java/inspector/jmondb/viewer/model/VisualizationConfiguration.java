@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class VisualizationConfiguration extends Configuration {
 
-    private final Map<String, Integer> colorDefaults = ImmutableMap.of(
+    private static final Map<String, Integer> COLOR_DEFAULTS = ImmutableMap.of(
             "color.undefined", Color.ORANGE.getRGB(),
             "color.calibration", Color.GREEN.getRGB(),
             "color.maintenance", Color.BLUE.getRGB(),
@@ -21,7 +21,7 @@ public class VisualizationConfiguration extends Configuration {
 
     public Color getColor(EventType type) {
         String key = type != null ? "color." + type.toString() : "unknown";
-        int def = colorDefaults.containsKey(key) ? colorDefaults.get(key) : Color.BLACK.getRGB();
+        int def = COLOR_DEFAULTS.containsKey(key) ? COLOR_DEFAULTS.get(key) : Color.BLACK.getRGB();
         return new Color(PREFERENCES.getInt(key, def));
     }
 
@@ -33,7 +33,7 @@ public class VisualizationConfiguration extends Configuration {
     }
 
     public void reset() {
-        for(Map.Entry<String, Integer> entry : colorDefaults.entrySet()) {
+        for(Map.Entry<String, Integer> entry : COLOR_DEFAULTS.entrySet()) {
             PREFERENCES.putInt(entry.getKey(), entry.getValue());
         }
     }

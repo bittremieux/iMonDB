@@ -1,6 +1,7 @@
 package inspector.jmondb.viewer.controller.listeners;
 
 import inspector.jmondb.model.EventType;
+import inspector.jmondb.viewer.model.DatabaseConfiguration;
 import inspector.jmondb.viewer.model.VisualizationConfiguration;
 import inspector.jmondb.viewer.view.gui.ConfigTabbedPane;
 import inspector.jmondb.viewer.view.gui.ViewerFrame;
@@ -13,17 +14,20 @@ public class PreferencesListener implements ActionListener {
 
     private ViewerFrame viewerFrame;
 
-    private VisualizationConfiguration configuration;
+    private VisualizationConfiguration visualizationConfiguration;
+    private DatabaseConfiguration databaseConfiguration;
 
-    public PreferencesListener(ViewerFrame viewerFrame, VisualizationConfiguration configuration) {
+    public PreferencesListener(ViewerFrame viewerFrame, VisualizationConfiguration visualizationConfiguration,
+                               DatabaseConfiguration databaseConfiguration) {
         this.viewerFrame = viewerFrame;
 
-        this.configuration = configuration;
+        this.visualizationConfiguration = visualizationConfiguration;
+        this.databaseConfiguration = databaseConfiguration;
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        ConfigTabbedPane configPane = new ConfigTabbedPane(viewerFrame, configuration);
+        ConfigTabbedPane configPane = new ConfigTabbedPane(viewerFrame, visualizationConfiguration, databaseConfiguration);
 
         String[] options = new String[] { "OK", "Cancel", "Reset" };
         int option = JOptionPane.showOptionDialog(viewerFrame.getFrame(), configPane.getTabbedPane(),
@@ -32,13 +36,20 @@ public class PreferencesListener implements ActionListener {
         if(option == JOptionPane.OK_OPTION) {
             // update preferences
             for(EventType type : EventType.values()) {
-                configuration.setColor(type, configPane.getVisualizationConfigPanel().getColor(type));
+                visualizationConfiguration.setColor(type, configPane.getVisualizationConfigPanel().getColor(type));
             }
+            databaseConfiguration.setAutoConnect(configPane.getDatabaseConfigPanel().getAutoConnect());
+            databaseConfiguration.setHost(configPane.getDatabaseConfigPanel().getDatabaseConnectionPanel().getHost());
+            databaseConfiguration.setPort(configPane.getDatabaseConfigPanel().getDatabaseConnectionPanel().getPort());
+            databaseConfiguration.setUserName(configPane.getDatabaseConfigPanel().getDatabaseConnectionPanel().getUserName());
+            databaseConfiguration.setPassword(configPane.getDatabaseConfigPanel().getDatabaseConnectionPanel().getPassword());
+            databaseConfiguration.setDatabase(configPane.getDatabaseConfigPanel().getDatabaseConnectionPanel().getDatabase());
 
             refresh();
         } else if(option == JOptionPane.CANCEL_OPTION) {
             // reset preferences
-            configuration.reset();
+            visualizationConfiguration.reset();
+            databaseConfiguration.reset();
 
             refresh();
         }

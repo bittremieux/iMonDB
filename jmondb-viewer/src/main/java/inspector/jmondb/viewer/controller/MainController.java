@@ -22,6 +22,7 @@ package inspector.jmondb.viewer.controller;
 
 import com.jtattoo.plaf.fast.FastLookAndFeel;
 import inspector.jmondb.viewer.controller.listeners.*;
+import inspector.jmondb.viewer.model.DatabaseConfiguration;
 import inspector.jmondb.viewer.model.VisualizationConfiguration;
 import inspector.jmondb.viewer.view.gui.ViewerFrame;
 import inspector.jmondb.viewer.viewmodel.EventsViewModel;
@@ -39,9 +40,10 @@ public class MainController {
     public MainController() {
         // model
         VisualizationConfiguration visualizationConfiguration = new VisualizationConfiguration();
+        DatabaseConfiguration databaseConfiguration = new DatabaseConfiguration();
 
         // view
-        viewer = new ViewerFrame(visualizationConfiguration);
+        viewer = new ViewerFrame(visualizationConfiguration, databaseConfiguration);
 
         // view model
         InstrumentsViewModel instrumentsViewModel = new InstrumentsViewModel(viewer.getPropertySelectionPanel());
@@ -63,7 +65,8 @@ public class MainController {
         viewer.addExitAction(new ExitAction(databaseController));
         viewer.addAboutDisplayer(new AboutListener(viewer));
 
-        viewer.addDatabaseConnector(new DatabaseConnectListener(viewer, databaseController, searchSettingsController));
+        viewer.addDatabaseConnector(new DatabaseConnectListener(viewer, databaseController, searchSettingsController,
+                databaseConfiguration));
         viewer.addDatabaseDisconnector(new DatabaseDisconnectListener(viewer, databaseController));
 
         GraphShowListener graphShowListener = new GraphShowListener(viewer, searchSettingsController, graphController);
@@ -86,7 +89,7 @@ public class MainController {
 
         viewer.addUpdateChecker(new UpdateListener(viewer));
 
-        viewer.addPreferencesDisplayer(new PreferencesListener(viewer, visualizationConfiguration));
+        viewer.addPreferencesDisplayer(new PreferencesListener(viewer, visualizationConfiguration, databaseConfiguration));
     }
 
     public static void main(String[] args) {
@@ -95,8 +98,8 @@ public class MainController {
         // start viewer
         SwingUtilities.invokeLater(() -> {
             MainController controller = new MainController();
-            controller.viewer.initialize();
             controller.viewer.display();
+            controller.viewer.initialize();
         });
     }
 

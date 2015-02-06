@@ -24,31 +24,34 @@ public class VisualizationConfigPanel {
     public VisualizationConfigPanel(ViewerFrame viewerFrame, VisualizationConfiguration configuration) {
         this.viewerFrame = viewerFrame;
 
-        panel = new JPanel(new BorderLayout());
+        panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.PAGE_AXIS));
 
         JLabel title = new JLabel("Specify the color of the various event types.");
-        panel.add(title, BorderLayout.PAGE_START);
+        panel.add(title);
         title.setBorder(BorderFactory.createEmptyBorder(5, 0, 20, 0));
 
-        JPanel colorPanel = new JPanel(new GridLayout(0, 2, 0, 5));
+        JPanel colorPanel = new JPanel(new SpringLayout());
 
-        colorPanel.add(new JLabel("Undefined:"));
+        colorPanel.add(new JLabel("Undefined:", JLabel.TRAILING));
         colorUndefined = createColorWell(configuration.getColor(EventType.UNDEFINED));
         colorPanel.add(colorUndefined);
 
-        colorPanel.add(new JLabel("Calibration:"));
+        colorPanel.add(new JLabel("Calibration:", JLabel.TRAILING));
         colorCalibration = createColorWell(configuration.getColor(EventType.CALIBRATION));
         colorPanel.add(colorCalibration);
 
-        colorPanel.add(new JLabel("Maintenance:"));
+        colorPanel.add(new JLabel("Maintenance:", JLabel.TRAILING));
         colorMaintenance = createColorWell(configuration.getColor(EventType.MAINTENANCE));
         colorPanel.add(colorMaintenance);
 
-        colorPanel.add(new JLabel("Incident:"));
+        colorPanel.add(new JLabel("Incident:", JLabel.TRAILING));
         colorIncident = createColorWell(configuration.getColor(EventType.INCIDENT));
         colorPanel.add(colorIncident);
 
-        panel.add(colorPanel, BorderLayout.CENTER);
+        SpringUtilities.makeCompactGrid(colorPanel, 4, 2, 6, 6, 6, 6);
+
+        panel.add(colorPanel);
     }
 
     public JPanel getPanel() {

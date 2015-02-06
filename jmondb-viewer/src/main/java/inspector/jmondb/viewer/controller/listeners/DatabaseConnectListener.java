@@ -22,6 +22,7 @@ package inspector.jmondb.viewer.controller.listeners;
 
 import inspector.jmondb.viewer.controller.DatabaseController;
 import inspector.jmondb.viewer.controller.SearchSettingsController;
+import inspector.jmondb.viewer.model.DatabaseConfiguration;
 import inspector.jmondb.viewer.view.gui.DatabaseConnectionDialog;
 import inspector.jmondb.viewer.view.gui.DatabaseConnectionPanel;
 import inspector.jmondb.viewer.view.gui.ViewerFrame;
@@ -34,6 +35,8 @@ import java.util.concurrent.ExecutionException;
 
 public class DatabaseConnectListener implements ActionListener {
 
+    private DatabaseConfiguration configuration;
+
     private ViewerFrame viewerFrame;
 
     private DatabaseController databaseController;
@@ -41,27 +44,42 @@ public class DatabaseConnectListener implements ActionListener {
     private SearchSettingsController searchSettingsController;
 
     public DatabaseConnectListener(ViewerFrame viewerFrame, DatabaseController databaseController,
-                                   SearchSettingsController searchSettingsController) {
+                                   SearchSettingsController searchSettingsController, DatabaseConfiguration configuration) {
         this.viewerFrame = viewerFrame;
         this.databaseController = databaseController;
         this.searchSettingsController = searchSettingsController;
+
+        this.configuration = configuration;
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        DatabaseConnectionPanel connectionPanel = new DatabaseConnectionPanel();
-        int option = JOptionPane.showConfirmDialog(viewerFrame.getFrame(), connectionPanel.getPanel(),
-                "Connect to the database", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        DatabaseConnectionPanel connectionPanel;
+        int option;
+        if(!e.getActionCommand().equals("Auto connect")) {
+            connectionPanel = new DatabaseConnectionPanel();
+            option = JOptionPane.showConfirmDialog(viewerFrame.getFrame(), connectionPanel.getPanel(),
+                    "Connect to the database", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        } else {
+            connectionPanel = new DatabaseConnectionPanel(configuration.getHost(), configuration.getPort(),
+                    configuration.getUserName(), configuration.getPassword(), configuration.getDatabase());
+            option = JOptionPane.OK_OPTION;
+        }
 
         if(option == JOptionPane.OK_OPTION) {
+            final String host = connectionPanel.getHost();
+            final String port = connectionPanel.getPort();
+            final String database = connectionPanel.getDatabase();
+            final String userName = connectionPanel.getUserName();
+            final String password = connectionPanel.getPassword();
+
             DatabaseConnectionDialog dialog = new DatabaseConnectionDialog(viewerFrame.getFrame(),
                     connectionPanel.getHost(), connectionPanel.getDatabase(), connectionPanel.getUserName());
 
             SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                 @Override
                 protected Void doInBackground() throws Exception {
-                    databaseController.connect(connectionPanel.getHost(), connectionPanel.getPort(),
-                            connectionPanel.getDatabase(), connectionPanel.getUserName(), connectionPanel.getPassword());
+                    databaseController.connect(host, port, database, userName, password);
 
                     return null;
                 }

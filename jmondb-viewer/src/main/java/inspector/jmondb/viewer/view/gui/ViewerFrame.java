@@ -20,6 +20,7 @@ package inspector.jmondb.viewer.view.gui;
  * #L%
  */
 
+import inspector.jmondb.viewer.model.DatabaseConfiguration;
 import inspector.jmondb.viewer.model.VisualizationConfiguration;
 
 import javax.swing.*;
@@ -27,6 +28,8 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class ViewerFrame {
+
+    private DatabaseConfiguration databaseConfiguration;
 
     private JFrame frame;
 
@@ -48,7 +51,9 @@ public class ViewerFrame {
     private GraphPanel panelGraph;
     private EventPanel panelEvent;
 
-    public ViewerFrame(VisualizationConfiguration configuration) {
+    public ViewerFrame(VisualizationConfiguration configuration, DatabaseConfiguration databaseConfiguration) {
+        this.databaseConfiguration = databaseConfiguration;
+
         frame = new JFrame("iMonDB Viewer");
         frame.setIconImage(new ImageIcon(getClass().getResource("/images/logo-small.png")).getImage());
 
@@ -77,6 +82,13 @@ public class ViewerFrame {
         // check for updates on startup
         for(ActionListener a : menuItemUpdate.getActionListeners()) {
             a.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Initialization update check"));
+        }
+
+        // auto connect to a database
+        if(databaseConfiguration.getAutoConnect()) {
+            for(ActionListener a : buttonConnectToDatabase.getActionListeners()) {
+                a.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, "Auto connect"));
+            }
         }
     }
 
