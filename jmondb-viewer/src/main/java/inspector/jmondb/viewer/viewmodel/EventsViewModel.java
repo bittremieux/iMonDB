@@ -44,10 +44,6 @@ public class EventsViewModel {
         this.eventConfigurationPanel = eventConfigurationPanel;
     }
 
-    public EventMarkers getMarkers() {
-        return eventMarkers;
-    }
-
     public List<Event> getAll() {
         List<Event> events = new ArrayList<>(eventTree.getTree().getRowCount());
         TreeNode rootNode = (TreeNode) eventTree.getTree().getModel().getRoot();

@@ -20,6 +20,8 @@ package inspector.jmondb.viewer.view.gui;
  * #L%
  */
 
+import inspector.jmondb.viewer.model.VisualizationConfiguration;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -45,7 +47,7 @@ public class ViewerFrame {
     private GraphPanel panelGraph;
     private EventPanel panelEvent;
 
-    public ViewerFrame() {
+    public ViewerFrame(VisualizationConfiguration configuration) {
         frame = new JFrame("iMonDB Viewer");
         frame.setIconImage(new ImageIcon(getClass().getResource("/images/logo-small.png")).getImage());
 
@@ -56,9 +58,9 @@ public class ViewerFrame {
         frame.setJMenuBar(createMenuBar());
 
         // create and arrange panels
-        panelGraph = new GraphPanel();
+        panelGraph = new GraphPanel(configuration);
         panelDatabase = new DatabasePanel();
-        panelEvent = new EventPanel();
+        panelEvent = new EventPanel(configuration);
         panelParent.add(panelGraph.getPanel(), BorderLayout.CENTER);
         panelParent.add(createTopPanel(), BorderLayout.PAGE_START);
         panelParent.add(panelDatabase.getPanel(), BorderLayout.PAGE_END);

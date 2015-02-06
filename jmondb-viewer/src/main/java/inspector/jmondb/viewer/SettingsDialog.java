@@ -23,8 +23,6 @@ package inspector.jmondb.viewer;
 import inspector.jmondb.viewer.view.gui.DatabaseConnectionPanel;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ItemEvent;
 
 public class SettingsDialog extends JPanel {
 
@@ -35,10 +33,10 @@ public class SettingsDialog extends JPanel {
 		setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
 
 		// load the settings
-		loadDatabasePreferences();
+		//loadDatabasePreferences();
 	}
 
-	private void loadDatabasePreferences() {
+	/*private void loadDatabasePreferences() {
 		// retrieve saved database settings
 		checkBoxAutoConnect = new JCheckBox("<html>Automatically connect to the database.<br/>This will be applied the next time the application is launched.</html>");
 		add(checkBoxAutoConnect);
@@ -69,5 +67,5 @@ public class SettingsDialog extends JPanel {
 		SettingsHandler.getSettings().setDatabaseUserName(databaseDialog.getUserName());
 		SettingsHandler.getSettings().setDatabasePassword(databaseDialog.getPassword());
 		SettingsHandler.getSettings().setDatabaseName(databaseDialog.getDatabase());
-	}
+	}*/
 }

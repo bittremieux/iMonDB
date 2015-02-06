@@ -21,7 +21,7 @@ package inspector.jmondb.viewer.controller;
  */
 
 import inspector.jmondb.viewer.controller.listeners.*;
-import inspector.jmondb.viewer.view.gui.EventMarkers;
+import inspector.jmondb.viewer.model.VisualizationConfiguration;
 import inspector.jmondb.viewer.view.gui.ViewerFrame;
 import inspector.jmondb.viewer.viewmodel.EventsViewModel;
 import inspector.jmondb.viewer.viewmodel.InstrumentsViewModel;
@@ -35,15 +35,18 @@ public class MainController {
     private ViewerFrame viewer;
 
     public MainController() {
+        // model
+        VisualizationConfiguration visualizationConfiguration = new VisualizationConfiguration();
+
         // view
-        viewer = new ViewerFrame();
+        viewer = new ViewerFrame(visualizationConfiguration);
 
         // view model
         InstrumentsViewModel instrumentsViewModel = new InstrumentsViewModel(viewer.getPropertySelectionPanel());
         PropertiesViewModel propertiesViewModel = new PropertiesViewModel(viewer.getPropertySelectionPanel());
         MetadataViewModel metadataViewModel = new MetadataViewModel();
         EventsViewModel eventsViewModel = new EventsViewModel(viewer.getEventPanel().getEventTree(),
-                new EventMarkers(viewer.getGraphPanel()), viewer.getEventPanel().getEventConfigurationPanel());
+                viewer.getGraphPanel().getEventMarkers(), viewer.getEventPanel().getEventConfigurationPanel());
 
         // controller
         SearchSettingsController searchSettingsController = new SearchSettingsController(

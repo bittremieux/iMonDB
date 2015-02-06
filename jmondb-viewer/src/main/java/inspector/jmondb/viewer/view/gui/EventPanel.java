@@ -20,6 +20,8 @@ package inspector.jmondb.viewer.view.gui;
  * #L%
  */
 
+import inspector.jmondb.viewer.model.VisualizationConfiguration;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -35,7 +37,7 @@ public class EventPanel {
     private JButton buttonRemove;
     private JButton buttonClear;
 
-    public EventPanel() {
+    public EventPanel(VisualizationConfiguration configuration) {
         panel = new JPanel();
         BorderLayout eventsLayout = new BorderLayout();
         eventsLayout.setVgap(25);
@@ -46,7 +48,7 @@ public class EventPanel {
         panel.add(configurationPanel.getPanel(), BorderLayout.PAGE_START);
 
         // create event tree
-        eventTree = new EventTree();
+        eventTree = new EventTree(configuration);
         panel.add(eventTree.getPanel(), BorderLayout.CENTER);
 
         // create buttons to manipulate events

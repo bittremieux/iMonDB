@@ -20,6 +20,7 @@ package inspector.jmondb.viewer.view.gui;
  * #L%
  */
 
+import inspector.jmondb.viewer.model.VisualizationConfiguration;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.ValueMarker;
@@ -34,6 +35,7 @@ public class GraphPanel {
     private JPanel panel;
 
     private ChartPanel chartPanel;
+    private EventMarkers eventMarkers;
 
     private JLabel logoLabel;
 
@@ -41,9 +43,8 @@ public class GraphPanel {
     private JButton next;
     private JLabel propertyLabel;
 
-    public GraphPanel() {
+    public GraphPanel(VisualizationConfiguration configuration) {
         panel = new JPanel(new BorderLayout());
-
 
         // chart
         chartPanel = new ChartPanel(null);
@@ -51,6 +52,9 @@ public class GraphPanel {
         logoLabel = new JLabel(new AlphaIcon(new ImageIcon(getClass().getResource("/images/logo.png")), 0.1F));
         chartPanel.add(logoLabel, BorderLayout.CENTER);
         panel.add(chartPanel, BorderLayout.CENTER);
+
+        // markers
+        eventMarkers = new EventMarkers(this, configuration);
 
         // previous next buttons
         JPanel buttonsPanel = new JPanel();
@@ -83,6 +87,10 @@ public class GraphPanel {
 
     public ChartPanel getChartPanel() {
         return chartPanel;
+    }
+
+    public EventMarkers getEventMarkers() {
+        return eventMarkers;
     }
 
     public void addEventMarker(ValueMarker marker) {

@@ -22,6 +22,7 @@ package inspector.jmondb.viewer.view.gui;
 
 import inspector.jmondb.model.Event;
 import inspector.jmondb.viewer.controller.listeners.EventTreeMouseListener;
+import inspector.jmondb.viewer.model.VisualizationConfiguration;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -43,7 +44,7 @@ public class EventTree {
 
     private EventTreeMouseListener mouseListener;
 
-    public EventTree() {
+    public EventTree(VisualizationConfiguration configuration) {
         panel = new JPanel(new BorderLayout());
 
         // create all tree nodes
@@ -59,7 +60,7 @@ public class EventTree {
 
         // create the event tree
         treeEvents = new JTree(nodeEvents);
-        treeEvents.setCellRenderer(new EventTreeCellRenderer());
+        treeEvents.setCellRenderer(new EventTreeCellRenderer(configuration));
 
         // scroll pane for long event lists
         JScrollPane scrollPaneEvents = new JScrollPane(treeEvents);

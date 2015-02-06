@@ -113,7 +113,7 @@ public class GraphController {
             XYPlot plot = (XYPlot) graphPanel.getChartPanel().getChart().getPlot();
             Collection activeMarkers = plot.getDomainMarkers(Layer.FOREGROUND);
 
-            for(ValueMarker marker : eventsViewModel.getMarkers().getMarkers(type)) {
+            for(ValueMarker marker : graphPanel.getEventMarkers().getMarkers(type)) {
                 if(display && (activeMarkers == null || !activeMarkers.contains(marker))) {
                     plot.addDomainMarker(marker);
                 } else if(!display) {
