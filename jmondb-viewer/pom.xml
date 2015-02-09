@@ -40,9 +40,9 @@
 
         <!-- look and feel -->
         <dependency>
-            <groupId>com.jtattoo</groupId>
-            <artifactId>JTattoo</artifactId>
-            <version>1.6.11</version>
+            <groupId>com.github.arnabk</groupId>
+            <artifactId>pgslookandfeel</artifactId>
+            <version>1.1.3</version>
         </dependency>
 
         <!-- graphs -->
@@ -85,12 +85,6 @@
             <groupId>com.bric.javagraphics</groupId>
             <artifactId>Colors</artifactId>
             <version>1.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.arnabk</groupId>
-            <artifactId>pgslookandfeel</artifactId>
-            <version>1.1.3</version>
         </dependency>
     </dependencies>
 

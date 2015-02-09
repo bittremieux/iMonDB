@@ -24,8 +24,9 @@ import java.util.prefs.Preferences;
 
 public abstract class Configuration {
 
-	protected static final Preferences PREFERENCES = Preferences.userNodeForPackage(Configuration.class);
+	protected final Preferences preferences;
 
 	public Configuration() {
+        preferences = Preferences.userNodeForPackage(Configuration.class);
 	}
 }

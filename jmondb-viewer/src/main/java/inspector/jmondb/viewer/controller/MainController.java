@@ -29,6 +29,7 @@ import inspector.jmondb.viewer.viewmodel.EventsViewModel;
 import inspector.jmondb.viewer.viewmodel.InstrumentsViewModel;
 import inspector.jmondb.viewer.viewmodel.MetadataViewModel;
 import inspector.jmondb.viewer.viewmodel.PropertiesViewModel;
+import net.infotrek.util.prefs.FilePreferencesFactory;
 
 import javax.swing.*;
 
@@ -92,6 +93,8 @@ public class MainController {
     }
 
     public static void main(String[] args) {
+        setPreferencesFactory();
+
         setLookAndFeel();
 
         // start viewer
@@ -100,6 +103,11 @@ public class MainController {
             controller.viewer.display();
             controller.viewer.initialize();
         });
+    }
+
+    private static void setPreferencesFactory() {
+        System.setProperty("java.util.prefs.PreferencesFactory", FilePreferencesFactory.class.getName());
+        System.setProperty(FilePreferencesFactory.SYSTEM_PROPERTY_FILE, "imondb.preferences");
     }
 
     private static void setLookAndFeel() {
