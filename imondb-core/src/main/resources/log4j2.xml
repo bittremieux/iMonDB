@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- iMonDB logging: detailed logging to file <imondb.log> and console -->
+<configuration>
+
+	<appenders>
+		<RollingFile name="logFile" fileName="imondb.log" filePattern="imondb.log">
+			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+		</RollingFile>
+		<Console name="console" target="SYSTEM_OUT">
+			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+		</Console>
+	</appenders>
+	
+	<loggers>
+		<root level="OFF">
+			<appender-ref ref="logFile" />
+			<appender-ref ref="console" />
+		</root>
+	</loggers>
+	
+</configuration>
