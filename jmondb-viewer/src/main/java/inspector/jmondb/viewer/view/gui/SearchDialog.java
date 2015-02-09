@@ -192,7 +192,12 @@ public class SearchDialog {
             if(metadataPanel.getComponentCount() > 0) {
 				addConnectorPanel(null);
             }
+
             addMetadataPanel(null, null, null);
+
+            metadataPanel.validate();
+            metadataPanel.repaint();
+            metadataScrollPane.validate();
         }
     }
 

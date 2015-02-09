@@ -20,7 +20,7 @@ package inspector.jmondb.viewer.controller;
  * #L%
  */
 
-import com.jtattoo.plaf.fast.FastLookAndFeel;
+import com.pagosoft.plaf.PlafOptions;
 import inspector.jmondb.viewer.controller.listeners.*;
 import inspector.jmondb.viewer.model.DatabaseConfiguration;
 import inspector.jmondb.viewer.model.VisualizationConfiguration;
@@ -31,7 +31,6 @@ import inspector.jmondb.viewer.viewmodel.MetadataViewModel;
 import inspector.jmondb.viewer.viewmodel.PropertiesViewModel;
 
 import javax.swing.*;
-import java.util.Properties;
 
 public class MainController {
 
@@ -104,18 +103,7 @@ public class MainController {
     }
 
     private static void setLookAndFeel() {
-        try {
-            // JTattoo fast look and feel
-            Properties properties = new Properties();
-            properties.put("logoString", "");
-            FastLookAndFeel.setCurrentTheme(properties);
-            UIManager.setLookAndFeel("com.jtattoo.plaf.fast.FastLookAndFeel");
-        } catch (Exception e) {
-            // fall back to cross-platform
-            try {
-                UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-            } catch(Exception ignored) {
-            }
-        }
+        PlafOptions.setAsLookAndFeel();
+        PlafOptions.updateAllUIs();
     }
 }
