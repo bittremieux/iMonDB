@@ -3,14 +3,15 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<!-- Project information -->
-	<groupId>inspector.jmondb</groupId>
-	<artifactId>jmondb</artifactId>
+	<groupId>inspector.imondb</groupId>
+	<artifactId>imondb</artifactId>
 	<packaging>pom</packaging>
 	<version>1.0.0</version>
 
-	<name>jMonDB</name>
-	<url>https://bitbucket.org/proteinspector/jmondb</url>
-	<description>jMonDB is a Java API and a collection of helper tools to work with an iMonDB.</description>
+	<name>iMonDB</name>
+	<url>https://bitbucket.org/proteinspector/imondb</url>
+	<description>The Instrument MONitoring DataBase (iMonDB) allows to automatically extract, store, and manage the
+        instrument parameters of a mass spectrometer instrument.</description>
     <inceptionYear>2014</inceptionYear>
 
     <organization>
@@ -40,8 +41,8 @@
 
     <!-- Multi module project -->
     <modules>
-        <module>jmondb-core</module>
-        <module>jmondb-collector</module>
-        <module>jmondb-viewer</module>
+        <module>imondb-core</module>
+        <module>imondb-collector</module>
+        <module>imondb-viewer</module>
     </modules>
 </project>
