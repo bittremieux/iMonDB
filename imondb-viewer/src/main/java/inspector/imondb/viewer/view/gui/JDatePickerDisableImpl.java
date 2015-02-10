@@ -196,12 +196,10 @@ public class JDatePickerDisableImpl extends JPanel implements JDatePicker {
             if (arg0.getSource() == button){
                 if (popup == null) {
                     showPopup();
-                }
-                else {
+                } else {
                     hidePopup();
                 }
-            }
-            else if (arg0.getSource() == datePanel){
+            } else if (arg0.getSource() == datePanel){
                 hidePopup();
             }
         }
@@ -242,8 +240,7 @@ public class JDatePickerDisableImpl extends JPanel implements JDatePicker {
     private void setTextFieldValue(JFormattedTextField textField, int year, int month, int day, boolean isSelected) {
         if (!isSelected) {
             textField.setValue(null);
-        }
-        else {
+        } else {
             Calendar calendar = Calendar.getInstance();
             calendar.set(year, month, day, 0, 0, 0);
             calendar.set(Calendar.MILLISECOND, 0);

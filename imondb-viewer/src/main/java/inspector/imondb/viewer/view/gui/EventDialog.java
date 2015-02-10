@@ -41,18 +41,6 @@ public class EventDialog {
 
     private static Map<String, Icon> iconFileTypes = initializeIconFileTypes();
 
-    private static Map<String, Icon> initializeIconFileTypes() {
-        Map<String, Icon> icons = new HashMap<>();
-        icons.put("audio", new ImageIcon(EventDialog.class.getResource("/images/audio.png")));
-        icons.put("image", new ImageIcon(EventDialog.class.getResource("/images/image.png")));
-        icons.put("text", new ImageIcon(EventDialog.class.getResource("/images/text.png")));
-        icons.put("video", new ImageIcon(EventDialog.class.getResource("/images/video.png")));
-        icons.put("general-file", new ImageIcon(EventDialog.class.getResource("/images/general-file.png")));
-        icons.put("no-file", new ImageIcon(EventDialog.class.getResource("/images/no-file.png")));
-
-        return icons;
-    }
-
     private JPanel panel;
 
     // instrument name
@@ -115,7 +103,7 @@ public class EventDialog {
 
             @Override
             public String valueToString(Object value) throws ParseException {
-				return value != null ? sdf.format(((Calendar) value).getTime()) : "";
+                return value != null ? sdf.format(((Calendar) value).getTime()) : "";
             }
         });
         panelDate.add(datePicker, BorderLayout.CENTER);
@@ -128,8 +116,8 @@ public class EventDialog {
         comboBoxType = new JComboBox<>();
         comboBoxType.setPreferredSize(new Dimension(200, 25));
         for(EventType type : EventType.values()) {
-			comboBoxType.addItem(type);
-		}
+            comboBoxType.addItem(type);
+        }
         panelType.add(comboBoxType, BorderLayout.CENTER);
         panelTop.add(panelType);
 
@@ -210,6 +198,18 @@ public class EventDialog {
         }
     }
 
+    private static Map<String, Icon> initializeIconFileTypes() {
+        Map<String, Icon> icons = new HashMap<>();
+        icons.put("audio", new ImageIcon(EventDialog.class.getResource("/images/audio.png")));
+        icons.put("image", new ImageIcon(EventDialog.class.getResource("/images/image.png")));
+        icons.put("text", new ImageIcon(EventDialog.class.getResource("/images/text.png")));
+        icons.put("video", new ImageIcon(EventDialog.class.getResource("/images/video.png")));
+        icons.put("general-file", new ImageIcon(EventDialog.class.getResource("/images/general-file.png")));
+        icons.put("no-file", new ImageIcon(EventDialog.class.getResource("/images/no-file.png")));
+
+        return icons;
+    }
+
     public JPanel getPanel() {
         return panel;
     }
@@ -239,38 +239,38 @@ public class EventDialog {
 
     public String getProblem() {
         String text = textProblem.getText();
-        if(!text.equals("")) {
-			return text;
-		} else {
-			return null;
-		}
+        if(!text.isEmpty()) {
+            return text;
+        } else {
+            return null;
+        }
     }
 
     public String getSolution() {
         String text = textSolution.getText();
-        if(!text.equals("")) {
-			return text;
-		} else {
-			return null;
-		}
+        if(!text.isEmpty()) {
+            return text;
+        } else {
+            return null;
+        }
     }
 
     public String getExtra() {
         String text = textExtra.getText();
-        if(!text.equals("")) {
-			return text;
-		} else {
-			return null;
-		}
+        if(!text.isEmpty()) {
+            return text;
+        } else {
+            return null;
+        }
     }
 
     public String getAttachmentName() {
         String text = labelAttachmentName.getText();
         if(!"No attachment added".equals(text)) {
-			return text;
-		} else {
-			return null;
-		}
+            return text;
+        } else {
+            return null;
+        }
     }
 
     public void setAttachmentName(String name) {
@@ -278,11 +278,11 @@ public class EventDialog {
     }
 
     public byte[] getAttachmentContent() {
-        return attachmentContent;
+        return attachmentContent != null ? attachmentContent.clone() : null;
     }
 
     public void setAttachmentContent(byte[] attachment) {
-        attachmentContent = attachment;
+        attachmentContent = attachment != null ? attachment.clone() : null;
     }
 
     public void setAttachmentIconFileType() {

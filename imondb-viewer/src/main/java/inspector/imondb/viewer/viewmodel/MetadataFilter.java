@@ -43,7 +43,7 @@ public class MetadataFilter implements Iterable<Object> {
 
     public void toQuery(StringBuilder querySelectFrom, StringBuilder queryWhere, Map<String, String> parameters) {
         // add a connector for the first entry
-        if(items.size() > 0) {
+        if(!items.isEmpty()) {
             queryWhere.append(" AND (");
         }
 
@@ -68,7 +68,7 @@ public class MetadataFilter implements Iterable<Object> {
         }
 
         // close the enclosing brackets
-        if(items.size() > 0) {
+        if(!items.isEmpty()) {
             queryWhere.append(")");
         }
     }

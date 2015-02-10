@@ -56,7 +56,7 @@ public class DatabaseConnectListener implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         DatabaseConnectionPanel connectionPanel;
         int option;
-        if(!e.getActionCommand().equals("Auto connect")) {
+        if(!"Auto connect".equals(e.getActionCommand())) {
             connectionPanel = new DatabaseConnectionPanel();
             option = JOptionPane.showConfirmDialog(viewerFrame.getFrame(), connectionPanel.getPanel(),
                     "Connect to the database", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
@@ -80,23 +80,20 @@ public class DatabaseConnectListener implements ActionListener {
                 @Override
                 protected Void doInBackground() throws Exception {
                     databaseController.connect(host, port, database, userName, password);
-
                     return null;
                 }
-
                 @Override
                 protected void done() {
                     try {
                         get();
-
                         dialog.hideDialog(false);
                     } catch(InterruptedException | ExecutionException ex) {
                         dialog.hideDialog(true);
-
                         JOptionPane.showMessageDialog(viewerFrame.getFrame(),
                                 "<html><b>Could not connect to the database</b></html>\n" + ex.getMessage(),
                                 "Error", JOptionPane.ERROR_MESSAGE);
                     } catch(CancellationException ignored) {
+                        // ignore
                     }
                 }
             };

@@ -85,6 +85,7 @@ package inspector.imondb.viewer.view.gui;
 import javax.swing.*;
 import javax.swing.SpringLayout;
 import java.awt.*;
+import java.util.logging.Logger;
 
 /**
  * A 1.4 file that provides utility methods for creating form- or grid-style layouts with SpringLayout.
@@ -93,6 +94,12 @@ import java.awt.*;
  * Retrieved from: https://docs.oracle.com/javase/tutorial/uiswing/examples/layout/SpringGridProject/src/layout/SpringUtilities.java
  */
 public class SpringUtilities {
+
+    private static final Logger LOGGER = Logger.getLogger(SpringUtilities.class.getName());
+
+    private SpringUtilities() {
+
+    }
 
     /**
      * Aligns the first <code>rows</code> * <code>cols</code> components of <code>parent</code> in a grid.
@@ -111,7 +118,7 @@ public class SpringUtilities {
         try {
             layout = (SpringLayout)parent.getLayout();
         } catch (ClassCastException exc) {
-            System.err.println("The first argument to makeGrid must use SpringLayout.");
+            LOGGER.warning("The first argument to makeGrid must use SpringLayout.");
             return;
         }
 
@@ -197,7 +204,7 @@ public class SpringUtilities {
         try {
             layout = (SpringLayout)parent.getLayout();
         } catch (ClassCastException exc) {
-            System.err.println("The first argument to makeCompactGrid must use SpringLayout.");
+            LOGGER.warning("The first argument to makeCompactGrid must use SpringLayout.");
             return;
         }
 

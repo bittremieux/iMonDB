@@ -37,7 +37,7 @@ public class SearchDialog {
     private static ImageIcon iconAdd = new ImageIcon(SearchDialog.class.getResource("/images/add.png"));
     private static ImageIcon iconRemove = new ImageIcon(SearchDialog.class.getResource("/images/remove.png"));
 
-	private JPanel panel;
+    private JPanel panel;
 
     private JTextField filterTextField;
 
@@ -59,9 +59,9 @@ public class SearchDialog {
             values.add(md.getValue());
         }
 
-		panel = new JPanel();
+        panel = new JPanel();
         panel.setLayout(new BorderLayout());
-		panel.setPreferredSize(new Dimension(650, 400));
+        panel.setPreferredSize(new Dimension(650, 400));
 
         // properties filter
         JPanel filterPropertiesPanel = new JPanel();
@@ -77,9 +77,9 @@ public class SearchDialog {
         JLabel labelAdd = new JLabel("Specify additional metadata search settings");
         addMetadataPanel.add(labelAdd);
         JButton buttonAdd = new JButton(iconAdd);
-        if(metadata.size() == 0) {
-			buttonAdd.setEnabled(false);
-		}
+        if(metadata.isEmpty()) {
+            buttonAdd.setEnabled(false);
+        }
         buttonAdd.addActionListener(new AddListener());
         addMetadataPanel.add(buttonAdd);
         centerPanel.add(addMetadataPanel, BorderLayout.PAGE_START);
@@ -88,14 +88,14 @@ public class SearchDialog {
         metadataScrollPane = new JScrollPane(metadataPanel);
         centerPanel.add(metadataScrollPane, BorderLayout.CENTER);
 
-		panel.add(filterPropertiesPanel, BorderLayout.PAGE_START);
-		panel.add(centerPanel, BorderLayout.CENTER);
+        panel.add(filterPropertiesPanel, BorderLayout.PAGE_START);
+        panel.add(centerPanel, BorderLayout.CENTER);
     }
 
-	public SearchDialog(List<Metadata> metadata, String propertyFilter, MetadataFilter metadataFilter) {
-		this(metadata);
+    public SearchDialog(List<Metadata> metadata, String propertyFilter, MetadataFilter metadataFilter) {
+        this(metadata);
 
-		filterTextField.setText(propertyFilter);
+        filterTextField.setText(propertyFilter);
 
         if(metadataFilter != null) {
             for(Object elem : metadataFilter) {
@@ -107,68 +107,68 @@ public class SearchDialog {
                 }
             }
         }
-	}
+    }
 
     private void addMetadataPanel(String key, MetadataOperator operator, String value) {
-        JPanel metadataPanel = new JPanel();
+        JPanel newPanel = new JPanel();
         JComboBox<String> comboBoxKey = new JComboBox<>(keys.toArray(new String[keys.size()]));
         if(key != null) {
             comboBoxKey.setSelectedItem(key);
         }
         comboBoxKey.setPreferredSize(new Dimension(250, 25));
-        metadataPanel.add(comboBoxKey);
+        newPanel.add(comboBoxKey);
 
         JComboBox<MetadataOperator> comboBoxOperator = new JComboBox<>(
                 new MetadataOperator[] { MetadataOperator.EQUAL, MetadataOperator.NOT_EQUAL });
         if(operator != null) {
             comboBoxOperator.setSelectedItem(operator);
         }
-        metadataPanel.add(comboBoxOperator);
+        newPanel.add(comboBoxOperator);
 
         JComboBox<String> comboBoxValue = new JComboBox<>(values.toArray(new String[values.size()]));
         if(value != null) {
             comboBoxValue.setSelectedItem(value);
         }
         comboBoxValue.setPreferredSize(new Dimension(250, 25));
-        metadataPanel.add(comboBoxValue);
+        newPanel.add(comboBoxValue);
 
         JButton buttonRemove = new JButton(iconRemove);
         buttonRemove.addActionListener(new RemoveListener());
-        metadataPanel.add(buttonRemove);
+        newPanel.add(buttonRemove);
 
-        metadataPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        newPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         comboBoxes.add(comboBoxKey);
         comboBoxes.add(comboBoxOperator);
         comboBoxes.add(comboBoxValue);
-        this.metadataPanel.add(metadataPanel);
+        this.metadataPanel.add(newPanel);
     }
 
     private void addConnectorPanel(MetadataConnector connector) {
-        JPanel panel = new JPanel();
+        JPanel newPanel = new JPanel();
         JComboBox<MetadataConnector> comboBox = new JComboBox<>(
                 new MetadataConnector[] { MetadataConnector.AND, MetadataConnector.OR });
         if(connector != null) {
             comboBox.setSelectedItem(connector);
         }
-        panel.add(comboBox);
+        newPanel.add(comboBox);
 
-        panel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        newPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         comboBoxes.add(comboBox);
-        metadataPanel.add(panel);
+        metadataPanel.add(newPanel);
     }
 
-	public JPanel getPanel() {
-		return panel;
-	}
+    public JPanel getPanel() {
+        return panel;
+    }
 
     public String getPropertyFilter() {
         return filterTextField.getText().isEmpty() ? null : filterTextField.getText();
     }
 
     public MetadataFilter getMetadata() {
-        if(comboBoxes.size() == 0) {
+        if(comboBoxes.isEmpty()) {
             return null;
         } else {
             MetadataFilter metadata = new MetadataFilter();
@@ -194,7 +194,7 @@ public class SearchDialog {
         @Override
         public void actionPerformed(ActionEvent e) {
             if(metadataPanel.getComponentCount() > 0) {
-				addConnectorPanel(null);
+                addConnectorPanel(null);
             }
 
             addMetadataPanel(null, null, null);

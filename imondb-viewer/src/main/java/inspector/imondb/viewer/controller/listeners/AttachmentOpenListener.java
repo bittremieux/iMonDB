@@ -41,27 +41,29 @@ public class AttachmentOpenListener extends MouseAdapter {
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        if(e.getClickCount() == 2 &&
-                eventDialog.getAttachmentName() != null && eventDialog.getAttachmentContent() != null) {
-            Thread opener = new Thread() {
-                public void run() {
-                    try {
-                        // store the attachment in a temporary file
-                        String prefix = FilenameUtils.getBaseName(eventDialog.getAttachmentName()) + "_";
-                        String suffix = "." + FilenameUtils.getExtension(eventDialog.getAttachmentName());
-                        File temp = File.createTempFile(prefix, suffix);
-                        temp.deleteOnExit();
-                        FileUtils.writeByteArrayToFile(temp, eventDialog.getAttachmentContent());
+        if(e.getClickCount() == 2) {
+            byte[] attachmentContent = eventDialog.getAttachmentContent();
+            if(eventDialog.getAttachmentName() != null && attachmentContent != null) {
+                Thread opener = new Thread() {
+                    public void run() {
+                        try {
+                            // store the attachment in a temporary file
+                            String prefix = FilenameUtils.getBaseName(eventDialog.getAttachmentName()) + "_";
+                            String suffix = "." + FilenameUtils.getExtension(eventDialog.getAttachmentName());
+                            File temp = File.createTempFile(prefix, suffix);
+                            temp.deleteOnExit();
+                            FileUtils.writeByteArrayToFile(temp, attachmentContent);
 
-                        // open the attachment in the default application
-                        Desktop.getDesktop().open(temp);
-                    } catch(IOException ex) {
-                        JOptionPane.showMessageDialog(eventDialog.getPanel(), ex.getMessage(),
-                                "Warning", JOptionPane.WARNING_MESSAGE);
+                            // open the attachment in the default application
+                            Desktop.getDesktop().open(temp);
+                        } catch(IOException ex) {
+                            JOptionPane.showMessageDialog(eventDialog.getPanel(), ex.getMessage(),
+                                    "Warning", JOptionPane.WARNING_MESSAGE);
+                        }
                     }
-                }
-            };
-            opener.start();
+                };
+                opener.start();
+            }
         }
     }
 }

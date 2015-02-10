@@ -52,11 +52,11 @@ public class GraphShowListener implements ActionListener, Observer {
     public void actionPerformed(ActionEvent e) {
         if(DatabaseConnection.getConnection().isActive()) {
             // change property combobox (if necessary)
-            if(e.getActionCommand().equals("Next") && searchSettingsController.hasNextProperty()) {
+            if("Next".equals(e.getActionCommand()) && searchSettingsController.hasNextProperty()) {
                 searchSettingsController.advanceProperty(true);
-            } else if(e.getActionCommand().equals("Previous") && searchSettingsController.hasPreviousProperty()) {
+            } else if("Previous".equals(e.getActionCommand()) && searchSettingsController.hasPreviousProperty()) {
                 searchSettingsController.advanceProperty(false);
-            } else if(e.getActionCommand().equals("propertyChanged")) {
+            } else if("propertyChanged".equals(e.getActionCommand())) {
                 showGraph();
             }
         }
@@ -73,7 +73,7 @@ public class GraphShowListener implements ActionListener, Observer {
                 List<Object[]> values = graphController.queryValues();
 
                 if(values != null) {
-                    if(values.size() == 0) {
+                    if(values.isEmpty()) {
                         JOptionPane.showMessageDialog(viewerFrame.getFrame(), "No matching values found.",
                                 "Warning", JOptionPane.WARNING_MESSAGE);
                     } else {

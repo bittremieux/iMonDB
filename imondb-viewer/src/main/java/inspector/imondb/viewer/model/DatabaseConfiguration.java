@@ -28,7 +28,7 @@ public class DatabaseConfiguration extends Configuration {
 
     private static final boolean CONNECT_DEFAULT = false;
 
-    private final Map<String, String> DATABASE_DEFAULTS = ImmutableMap.of(
+    private static final Map<String, String> DATABASE_DEFAULTS = ImmutableMap.of(
             "db_host", "localhost",
             "db_port", "3306",
             "db_username", "",

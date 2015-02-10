@@ -62,7 +62,7 @@ public class MainController {
                 searchSettingsController, graphController, eventController);
 
         // listeners
-        viewer.addExitAction(new ExitAction(databaseController));
+        viewer.addExitAction(new ExitAction(viewer, databaseController));
         viewer.addAboutDisplayer(new AboutListener(viewer));
 
         viewer.addDatabaseConnector(new DatabaseConnectListener(viewer, databaseController, searchSettingsController,

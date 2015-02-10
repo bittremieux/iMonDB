@@ -29,50 +29,47 @@ import java.util.prefs.PreferencesFactory;
  * PreferencesFactory implementation that stores the preferences in a user-defined file. To use it,
  * set the system property <tt>java.util.prefs.PreferencesFactory</tt> to
  * <tt>net.infotrek.util.prefs.FilePreferencesFactory</tt>
- * <p/>
+ * <p>
  * The file defaults to [user.home]/.fileprefs, but may be overridden with the system property
  * <tt>net.infotrek.util.prefs.FilePreferencesFactory.file</tt>
  *
  * @author David Croft (<a href="http://www.davidc.net">www.davidc.net</a>)
  * @version $Id: FilePreferencesFactory.java 282 2009-06-18 17:05:18Z david $
- *
- * Retrieved from: http://www.davidc.net/programming/java/java-preferences-using-file-backing-store
+ *          <p>
+ *          Retrieved from: http://www.davidc.net/programming/java/java-preferences-using-file-backing-store
  */
-public class FilePreferencesFactory implements PreferencesFactory
-{
-    private static final Logger log = Logger.getLogger(FilePreferencesFactory.class.getName());
+public class FilePreferencesFactory implements PreferencesFactory {
 
-    Preferences rootPreferences;
-    public static final String SYSTEM_PROPERTY_FILE =
-            "net.infotrek.util.prefs.FilePreferencesFactory.file";
+    private static final Logger LOGGER = Logger.getLogger(FilePreferencesFactory.class.getName());
 
-    public Preferences systemRoot()
-    {
+    public static final String SYSTEM_PROPERTY_FILE = "net.infotrek.util.prefs.FilePreferencesFactory.file";
+
+    private static File preferencesFile;
+
+    private Preferences rootPreferences;
+
+    public static synchronized File getPreferencesFile() {
+        if(preferencesFile == null) {
+            String prefsFile = System.getProperty(SYSTEM_PROPERTY_FILE);
+            if(prefsFile == null || prefsFile.length() == 0) {
+                prefsFile = System.getProperty("user.home") + File.separator + ".fileprefs";
+            }
+            preferencesFile = new File(prefsFile).getAbsoluteFile();
+            LOGGER.finer("Preferences file is " + preferencesFile);
+        }
+        return preferencesFile;
+    }
+
+    public Preferences systemRoot() {
         return userRoot();
     }
 
-    public Preferences userRoot()
-    {
-        if (rootPreferences == null) {
-            log.finer("Instantiating root preferences");
+    public Preferences userRoot() {
+        if(rootPreferences == null) {
+            LOGGER.finer("Instantiating root preferences");
 
             rootPreferences = new FilePreferences(null, "");
         }
         return rootPreferences;
-    }
-
-    private static File preferencesFile;
-
-    public static File getPreferencesFile()
-    {
-        if (preferencesFile == null) {
-            String prefsFile = System.getProperty(SYSTEM_PROPERTY_FILE);
-            if (prefsFile == null || prefsFile.length() == 0) {
-                prefsFile = System.getProperty("user.home") + File.separator + ".fileprefs";
-            }
-            preferencesFile = new File(prefsFile).getAbsoluteFile();
-            log.finer("Preferences file is " + preferencesFile);
-        }
-        return preferencesFile;
     }
 }

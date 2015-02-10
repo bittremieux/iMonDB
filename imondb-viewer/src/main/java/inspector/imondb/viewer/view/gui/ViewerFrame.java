@@ -20,6 +20,7 @@ package inspector.imondb.viewer.view.gui;
  * #L%
  */
 
+import inspector.imondb.viewer.controller.listeners.ExitAction;
 import inspector.imondb.viewer.model.DatabaseConfiguration;
 import inspector.imondb.viewer.model.VisualizationConfiguration;
 
@@ -56,6 +57,7 @@ public class ViewerFrame {
 
         frame = new JFrame("iMonDB Viewer");
         frame.setIconImage(new ImageIcon(getClass().getResource("/images/logo-small.png")).getImage());
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         JPanel panelParent = new JPanel(new BorderLayout());
         frame.setContentPane(panelParent);
@@ -133,7 +135,7 @@ public class ViewerFrame {
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                action.actionPerformed(new ActionEvent(e.getSource(), e.getID(), "Exit"));
+                ((ExitAction) action).cleanUp();
             }
         });
     }

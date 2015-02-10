@@ -20,6 +20,8 @@ package net.infotrek.util.prefs;
  * #L%
  */
 
+import org.apache.commons.io.IOUtils;
+
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.logging.Level;
@@ -38,78 +40,67 @@ import java.io.FileOutputStream;
  *
  * Retrieved from: http://www.davidc.net/programming/java/java-preferences-using-file-backing-store
  */
-public class FilePreferences extends AbstractPreferences
-{
-    private static final Logger log = Logger.getLogger(FilePreferences.class.getName());
+public class FilePreferences extends AbstractPreferences {
+
+    private static final Logger LOGGER = Logger.getLogger(FilePreferences.class.getName());
 
     private Map<String, String> root;
     private Map<String, FilePreferences> children;
     private boolean isRemoved = false;
 
-    public FilePreferences(AbstractPreferences parent, String name)
-    {
+    public FilePreferences(AbstractPreferences parent, String name) {
         super(parent, name);
 
-        log.finest("Instantiating node " + name);
+        LOGGER.finest("Instantiating node " + name);
 
         root = new TreeMap<>();
         children = new TreeMap<>();
 
         try {
             sync();
-        }
-        catch (BackingStoreException e) {
-            log.log(Level.SEVERE, "Unable to sync on creation of node " + name, e);
+        } catch(BackingStoreException e) {
+            LOGGER.log(Level.SEVERE, "Unable to sync on creation of node " + name, e);
         }
     }
 
-    protected void putSpi(String key, String value)
-    {
+    protected void putSpi(String key, String value) {
         root.put(key, value);
         try {
             flush();
-        }
-        catch (BackingStoreException e) {
-            log.log(Level.SEVERE, "Unable to flush after putting " + key, e);
+        } catch(BackingStoreException e) {
+            LOGGER.log(Level.SEVERE, "Unable to flush after putting " + key, e);
         }
     }
 
-    protected String getSpi(String key)
-    {
+    protected String getSpi(String key) {
         return root.get(key);
     }
 
-    protected void removeSpi(String key)
-    {
+    protected void removeSpi(String key) {
         root.remove(key);
         try {
             flush();
-        }
-        catch (BackingStoreException e) {
-            log.log(Level.SEVERE, "Unable to flush after removing " + key, e);
+        } catch(BackingStoreException e) {
+            LOGGER.log(Level.SEVERE, "Unable to flush after removing " + key, e);
         }
     }
 
-    protected void removeNodeSpi() throws BackingStoreException
-    {
+    protected void removeNodeSpi() throws BackingStoreException {
         isRemoved = true;
         flush();
     }
 
-    protected String[] keysSpi() throws BackingStoreException
-    {
+    protected String[] keysSpi() throws BackingStoreException {
         return root.keySet().toArray(new String[root.keySet().size()]);
     }
 
-    protected String[] childrenNamesSpi() throws BackingStoreException
-    {
+    protected String[] childrenNamesSpi() throws BackingStoreException {
         return children.keySet().toArray(new String[children.keySet().size()]);
     }
 
-    protected FilePreferences childSpi(String name)
-    {
+    protected FilePreferences childSpi(String name) {
         FilePreferences child = children.get(name);
-        if (child == null || child.isRemoved()) {
+        if(child == null || child.isRemoved()) {
             child = new FilePreferences(this, name);
             children.put(name, child);
         }
@@ -117,75 +108,83 @@ public class FilePreferences extends AbstractPreferences
     }
 
 
-    protected void syncSpi() throws BackingStoreException
-    {
-        if (isRemoved()) return;
+    protected void syncSpi() throws BackingStoreException {
+        if(isRemoved()) {
+            return;
+        }
 
         final File file = FilePreferencesFactory.getPreferencesFile();
 
-        if (!file.exists()) return;
+        if(!file.exists()) {
+            return;
+        }
 
-        synchronized (file) {
+        synchronized(file) {
             Properties p = new Properties();
+            FileInputStream fis = null;
             try {
-                p.load(new FileInputStream(file));
+                fis = new FileInputStream(file);
+                p.load(fis);
 
                 StringBuilder sb = new StringBuilder();
                 getPath(sb);
                 String path = sb.toString();
 
                 final Enumeration<?> pnen = p.propertyNames();
-                while (pnen.hasMoreElements()) {
+                while(pnen.hasMoreElements()) {
                     String propKey = (String) pnen.nextElement();
-                    if (propKey.startsWith(path)) {
+                    if(propKey.startsWith(path)) {
                         String subKey = propKey.substring(path.length());
                         // Only load immediate descendants
-                        if (subKey.indexOf('.') == -1) {
+                        if(subKey.indexOf('.') == -1) {
                             root.put(subKey, p.getProperty(propKey));
                         }
                     }
                 }
-            }
-            catch (IOException e) {
+            } catch(IOException e) {
                 throw new BackingStoreException(e);
+            } finally {
+                IOUtils.closeQuietly(fis);
             }
         }
     }
 
-    private void getPath(StringBuilder sb)
-    {
+    private void getPath(StringBuilder sb) {
         final FilePreferences parent = (FilePreferences) parent();
-        if (parent == null) return;
+        if(parent == null) {
+            return;
+        }
 
         parent.getPath(sb);
         sb.append(name()).append('.');
     }
 
-    protected void flushSpi() throws BackingStoreException
-    {
+    protected void flushSpi() throws BackingStoreException {
         final File file = FilePreferencesFactory.getPreferencesFile();
 
-        synchronized (file) {
+        synchronized(file) {
             Properties p = new Properties();
+            FileInputStream fis = null;
+            FileOutputStream fos = null;
             try {
-
                 StringBuilder sb = new StringBuilder();
                 getPath(sb);
                 String path = sb.toString();
 
-                if (file.exists()) {
-                    p.load(new FileInputStream(file));
+                if(file.exists()) {
+                    fis = new FileInputStream(file);
+                    p.load(fis);
 
                     List<String> toRemove = new ArrayList<>();
 
                     // Make a list of all direct children of this node to be removed
                     final Enumeration<?> pnen = p.propertyNames();
-                    while (pnen.hasMoreElements()) {
+                    while(pnen.hasMoreElements()) {
                         String propKey = (String) pnen.nextElement();
-                        if (propKey.startsWith(path)) {
+                        if(propKey.startsWith(path)) {
                             String subKey = propKey.substring(path.length());
                             // Only do immediate descendants
-                            if (subKey.indexOf('.') == -1) {
+                            if(subKey.indexOf('.') == -1) {
                                 toRemove.add(propKey);
                             }
                         }
@@ -196,16 +195,19 @@ public class FilePreferences extends AbstractPreferences
                 }
 
                 // If this node hasn't been removed, add back in any values
-                if (!isRemoved) {
-                    for (String s : root.keySet()) {
+                if(!isRemoved) {
+                    for(String s : root.keySet()) {
                         p.setProperty(path + s, root.get(s));
                     }
                 }
 
-                p.store(new FileOutputStream(file), "FilePreferences");
-            }
-            catch (IOException e) {
+                fos = new FileOutputStream(file);
+                p.store(fos, "FilePreferences");
+            } catch(IOException e) {
                 throw new BackingStoreException(e);
+            } finally {
+                IOUtils.closeQuietly(fis);
+                IOUtils.closeQuietly(fos);
             }
         }
     }

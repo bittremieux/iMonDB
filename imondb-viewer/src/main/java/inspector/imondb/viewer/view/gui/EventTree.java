@@ -152,8 +152,9 @@ public class EventTree {
     }
 
     public void expand() {
-        for(int i = 0; i < treeEvents.getRowCount(); i++)
+        for(int i = 0; i < treeEvents.getRowCount(); i++) {
             treeEvents.expandRow(i);
+        }
     }
 
     public void clear() {

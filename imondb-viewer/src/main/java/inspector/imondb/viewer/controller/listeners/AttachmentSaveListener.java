@@ -39,7 +39,8 @@ public class AttachmentSaveListener implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if(eventDialog.getAttachmentName() != null && eventDialog.getAttachmentContent() != null) {
+        byte[] attachmentContent = eventDialog.getAttachmentContent();
+        if(eventDialog.getAttachmentName() != null && attachmentContent != null) {
             // show save dialog
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setSelectedFile(new File(eventDialog.getAttachmentName()));
@@ -50,7 +51,7 @@ public class AttachmentSaveListener implements ActionListener {
                 Thread attachmentSaver = new Thread() {
                     public void run() {
                         try {
-                            FileUtils.writeByteArrayToFile(fileChooser.getSelectedFile(), eventDialog.getAttachmentContent());
+                            FileUtils.writeByteArrayToFile(fileChooser.getSelectedFile(), attachmentContent);
                         } catch(IOException ex) {
                             JOptionPane.showMessageDialog(eventDialog.getPanel(), "Could not save the attachment",
                                     "Error", JOptionPane.ERROR_MESSAGE);

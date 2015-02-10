@@ -21,15 +21,21 @@ package inspector.imondb.viewer.controller.listeners;
  */
 
 import inspector.imondb.viewer.controller.DatabaseController;
+import inspector.imondb.viewer.view.gui.ViewerFrame;
 
 import javax.swing.*;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
 
 public class ExitAction extends AbstractAction {
 
+    private ViewerFrame viewerFrame;
+
     private DatabaseController databaseController;
 
-    public ExitAction(DatabaseController databaseController) {
+    public ExitAction(ViewerFrame viewerFrame, DatabaseController databaseController) {
+        this.viewerFrame = viewerFrame;
         this.databaseController = databaseController;
 
         putValue(Action.NAME, "Exit");
@@ -38,8 +44,10 @@ public class ExitAction extends AbstractAction {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        databaseController.disconnect();
+        viewerFrame.getFrame().dispatchEvent(new WindowEvent(viewerFrame.getFrame(), WindowEvent.WINDOW_CLOSING));
+    }
 
-        System.exit(0);
+    public void cleanUp() {
+        databaseController.disconnect();
     }
 }

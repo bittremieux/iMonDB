@@ -54,7 +54,7 @@ public class EventExportListener implements ActionListener {
 
                 int returnVal = fileChooser.showSaveDialog(viewerFrame.getFrame());
                 if(returnVal == JFileChooser.APPROVE_OPTION) {
-                    final File file = FilenameUtils.getExtension(fileChooser.getSelectedFile().getName()).equals("") ?
+                    final File file = FilenameUtils.getExtension(fileChooser.getSelectedFile().getName()).isEmpty() ?
                             new File(fileChooser.getSelectedFile().getAbsolutePath() + ".pdf") :
                             fileChooser.getSelectedFile();
 

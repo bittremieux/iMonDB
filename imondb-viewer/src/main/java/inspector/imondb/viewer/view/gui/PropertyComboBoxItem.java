@@ -20,6 +20,8 @@ package inspector.imondb.viewer.view.gui;
  * #L%
  */
 
+import java.util.Objects;
+
 public class PropertyComboBoxItem implements Comparable<PropertyComboBoxItem> {
 
     private String name;
@@ -41,6 +43,24 @@ public class PropertyComboBoxItem implements Comparable<PropertyComboBoxItem> {
     @Override
     public String toString() {
         return name + " (" + accession + ")";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if(this == o) {
+            return true;
+        }
+        if(o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        final PropertyComboBoxItem that = (PropertyComboBoxItem) o;
+        return Objects.equals(accession, that.accession) && Objects.equals(name, that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(accession, name);
     }
 
     @Override

@@ -156,7 +156,7 @@ public class EventController {
                 }
             });
 
-            if(events.size() == 0) {
+            if(events.isEmpty()) {
                 throw new IllegalArgumentException("No events found for instrument <" +
                         instrumentsViewModel.getActiveInstrument() + ">");
             } else {

@@ -37,7 +37,7 @@ import java.text.SimpleDateFormat;
 
 public class ValuePlot {
 
-	private XYPlot plot;
+    private XYPlot plot;
 
     public ValuePlot(java.util.List<Object[]> values) {
         // add data
@@ -88,18 +88,18 @@ public class ValuePlot {
         valueAxis.setAutoRangeIncludesZero(false);
 
         // create plot
-		plot = new XYPlot();
+        plot = new XYPlot();
         plot.setDomainAxis(dateAxis);
-		plot.setRangeAxis(valueAxis);
-		plot.setDataset(0, medianCollection);
-		plot.setDataset(1, q1q3Collection);
-		plot.setDataset(2, minMaxCollection);
-		plot.setRenderer(0, medianRenderer);
-		plot.setRenderer(1, q1q3Renderer);
-		plot.setRenderer(2, minMaxRenderer);
+        plot.setRangeAxis(valueAxis);
+        plot.setDataset(0, medianCollection);
+        plot.setDataset(1, q1q3Collection);
+        plot.setDataset(2, minMaxCollection);
+        plot.setRenderer(0, medianRenderer);
+        plot.setRenderer(1, q1q3Renderer);
+        plot.setRenderer(2, minMaxRenderer);
     }
 
-	public XYPlot getPlot() {
-		return plot;
-	}
+    public XYPlot getPlot() {
+        return plot;
+    }
 }
