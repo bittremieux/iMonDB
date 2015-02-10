@@ -22,7 +22,6 @@ package inspector.imondb.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hibernate.proxy.HibernateProxyHelper;
 
 import javax.persistence.*;
 import java.util.Objects;
@@ -208,7 +207,7 @@ public class Value {
         if(this == o) {
             return true;
         }
-        if(o == null || getClass() != HibernateProxyHelper.getClassWithoutInitializingProxy(o)) {
+        if(o == null || !(o instanceof Value)) {
             return false;
         }
 

@@ -25,7 +25,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Hibernate;
 import org.hibernate.annotations.SortNatural;
-import org.hibernate.proxy.HibernateProxyHelper;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
@@ -357,7 +356,7 @@ public class Instrument {
         if(this == o) {
             return true;
         }
-        if(o == null || getClass() != HibernateProxyHelper.getClassWithoutInitializingProxy(o)) {
+        if(o == null || !(o instanceof Instrument)) {
             return false;
         }
 
