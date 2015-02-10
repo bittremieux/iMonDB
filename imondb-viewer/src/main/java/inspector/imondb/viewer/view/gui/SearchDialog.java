@@ -168,22 +168,26 @@ public class SearchDialog {
     }
 
     public MetadataFilter getMetadata() {
-        MetadataFilter metadata = new MetadataFilter();
+        if(comboBoxes.size() == 0) {
+            return null;
+        } else {
+            MetadataFilter metadata = new MetadataFilter();
 
-        int index = 0;
-        while(index < comboBoxes.size()) {
-            if(index % 4 == 0) {
-                metadata.add(new MetadataEntry((String) comboBoxes.get(index).getSelectedItem(),
-                        (MetadataOperator) comboBoxes.get(index + 1).getSelectedItem(),
-                        (String) comboBoxes.get(index + 2).getSelectedItem()));
-                index += 3;
-            } else if(index % 4 == 3) {
-                metadata.add(comboBoxes.get(index).getSelectedItem());
-                index++;
+            int index = 0;
+            while(index < comboBoxes.size()) {
+                if(index % 4 == 0) {
+                    metadata.add(new MetadataEntry((String) comboBoxes.get(index).getSelectedItem(),
+                            (MetadataOperator) comboBoxes.get(index + 1).getSelectedItem(),
+                            (String) comboBoxes.get(index + 2).getSelectedItem()));
+                    index += 3;
+                } else if(index % 4 == 3) {
+                    metadata.add(comboBoxes.get(index).getSelectedItem());
+                    index++;
+                }
             }
-        }
 
-        return metadata;
+            return metadata;
+        }
     }
 
     private class AddListener implements ActionListener {

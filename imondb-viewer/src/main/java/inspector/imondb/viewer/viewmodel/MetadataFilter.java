@@ -20,10 +20,7 @@ package inspector.imondb.viewer.viewmodel;
  * #L%
  */
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MetadataFilter implements Iterable<Object> {
 
@@ -91,5 +88,23 @@ public class MetadataFilter implements Iterable<Object> {
             }
         }
         return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if(this == o) {
+            return true;
+        }
+        if(o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        final MetadataFilter that = (MetadataFilter) o;
+        return Objects.deepEquals(items, that.items);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(items);
     }
 }

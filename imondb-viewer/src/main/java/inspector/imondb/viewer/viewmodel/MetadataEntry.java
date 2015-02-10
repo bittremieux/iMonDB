@@ -20,6 +20,8 @@ package inspector.imondb.viewer.viewmodel;
  * #L%
  */
 
+import java.util.Objects;
+
 public class MetadataEntry {
 
     private String key;
@@ -47,5 +49,25 @@ public class MetadataEntry {
     @Override
     public String toString() {
         return key + " " + operator.toString() + " " + value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if(this == o) {
+            return true;
+        }
+        if(o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        final MetadataEntry that = (MetadataEntry) o;
+        return  Objects.equals(key, that.key) &&
+                Objects.equals(operator, that.operator) &&
+                Objects.equals(value, that.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(key, operator, value);
     }
 }
