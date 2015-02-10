@@ -89,9 +89,8 @@ public class DatabaseConnectListener implements ActionListener {
                         dialog.hideDialog(false);
                     } catch(InterruptedException | ExecutionException ex) {
                         dialog.hideDialog(true);
-                        JOptionPane.showMessageDialog(viewerFrame.getFrame(),
-                                "<html><b>Could not connect to the database</b></html>\n" + ex.getMessage(),
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(viewerFrame.getFrame(), "<html><b>Could not connect to the database</b></html>\n"
+                                        + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     } catch(CancellationException ignored) {
                         // ignore
                     }

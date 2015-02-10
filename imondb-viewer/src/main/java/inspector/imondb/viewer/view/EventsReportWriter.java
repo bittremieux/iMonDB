@@ -33,7 +33,10 @@ import net.sf.dynamicreports.report.constant.PageType;
 import net.sf.dynamicreports.report.constant.VerticalAlignment;
 import net.sf.dynamicreports.report.exception.DRException;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+import org.apache.commons.io.IOUtils;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -45,65 +48,88 @@ import static net.sf.dynamicreports.report.builder.DynamicReports.*;
 
 public class EventsReportWriter {
 
-	// text styles
-	private static StyleBuilder titleBigStyle = stl.style().bold().setFontSize(40).setHorizontalAlignment(HorizontalAlignment.LEFT).setVerticalAlignment(VerticalAlignment.MIDDLE);
-	private static StyleBuilder titleNormalStyle = stl.style().bold().setFontSize(15).setHorizontalAlignment(HorizontalAlignment.RIGHT).setVerticalAlignment(VerticalAlignment.TOP).setLineSpacing(LineSpacing.SINGLE);
+    // text styles
+    private static StyleBuilder titleBigStyle = stl.style().bold().setFontSize(30)
+            .setHorizontalAlignment(HorizontalAlignment.LEFT).setVerticalAlignment(VerticalAlignment.MIDDLE);
+    private static StyleBuilder titleNormalStyle = stl.style().bold().setFontSize(15)
+            .setHorizontalAlignment(HorizontalAlignment.RIGHT).setVerticalAlignment(VerticalAlignment.MIDDLE)
+            .setLineSpacing(LineSpacing.SINGLE);
 
-	private static StyleBuilder keyStyle = stl.style().bold().setHorizontalAlignment(HorizontalAlignment.LEFT).setVerticalAlignment(VerticalAlignment.TOP);
-	private static StyleBuilder valueStyle = stl.style().setHorizontalAlignment(HorizontalAlignment.LEFT).setVerticalAlignment(VerticalAlignment.TOP);
-	private static StyleBuilder dateStyle = valueStyle.setPattern("dd/MM/yyyy");
+    private static StyleBuilder keyStyle = stl.style().bold()
+            .setHorizontalAlignment(HorizontalAlignment.LEFT).setVerticalAlignment(VerticalAlignment.TOP);
+    private static StyleBuilder valueStyle = stl.style()
+            .setHorizontalAlignment(HorizontalAlignment.LEFT).setVerticalAlignment(VerticalAlignment.TOP);
+    private static StyleBuilder dateStyle = valueStyle.setPattern("dd/MM/yyyy");
 
-	public static void writeReport(String instrumentName, List<Event> events, File file) throws DRException, IOException {
+    private EventsReportWriter() {
 
-		JasperReportBuilder report = report();
+    }
 
-		// create report
-		// header text fields
-		TextFieldBuilder<String> dateHeader = cmp.text("Date:").setStyle(keyStyle).setWidth(35);
-		TextFieldBuilder<String> typeHeader = cmp.text("Type:").setStyle(keyStyle).setWidth(35);
-		TextFieldBuilder<String> problemHeader = cmp.text("Problem:").setStyle(keyStyle).setWidth(35);
-		TextFieldBuilder<String> solutionHeader = cmp.text("Solution:").setStyle(keyStyle).setWidth(35);
-		TextFieldBuilder<String> extraHeader = cmp.text("Additional information:").setStyle(keyStyle).setWidth(35);
+    public static void writeReport(String instrumentName, List<Event> events, File file) throws DRException, IOException {
 
-		// value text fields
-		TextFieldBuilder<Date> dateValue = cmp.text(field("date", type.dateType())).setStyle(dateStyle);
-		TextFieldBuilder<EventType> typeValue = cmp.text(field("type", EventType.class)).setStyle(valueStyle);
-		TextFieldBuilder<String> problemValue = cmp.text(field("problem", type.stringType())).setStyle(valueStyle);
-		TextFieldBuilder<String> solutionValue = cmp.text(field("solution", type.stringType())).setStyle(valueStyle);
-		TextFieldBuilder<String> extraValue = cmp.text(field("extra", type.stringType())).setStyle(valueStyle);
+        JasperReportBuilder report = report();
 
-		// visualization lists
-		HorizontalListBuilder dateList = cmp.horizontalList(dateHeader, dateValue);
-		HorizontalListBuilder typeList = cmp.horizontalList(typeHeader, typeValue);
-		HorizontalListBuilder problemList = cmp.horizontalList(problemHeader, problemValue);
-		HorizontalListBuilder solutionList = cmp.horizontalList(solutionHeader, solutionValue);
-		HorizontalListBuilder extraList = cmp.horizontalList(extraHeader, extraValue);
+        // create report
+        // logo
+        BufferedImage logo = ImageIO.read(EventsReportWriter.class.getResource("/images/logo.png"));
 
-		VerticalListBuilder rowList = cmp.verticalList(cmp.text(""), dateList, typeList, problemList, solutionList, extraList, cmp.text("")).setGap(3);
-		rowList.setStyle(stl.style().setBottomBorder(stl.pen2Point()));
+        // header text fields
+        int keyWidth = 35;
+        TextFieldBuilder<String> dateHeader = cmp.text("Date:").setStyle(keyStyle).setWidth(keyWidth);
+        TextFieldBuilder<String> typeHeader = cmp.text("Type:").setStyle(keyStyle).setWidth(keyWidth);
+        TextFieldBuilder<String> problemHeader = cmp.text("Problem:").setStyle(keyStyle).setWidth(keyWidth);
+        TextFieldBuilder<String> solutionHeader = cmp.text("Solution:").setStyle(keyStyle).setWidth(keyWidth);
+        TextFieldBuilder<String> extraHeader = cmp.text("Additional information:").setStyle(keyStyle).setWidth(keyWidth);
 
-		// add to the report
-		report.columns(col.componentColumn(rowList));
+        // value text fields
+        TextFieldBuilder<Date> dateValue = cmp.text(field("date", type.dateType())).setStyle(dateStyle);
+        TextFieldBuilder<EventType> typeValue = cmp.text(field("type", EventType.class)).setStyle(valueStyle);
+        TextFieldBuilder<String> problemValue = cmp.text(field("problem", type.stringType())).setStyle(valueStyle);
+        TextFieldBuilder<String> solutionValue = cmp.text(field("solution", type.stringType())).setStyle(valueStyle);
+        TextFieldBuilder<String> extraValue = cmp.text(field("extra", type.stringType())).setStyle(valueStyle);
 
-		report.pageFooter(cmp.pageXofY());
+        // visualization lists
+        HorizontalListBuilder dateList = cmp.horizontalList(dateHeader, dateValue);
+        HorizontalListBuilder typeList = cmp.horizontalList(typeHeader, typeValue);
+        HorizontalListBuilder problemList = cmp.horizontalList(problemHeader, problemValue);
+        HorizontalListBuilder solutionList = cmp.horizontalList(solutionHeader, solutionValue);
+        HorizontalListBuilder extraList = cmp.horizontalList(extraHeader, extraValue);
 
-		report.setPageFormat(PageType.A4);
-		report.setPageMargin(margin().setTop(20).setBottom(10).setLeft(30).setRight(30));
+        VerticalListBuilder rowList = cmp.verticalList(cmp.text(""), dateList, typeList, problemList, solutionList,
+                extraList, cmp.text("")).setGap(3);
+        rowList.setStyle(stl.style().setBottomBorder(stl.pen2Point()));
 
-		// fill in customizable data
-		// title
-		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-		HorizontalListBuilder titleList = cmp.horizontalList(cmp.text("iMonDB").setStyle(titleBigStyle).setWidth(40),
-				cmp.verticalList(cmp.text("Event log for instrument <" + instrumentName + ">").setStyle(titleNormalStyle),
-						cmp.text("Generated on " + sdf.format(new Date())).setStyle(titleNormalStyle)));
-		report.title(titleList);
+        // add to the report
+        report.columns(col.componentColumn(rowList));
 
-		// add all events
-		report.setDataSource(new JRBeanCollectionDataSource(events));
+        report.pageFooter(cmp.pageXofY());
 
-		// output to file
-		FileOutputStream fos = new FileOutputStream(file);
-		report.toPdf(fos);
-		fos.close();
-	}
+        report.setPageFormat(PageType.A4);
+        report.setPageMargin(margin().setTop(20).setBottom(10).setLeft(30).setRight(30));
+
+        // fill in customizable data
+        // title
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+        HorizontalListBuilder titleList = cmp.horizontalList(cmp.image(logo).setFixedDimension(62, 50),
+                cmp.horizontalGap(10),
+                cmp.text("iMonDB").setStyle(titleBigStyle).setWidth(40),
+                cmp.verticalList(
+                        cmp.text("Event log for instrument <" + instrumentName + ">").setStyle(titleNormalStyle),
+                        cmp.text("Generated on " + sdf.format(new Date())).setStyle(titleNormalStyle)))
+                .newRow()
+                .add(cmp.filler().setStyle(stl.style().setBottomBorder(stl.pen2Point())).setFixedHeight(10));
+        report.title(titleList);
+
+        // add all events
+        report.setDataSource(new JRBeanCollectionDataSource(events));
+
+        // output to file
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(file);
+            report.toPdf(fos);
+        } finally {
+            IOUtils.closeQuietly(fos);
+        }
+    }
 }
