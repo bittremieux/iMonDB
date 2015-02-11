@@ -86,6 +86,13 @@
             <artifactId>Colors</artifactId>
             <version>1.0</version>
         </dependency>
+
+        <!-- encryption -->
+        <dependency>
+            <groupId>org.jasypt</groupId>
+            <artifactId>jasypt</artifactId>
+            <version>1.9.2</version>
+        </dependency>
     </dependencies>
 
     <build>
