@@ -84,7 +84,8 @@ public class SearchDialog {
         addMetadataPanel.add(buttonAdd);
         centerPanel.add(addMetadataPanel, BorderLayout.PAGE_START);
 
-        metadataPanel = new JPanel(new GridLayout(0, 1));
+        metadataPanel = new JPanel();
+        metadataPanel.setLayout(new BoxLayout(metadataPanel, BoxLayout.PAGE_AXIS));
         metadataScrollPane = new JScrollPane(metadataPanel);
         centerPanel.add(metadataScrollPane, BorderLayout.CENTER);
 
@@ -111,6 +112,8 @@ public class SearchDialog {
 
     private void addMetadataPanel(String key, MetadataOperator operator, String value) {
         JPanel newPanel = new JPanel();
+        newPanel.setMaximumSize(new Dimension(613, 35));
+
         JComboBox<String> comboBoxKey = new JComboBox<>(keys.toArray(new String[keys.size()]));
         if(key != null) {
             comboBoxKey.setSelectedItem(key);
@@ -146,6 +149,8 @@ public class SearchDialog {
 
     private void addConnectorPanel(MetadataConnector connector) {
         JPanel newPanel = new JPanel();
+        newPanel.setMaximumSize(new Dimension(65, 31));
+
         JComboBox<MetadataConnector> comboBox = new JComboBox<>(
                 new MetadataConnector[] { MetadataConnector.AND, MetadataConnector.OR });
         if(connector != null) {
