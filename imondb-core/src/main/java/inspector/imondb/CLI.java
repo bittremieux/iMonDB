@@ -22,7 +22,9 @@ package inspector.imondb;
 
 import inspector.imondb.convert.thermo.ThermoRawFileExtractor;
 import inspector.imondb.io.IMonDBManagerFactory;
+import inspector.imondb.io.IMonDBReader;
 import inspector.imondb.io.IMonDBWriter;
+import inspector.imondb.model.Instrument;
 import inspector.imondb.model.Run;
 import org.apache.commons.cli.*;
 import org.apache.logging.log4j.Level;
@@ -121,10 +123,12 @@ public class CLI {
                 if(!error) {
                     // create database connection
                     emf = IMonDBManagerFactory.createMySQLFactory(host, port, database, user, pass);
+                    IMonDBReader reader = new IMonDBReader(emf);
                     IMonDBWriter writer = new IMonDBWriter(emf);
 
                     // store raw file in the database
-                    Run run = new ThermoRawFileExtractor().extractInstrumentData(rawFile, null, instrumentName);
+                    Instrument instrument = reader.getInstrument(instrumentName);
+                    Run run = new ThermoRawFileExtractor().extractInstrumentData(rawFile, null, instrument);
                     writer.writeRun(run);
                 } else {
                     new HelpFormatter().printHelp("iMonDB-core", options, true);
