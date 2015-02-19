@@ -37,8 +37,6 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Processes a raw file by extracting the instrument data and storing the resulting {@link Run} in the database.
@@ -48,9 +46,6 @@ import java.util.concurrent.locks.ReentrantLock;
 public class FileProcessor implements Callable<Timestamp> {
 
 	protected static final Logger logger = LogManager.getLogger(FileProcessor.class);
-
-	/** static lock to make sure only one thread is writing to the database simultaneously */
-	private static final Lock DATABASE_LOCK = new ReentrantLock();
 
 	private IMonDBReader dbReader;
 	private IMonDBWriter dbWriter;
@@ -121,13 +116,9 @@ public class FileProcessor implements Callable<Timestamp> {
 				metadataMapper.applyMetadata(run, file);
 
 			// write the run to the database
-			try {
-				DATABASE_LOCK.lock();
-				dbWriter.writeRun(run);
-			}
-			finally {
-				DATABASE_LOCK.unlock();
-			}
+            synchronized(FileProcessor.class) {
+                dbWriter.writeRun(run);
+            }
 
 			// return the run's sample date
 			return run.getSampleDate();
