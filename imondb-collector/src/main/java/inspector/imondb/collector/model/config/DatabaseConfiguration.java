@@ -21,6 +21,7 @@ package inspector.imondb.collector.model.config;
  */
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang.StringUtils;
 import org.jasypt.util.text.BasicTextEncryptor;
 
 import java.util.Map;
@@ -49,49 +50,49 @@ public class DatabaseConfiguration {
     public String getHost() {
         @SuppressWarnings("unchecked")
         String result = ((Map<String, String>) rootMap.get("sql")).get("host");
-        return result != null ? result : DATABASE_DEFAULTS.get("db_host");
+        return !StringUtils.isEmpty(result) ? result : DATABASE_DEFAULTS.get("db_host");
     }
 
     public void setHost(String host) {
         @SuppressWarnings("unchecked")
         Map<String, String> sqlMap = (Map<String, String>) rootMap.get("sql");
-        sqlMap.put("host", host != null && !host.isEmpty() ? host : DATABASE_DEFAULTS.get("db_host"));
+        sqlMap.put("host", !StringUtils.isEmpty(host) ? host : DATABASE_DEFAULTS.get("db_host"));
     }
 
     public String getPort() {
         @SuppressWarnings("unchecked")
         String result = ((Map<String, String>) rootMap.get("sql")).get("port");
-        return result != null ? result : DATABASE_DEFAULTS.get("db_port");
+        return !StringUtils.isEmpty(result) ? result : DATABASE_DEFAULTS.get("db_port");
     }
 
     public void setPort(String port) {
         @SuppressWarnings("unchecked")
         Map<String, String> sqlMap = (Map<String, String>) rootMap.get("sql");
-        sqlMap.put("port", port != null && !port.isEmpty() ? port : DATABASE_DEFAULTS.get("db_port"));
+        sqlMap.put("port", !StringUtils.isEmpty(port) ? port : DATABASE_DEFAULTS.get("db_port"));
     }
 
     public String getDatabase() {
         @SuppressWarnings("unchecked")
         String result = ((Map<String, String>) rootMap.get("sql")).get("database");
-        return result != null ? result : DATABASE_DEFAULTS.get("db_database");
+        return !StringUtils.isEmpty(result) ? result : DATABASE_DEFAULTS.get("db_database");
     }
 
     public void setDatabase(String database) {
         @SuppressWarnings("unchecked")
         Map<String, String> sqlMap = (Map<String, String>) rootMap.get("sql");
-        sqlMap.put("database", database != null && !database.isEmpty() ? database : DATABASE_DEFAULTS.get("db_database"));
+        sqlMap.put("database", !StringUtils.isEmpty(database) ? database : DATABASE_DEFAULTS.get("db_database"));
     }
 
     public String getUserName() {
         @SuppressWarnings("unchecked")
         String result = ((Map<String, String>) rootMap.get("sql")).get("user");
-        return result != null ? result : DATABASE_DEFAULTS.get("db_username");
+        return !StringUtils.isEmpty(result) ? result : DATABASE_DEFAULTS.get("db_username");
     }
 
     public void setUserName(String username) {
         @SuppressWarnings("unchecked")
         Map<String, String> sqlMap = (Map<String, String>) rootMap.get("sql");
-        sqlMap.put("user", username != null && !username.isEmpty() ? username : DATABASE_DEFAULTS.get("db_username"));
+        sqlMap.put("user", !StringUtils.isEmpty(username) ? username : DATABASE_DEFAULTS.get("db_username"));
     }
 
     public String getPassword() {

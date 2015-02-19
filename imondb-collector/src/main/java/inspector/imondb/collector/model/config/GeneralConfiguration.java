@@ -20,6 +20,8 @@ package inspector.imondb.collector.model.config;
  * #L%
  */
 
+import org.apache.commons.lang.StringUtils;
+
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -55,13 +57,13 @@ public class GeneralConfiguration {
     public String getFileNameRegex() {
         @SuppressWarnings("unchecked")
         String result = ((Map<String, String>) rootMap.get("general")).get("match_file");
-        return result != null ? result : REGEX_DEFAULT;
+        return !StringUtils.isEmpty(result) ? result : REGEX_DEFAULT;
     }
 
     public void setFileNameRegex(String regex) {
         @SuppressWarnings("unchecked")
         Map<String, String> generalMap = (Map<String, String>) rootMap.get("general");
-        generalMap.put("match_file", regex != null && !regex.isEmpty() ? regex : REGEX_DEFAULT);
+        generalMap.put("match_file", !StringUtils.isEmpty(regex) ? regex : REGEX_DEFAULT);
     }
 
     public Timestamp getStartDate() {
@@ -85,7 +87,7 @@ public class GeneralConfiguration {
     public int getNumberOfThreads() {
         @SuppressWarnings("unchecked")
         Integer result = ((Map<String, Integer>) rootMap.get("general")).get("num_threads");
-        return result != null ? result : NR_OF_THREADS_DEFAULT;
+        return result != null && result > 0 ? result : NR_OF_THREADS_DEFAULT;
     }
 
     public void setNumberOfThreads(int numberOfThreads) {
