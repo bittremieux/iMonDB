@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="inspector.imondb.collector.view.database.DatabasePanel">
+  <grid id="de9d3" binding="panel" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="1">
+    <constraints>
+      <xy x="20" y="20" width="521" height="400"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <grid id="27dc6" layout-manager="FormLayout">
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:3dlu:noGrow"/>
+        <rowspec value="center:d:noGrow"/>
+        <rowspec value="top:3dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:3dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:3dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:3dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <colspec value="fill:d:noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:d:grow"/>
+        <constraints/>
+        <properties/>
+        <border type="empty">
+          <size top="10" left="10" bottom="10" right="10"/>
+        </border>
+        <children>
+          <component id="6b1c4" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="11"/>
+              <labelFor value="2e935"/>
+              <text value="&lt;html&gt;&lt;b&gt;&amp;Host&lt;/b&gt;&lt;/html&gt;"/>
+              <toolTipText value="The MySQL host"/>
+            </properties>
+          </component>
+          <component id="2e935" class="javax.swing.JTextField" binding="textFieldHost">
+            <constraints>
+              <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties>
+              <maximumSize width="420" height="24"/>
+              <minimumSize width="420" height="24"/>
+              <preferredSize width="420" height="24"/>
+              <text value="localhost"/>
+            </properties>
+          </component>
+          <component id="b518f" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="11"/>
+              <labelFor value="20a04"/>
+              <text value="&lt;html&gt;&lt;b&gt;&amp;Port&lt;/b&gt;&lt;/html&gt;"/>
+              <toolTipText value="The MySQL port"/>
+            </properties>
+          </component>
+          <component id="f9609" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="11"/>
+              <labelFor value="9d772"/>
+              <text value="&lt;html&gt;&lt;b&gt;&amp;Database&lt;/b&gt;&lt;/html&gt;"/>
+              <toolTipText value="The iMonDB database name"/>
+            </properties>
+          </component>
+          <component id="fee2" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="11"/>
+              <labelFor value="86d48"/>
+              <text value="&lt;html&gt;&lt;b&gt;&amp;User name&lt;/b&gt;&lt;/html&gt;"/>
+              <toolTipText value="The MySQL user name"/>
+            </properties>
+          </component>
+          <component id="1b9e5" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="10" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="11"/>
+              <labelFor value="32887"/>
+              <text value="Pass&amp;word"/>
+              <toolTipText value="The password for the given user"/>
+            </properties>
+          </component>
+          <component id="20a04" class="javax.swing.JTextField" binding="textFieldPort">
+            <constraints>
+              <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties>
+              <maximumSize width="420" height="24"/>
+              <minimumSize width="420" height="24"/>
+              <preferredSize width="420" height="24"/>
+              <text value="3306"/>
+            </properties>
+          </component>
+          <component id="9d772" class="javax.swing.JTextField" binding="textFieldDatabase">
+            <constraints>
+              <grid row="6" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties>
+              <maximumSize width="420" height="24"/>
+              <minimumSize width="420" height="24"/>
+              <preferredSize width="420" height="24"/>
+              <text value="iMonDB"/>
+            </properties>
+          </component>
+          <component id="86d48" class="javax.swing.JTextField" binding="textFieldUserName">
+            <constraints>
+              <grid row="8" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties>
+              <maximumSize width="420" height="24"/>
+              <minimumSize width="420" height="24"/>
+              <preferredSize width="420" height="24"/>
+            </properties>
+          </component>
+          <component id="32887" class="javax.swing.JPasswordField" binding="passwordField">
+            <constraints>
+              <grid row="10" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties>
+              <maximumSize width="420" height="24"/>
+              <minimumSize width="420" height="24"/>
+              <preferredSize width="420" height="24"/>
+            </properties>
+          </component>
+          <grid id="3249" layout-manager="FormLayout">
+            <rowspec value="center:d:noGrow"/>
+            <colspec value="fill:d:grow"/>
+            <colspec value="left:4dlu:noGrow"/>
+            <colspec value="fill:d:grow"/>
+            <constraints>
+              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="8" fill="2" indent="0" use-parent-layout="false"/>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties/>
+            <border type="empty">
+              <size top="0" left="0" bottom="15" right="0"/>
+            </border>
+            <children>
+              <component id="1a3dd" class="javax.swing.JButton" binding="buttonVerify">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+                  <forms/>
+                </constraints>
+                <properties>
+                  <text value="&amp;Verify"/>
+                </properties>
+              </component>
+              <component id="55278" class="javax.swing.JLabel" binding="labelStatus">
+                <constraints>
+                  <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+                  <forms/>
+                </constraints>
+                <properties>
+                  <horizontalAlignment value="11"/>
+                  <icon value="images/warning.png"/>
+                  <text value="No/unverified connection"/>
+                </properties>
+              </component>
+            </children>
+          </grid>
+        </children>
+      </grid>
+    </children>
+  </grid>
+</form>
