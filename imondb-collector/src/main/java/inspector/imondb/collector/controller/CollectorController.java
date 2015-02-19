@@ -51,9 +51,10 @@ public class CollectorController {
 
         // controller
         databaseController = new DatabaseController();
+        ExecutionController executionController = new ExecutionController(databaseController, configuration);
 
         // view
-        collector = new CollectorFrame(this, configuration);
+        collector = new CollectorFrame(this, executionController, configuration);
 
         // listeners
         collector.addExitAction(new ExitAction());

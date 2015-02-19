@@ -32,8 +32,30 @@
               <card name="CardExecution"/>
             </constraints>
             <properties/>
-            <border type="none"/>
-            <children/>
+            <border type="empty">
+              <size top="10" left="10" bottom="10" right="10"/>
+            </border>
+            <children>
+              <component id="6e817" class="javax.swing.JProgressBar" binding="progressBar">
+                <constraints>
+                  <card name="Card1"/>
+                </constraints>
+                <properties/>
+              </component>
+              <scrollpane id="27a37">
+                <constraints>
+                  <card name="Card2"/>
+                </constraints>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <component id="1d94" class="javax.swing.JTextArea" binding="textAreaLog">
+                    <constraints/>
+                    <properties/>
+                  </component>
+                </children>
+              </scrollpane>
+            </children>
           </grid>
         </children>
       </grid>
@@ -48,4 +70,8 @@
       </component>
     </children>
   </grid>
+  <inspectionSuppressions>
+    <suppress inspection="NoLabelFor" id="27a37"/>
+    <suppress inspection="NoLabelFor" id="1d94"/>
+  </inspectionSuppressions>
 </form>

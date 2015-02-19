@@ -20,6 +20,9 @@ package inspector.imondb.collector.view.overview;
  * #L%
  */
 
+import inspector.imondb.collector.controller.ExecutionController;
+import inspector.imondb.collector.view.CollectorFrame;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -35,28 +38,65 @@ public class ExecutionPanel implements Observer {
 
     private JPanel panelOverview;
 
-    private JButton buttonExecute;
     private JPanel panelExecution;
 
-    public ExecutionPanel(OverviewPanel overviewPanel) {
-        panelOverview.add(overviewPanel.getPanel());
-        overviewPanel.addObserver(this);
+    private JTextArea textAreaLog;
+    private JProgressBar progressBar;
+
+    private JButton buttonExecute;
+
+    public ExecutionPanel(CollectorFrame collectorFrame, ExecutionController executionController) {
+        panelOverview.add(collectorFrame.getOverviewPanel().getPanel());
+        collectorFrame.getOverviewPanel().addObserver(this);
+
+        ExecutionController executionController1 = executionController;
 
         buttonExecute.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                CardLayout cardLayout = (CardLayout) panelCardLayout.getLayout();
-                String cardName = "CardOverview";
+                // change the card layout
+                updateLayout(e);
+
+                // execute the button functionality
                 if("Start collector".equals(e.getActionCommand())) {
-                    cardName = "CardExecution";
-                    buttonExecute.setText("Stop collector");
+                    collectorFrame.setWaitCursor(true);
+
+                    SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                        @Override
+                        protected Void doInBackground() throws Exception {
+                            executionController.startCollector();
+                            return null;
+                        }
+                        @Override
+                        protected void done() {
+                            collectorFrame.setWaitCursor(false);
+                            buttonExecute.setText("Start collector");
+                        }
+                    };
+
+                    worker.execute();
                 } else if("Stop collector".equals(e.getActionCommand())) {
-                    cardName = "CardOverview";
-                    buttonExecute.setText("Start collector");
+                    //TODO
+                } else if("Schedule collector".equals(e.getActionCommand())) {
+                    //TODO
                 }
-                cardLayout.show(panelCardLayout, cardName);
             }
         });
+    }
+
+    private void updateLayout(ActionEvent e) {
+        CardLayout cardLayout = (CardLayout) panelCardLayout.getLayout();
+        String cardName = "CardOverview";
+        if("Start collector".equals(e.getActionCommand())) {
+            cardName = "CardExecution";
+            buttonExecute.setText("Stop collector");
+        } else if("Stop collector".equals(e.getActionCommand())) {
+            cardName = "CardOverview";
+            buttonExecute.setText("Start collector");
+        } else if("Schedule collector".equals(e.getActionCommand())) {
+            // no layout change
+        }
+        cardLayout.show(panelCardLayout, cardName);
     }
 
     public JPanel getPanel() {
@@ -66,5 +106,9 @@ public class ExecutionPanel implements Observer {
     @Override
     public void update(Observable o, Object arg) {
         buttonExecute.setEnabled(!arg.equals(OverviewPanel.Status.ERROR));
+    }
+
+    public void setSchedule(boolean enabled) {
+        buttonExecute.setText(enabled ? "Schedule collector" : "Start collector");
     }
 }

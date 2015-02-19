@@ -21,6 +21,7 @@ package inspector.imondb.collector.view;
  */
 
 import inspector.imondb.collector.controller.CollectorController;
+import inspector.imondb.collector.controller.ExecutionController;
 import inspector.imondb.collector.controller.listeners.ConfigurationChangeListener;
 import inspector.imondb.collector.controller.listeners.DatabaseConnectionListener;
 import inspector.imondb.collector.model.config.Configuration;
@@ -57,7 +58,7 @@ public class CollectorFrame {
     private MetadataPanel metadataPanel;
     private OverviewPanel overviewPanel;
 
-    public CollectorFrame(CollectorController collectorController, Configuration configuration) {
+    public CollectorFrame(CollectorController collectorController, ExecutionController executionController, Configuration configuration) {
         this.collectorController = collectorController;
 
         frame = new JFrame("iMonDB Collector");
@@ -92,7 +93,7 @@ public class CollectorFrame {
         tabbedPane.addTab("Schedule", null);
 
         overviewPanel = new OverviewPanel(this);
-        ExecutionPanel executionPanel = new ExecutionPanel(overviewPanel);
+        ExecutionPanel executionPanel = new ExecutionPanel(this, executionController);
         tabbedPane.addTab("Execute", executionPanel.getPanel());
 
         tabbedPane.addChangeListener(e -> {

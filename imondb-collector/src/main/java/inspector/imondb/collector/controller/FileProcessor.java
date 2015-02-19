@@ -1,4 +1,4 @@
-package inspector.imondb.collect;
+package inspector.imondb.collector.controller;
 
 /*
  * #%L
@@ -21,10 +21,14 @@ package inspector.imondb.collect;
  */
 
 import com.google.common.collect.ImmutableMap;
-import inspector.imondb.config.MetadataMapper;
+import inspector.imondb.collector.model.InstrumentMap;
+import inspector.imondb.collector.model.MetadataMap;
+import inspector.imondb.collector.model.RegexMapper;
 import inspector.imondb.convert.thermo.ThermoRawFileExtractor;
 import inspector.imondb.io.IMonDBReader;
 import inspector.imondb.io.IMonDBWriter;
+import inspector.imondb.model.Instrument;
+import inspector.imondb.model.Metadata;
 import inspector.imondb.model.Run;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -50,18 +54,10 @@ public class FileProcessor implements Callable<Timestamp> {
 	private IMonDBReader dbReader;
 	private IMonDBWriter dbWriter;
 	private ThermoRawFileExtractor extractor;
-	private MetadataMapper metadataMapper;
 	private File file;
-	private String instrumentName;
+	private InstrumentMap instrumentMap;
 	private boolean forceUnique;
-
-	/**
-	 * Processes a file by extracting the instrument data from it and storing the resulting run in the database.
-	 *
-	 * @param dbReader  The {@link IMonDBReader} used to verify the current file isn't present in the database yet
-	 * @param dbWriter  The {@link IMonDBWriter} used to write the new {@link Run} to the database
-	 * @param file  The raw file that will be processed
-	 */
+    private RegexMapper<MetadataMap> metadataMapper;
 
 	/**
 	 * Processes a file by extracting the instrument data from it and storing the resulting run in the database.
@@ -69,19 +65,20 @@ public class FileProcessor implements Callable<Timestamp> {
 	 * @param dbReader  the {@link IMonDBReader} used to verify the current file is not present in the database yet
 	 * @param dbWriter  the {@link IMonDBWriter} used to write the new {@link Run} to the database
 	 * @param extractor  the {@link ThermoRawFileExtractor} used to extract the instrument data from the raw file
-	 * @param metadataMapper  the {@link MetadataMapper} used to obtain metadata based on the config file
 	 * @param file  the raw file that will be processed
-	 * @param instrumentName  the (unique) name of the instrument on which the run was performed
-	 * @param forceUnique  flag which indicates whether file names have to be made unique explicitly
+	 * @param instrumentMap  the information for the instrument on which the run was performed
+	 * @param forceUnique  flag which indicates whether run names have to be made unique explicitly
+     * @param metadataMapper  mapping to apply metadata based on the file information
 	 */
-	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor, MetadataMapper metadataMapper, File file, String instrumentName, boolean forceUnique) {
+	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor,
+                         File file, InstrumentMap instrumentMap, boolean forceUnique, RegexMapper<MetadataMap> metadataMapper) {
 		this.dbReader = dbReader;
 		this.dbWriter = dbWriter;
 		this.extractor = extractor;
-		this.metadataMapper = metadataMapper;
 		this.file = file;
-		this.instrumentName = instrumentName;
+		this.instrumentMap = instrumentMap;
 		this.forceUnique = forceUnique;
+        this.metadataMapper = metadataMapper;
 	}
 
 	@Override
@@ -99,21 +96,23 @@ public class FileProcessor implements Callable<Timestamp> {
 
 				fis.close();
 			} catch(IOException e) {
-				e.printStackTrace();
+				logger.error("Unable to create a unique run name based on the MD5 checksum: {}", e.getMessage(), e);
 			}
 		}
 
 		// check if this run already exists in the database for the given instrument
-		Map<String, String> parameters = ImmutableMap.of("runName", runName, "instName", instrumentName);
+		Map<String, String> parameters = ImmutableMap.of("runName", runName, "instName", instrumentMap.getKey());
 		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = :runName AND run.instrument.name = :instName";
 		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class, parameters).get(0).equals(1L);
 
 		if(!exists) {
-			Run run = extractor.extractInstrumentData(file.getAbsolutePath(), runName, instrumentName);
+            Instrument instrument = dbReader.getInstrument(instrumentMap.getKey());
+			Run run = extractor.extractInstrumentData(file.getAbsolutePath(), runName, instrument);
 
-			// extract metadata
-			if(metadataMapper != null)
-				metadataMapper.applyMetadata(run, file);
+			// apply metadata
+            for(MetadataMap metadataMap : metadataMapper.getApplicableMaps(file)) {
+                new Metadata(metadataMap.getKey(), metadataMap.getValue(), run);
+            }
 
 			// write the run to the database
             synchronized(FileProcessor.class) {
