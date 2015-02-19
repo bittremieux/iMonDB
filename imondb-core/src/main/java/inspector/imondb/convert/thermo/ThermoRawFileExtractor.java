@@ -48,8 +48,6 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Locale;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -62,9 +60,6 @@ import java.util.jar.JarFile;
 public class ThermoRawFileExtractor {
 
     private static final Logger LOGGER = LogManager.getLogger(ThermoRawFileExtractor.class);
-
-    /** static lock to make sure that the Thermo external resources are only accessed by a single instance */
-    private static final Lock FILE_COPY_LOCK = new ReentrantLock();
 
     /** properties containing a list of value names that have to be excluded */
     private PropertiesConfiguration exclusionProperties;
@@ -83,8 +78,7 @@ public class ThermoRawFileExtractor {
         exclusionProperties = initializeExclusionProperties();
 
         // make sure the extractor exe's are available outside the jar
-        try {
-            FILE_COPY_LOCK.lock();
+        synchronized(ThermoRawFileExtractor.class) {
             if(!new File("./Thermo/ThermoMetaData.exe").exists()
                     || !new File("./Thermo/ThermoStatusLog.exe").exists()
                     || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
@@ -92,8 +86,6 @@ public class ThermoRawFileExtractor {
                 LOGGER.debug("Copying the Thermo extractor CLI's to a new folder in the base directory");
                 copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
             }
-        } finally {
-            FILE_COPY_LOCK.unlock();
         }
     }
 
