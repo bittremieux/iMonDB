@@ -144,6 +144,7 @@ public class CollectorFrame {
     }
 
     public void display() {
+        frame.setResizable(false);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
