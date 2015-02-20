@@ -22,10 +22,10 @@ package inspector.imondb.collector.controller.listeners;
 
 import inspector.imondb.collector.controller.DatabaseController;
 import inspector.imondb.collector.model.InstrumentMap;
-import inspector.imondb.collector.view.CollectorFrame;
-import inspector.imondb.collector.view.database.DatabasePanel;
-import inspector.imondb.collector.view.instrument.InstrumentOverviewPanel;
-import inspector.imondb.collector.view.instrument.InstrumentsPanel;
+import inspector.imondb.collector.view.gui.CollectorFrame;
+import inspector.imondb.collector.view.gui.database.DatabasePanel;
+import inspector.imondb.collector.view.gui.instrument.InstrumentOverviewPanel;
+import inspector.imondb.collector.view.gui.instrument.InstrumentsPanel;
 import inspector.imondb.model.Instrument;
 
 import javax.swing.*;

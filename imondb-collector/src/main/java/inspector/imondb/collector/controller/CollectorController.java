@@ -24,10 +24,10 @@ import com.pagosoft.plaf.PlafOptions;
 import inspector.imondb.collector.controller.listeners.ConfigurationChangeListener;
 import inspector.imondb.collector.controller.listeners.DatabaseConnectionListener;
 import inspector.imondb.collector.model.config.Configuration;
-import inspector.imondb.collector.view.CollectorFrame;
-import inspector.imondb.collector.view.about.AboutListener;
-import inspector.imondb.collector.view.exit.ExitAction;
-import inspector.imondb.collector.view.update.UpdateListener;
+import inspector.imondb.collector.view.gui.CollectorFrame;
+import inspector.imondb.collector.view.gui.about.AboutListener;
+import inspector.imondb.collector.view.gui.exit.ExitAction;
+import inspector.imondb.collector.view.gui.update.UpdateListener;
 
 import javax.swing.*;
 import java.io.File;

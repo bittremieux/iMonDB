@@ -1,7 +1,7 @@
 package inspector.imondb.collector.controller;
 
 import inspector.imondb.collector.model.config.Configuration;
-import inspector.imondb.collector.view.overview.ProgressPanel;
+import inspector.imondb.collector.view.gui.overview.ProgressPanel;
 
 public class ExecutionController {
 

@@ -7,7 +7,7 @@ import inspector.imondb.collector.model.RegexMapper;
 import inspector.imondb.collector.model.config.Configuration;
 import inspector.imondb.collector.model.config.DatabaseConfiguration;
 import inspector.imondb.collector.model.config.GeneralConfiguration;
-import inspector.imondb.collector.view.overview.ProgressPanel;
+import inspector.imondb.collector.view.gui.overview.ProgressPanel;
 import inspector.imondb.convert.thermo.ThermoRawFileExtractor;
 import inspector.imondb.io.IMonDBReader;
 import inspector.imondb.io.IMonDBWriter;

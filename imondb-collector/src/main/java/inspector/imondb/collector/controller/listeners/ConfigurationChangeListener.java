@@ -21,9 +21,9 @@ package inspector.imondb.collector.controller.listeners;
  */
 
 import inspector.imondb.collector.model.config.Configuration;
-import inspector.imondb.collector.view.CollectorFrame;
-import inspector.imondb.collector.view.instrument.InstrumentsPanel;
-import inspector.imondb.collector.view.metadata.MetadataPanel;
+import inspector.imondb.collector.view.gui.CollectorFrame;
+import inspector.imondb.collector.view.gui.instrument.InstrumentsPanel;
+import inspector.imondb.collector.view.gui.metadata.MetadataPanel;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
