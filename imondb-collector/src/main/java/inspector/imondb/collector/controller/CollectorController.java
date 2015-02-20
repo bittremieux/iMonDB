@@ -20,7 +20,6 @@ package inspector.imondb.collector.controller;
  * #L%
  */
 
-import com.pagosoft.plaf.PlafOptions;
 import inspector.imondb.collector.controller.listeners.ConfigurationChangeListener;
 import inspector.imondb.collector.controller.listeners.DatabaseConnectionListener;
 import inspector.imondb.collector.model.config.Configuration;
@@ -39,50 +38,38 @@ public class CollectorController {
     private CollectorFrame collector;
 
     private DatabaseController databaseController;
+    private ExecutionController executionController;
 
-    public CollectorController() {
-
-        // app information
-        String name = "iMonDB Collector";
-        String id = "collector";
-
+    public CollectorController(String config) {
         // model
-        configuration = new Configuration(new File("config.yaml"));
+        configuration = new Configuration(new File(config));
 
         // controller
         databaseController = new DatabaseController();
-        ExecutionController executionController = new ExecutionController(databaseController, configuration);
-
-        // view
-        collector = new CollectorFrame(this, executionController, configuration);
-
-        // listeners
-        collector.addExitAction(new ExitAction());
-        collector.addAboutDisplayer(new AboutListener(name));
-        collector.addUpdateChecker(new UpdateListener(id, name));
-
-        collector.addConfigurationChangeListener(new ConfigurationChangeListener(collector, configuration));
-        collector.addDatabaseConnectionListener(new DatabaseConnectionListener(collector, databaseController));
-    }
-
-    public static void main(String[] args) {
-        setLookAndFeel();
-
-        // start viewer
-        SwingUtilities.invokeLater(() -> {
-            CollectorController controller = new CollectorController();
-            controller.collector.display();
-            controller.collector.initialize();
-        });
-    }
-
-    private static void setLookAndFeel() {
-        PlafOptions.setAsLookAndFeel();
-        PlafOptions.updateAllUIs();
+        executionController = new ExecutionController(databaseController, configuration);
     }
 
     public void cleanUp() {
         configuration.store();
         databaseController.disconnect();
+    }
+
+    public void startGuiView() {
+        // view
+        collector = new CollectorFrame(this, executionController, configuration);
+
+        // listeners
+        collector.addExitAction(new ExitAction());
+        collector.addAboutDisplayer(new AboutListener("iMonDB Collector"));
+        collector.addUpdateChecker(new UpdateListener("collector", "iMonDB Collector"));
+
+        collector.addConfigurationChangeListener(new ConfigurationChangeListener(collector, configuration));
+        collector.addDatabaseConnectionListener(new DatabaseConnectionListener(collector, databaseController));
+
+        // start viewer
+        SwingUtilities.invokeLater(() -> {
+            collector.display();
+            collector.initialize();
+        });
     }
 }
