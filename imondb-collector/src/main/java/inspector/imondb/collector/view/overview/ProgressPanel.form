@@ -18,10 +18,17 @@
         <properties/>
         <border type="none"/>
         <children>
-          <component id="cbc56" class="javax.swing.JTextArea" binding="textAreaLog">
+          <grid id="98f18" layout-manager="BorderLayout" hgap="0" vgap="0">
             <constraints/>
             <properties/>
-          </component>
+            <border type="none"/>
+            <children>
+              <component id="2fc15" class="javax.swing.JTextPane" binding="textPaneLog">
+                <constraints border-constraint="Center"/>
+                <properties/>
+              </component>
+            </children>
+          </grid>
         </children>
       </scrollpane>
       <component id="793ac" class="javax.swing.JProgressBar" binding="progressBar">
@@ -33,5 +40,6 @@
   <inspectionSuppressions>
     <suppress inspection="NoLabelFor" id="cbc56"/>
     <suppress inspection="NoLabelFor" id="dc321"/>
+    <suppress inspection="NoLabelFor" id="2fc15"/>
   </inspectionSuppressions>
 </form>
