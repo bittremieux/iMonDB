@@ -7,6 +7,7 @@ import inspector.imondb.collector.model.RegexMapper;
 import inspector.imondb.collector.model.config.Configuration;
 import inspector.imondb.collector.model.config.DatabaseConfiguration;
 import inspector.imondb.collector.model.config.GeneralConfiguration;
+import inspector.imondb.collector.view.overview.ProgressPanel;
 import inspector.imondb.convert.thermo.ThermoRawFileExtractor;
 import inspector.imondb.io.IMonDBReader;
 import inspector.imondb.io.IMonDBWriter;
@@ -35,15 +36,15 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
 
     private static final Logger LOGGER = LogManager.getLogger(CollectorTask.class);
 
-    private JProgressBar progressBar;
+    private ProgressPanel progressPanel;
 
     private DatabaseController databaseController;
     private Configuration configuration;
 
     private ExecutorService threadPool;
 
-    public CollectorTask(JProgressBar progressBar, DatabaseController databaseController, Configuration configuration) {
-        this.progressBar = progressBar;
+    public CollectorTask(ProgressPanel progressPanel, DatabaseController databaseController, Configuration configuration) {
+        this.progressPanel = progressPanel;
         this.databaseController = databaseController;
         this.configuration = configuration;
     }
@@ -138,6 +139,8 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
             // save the (updated) config file to the user directory
             configuration.store();
 
+            LOGGER.info("Processing finished successfully");
+
         } catch(InterruptedException e) {
             LOGGER.error("Thread execution was interrupted: {}", e.getMessage(), e);
         } finally {
@@ -168,8 +171,16 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
     }
 
     @Override
+    protected void done() {
+        try {
+            progressPanel.done();
+        } catch(Exception ignore) {
+        }
+    }
+
+    @Override
     protected void process(List<Integer> chunks) {
-        chunks.forEach(progressBar::setValue);
+        chunks.forEach(progressPanel::setProgress);
     }
 
     public void cancelExecution() {

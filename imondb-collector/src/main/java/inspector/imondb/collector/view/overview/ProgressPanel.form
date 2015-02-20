@@ -1,23 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="inspector.imondb.collector.view.overview.ProgressPanel">
-  <grid id="27dc6" binding="panel" layout-manager="FormLayout">
-    <rowspec value="center:d:grow"/>
-    <rowspec value="top:3dlu:noGrow"/>
-    <rowspec value="center:max(d;4px):noGrow"/>
-    <colspec value="fill:d:grow"/>
+  <grid id="27dc6" binding="panel" layout-manager="BorderLayout" hgap="0" vgap="0">
     <constraints>
-      <xy x="20" y="20" width="500" height="400"/>
+      <xy x="20" y="20" width="600" height="600"/>
     </constraints>
-    <properties/>
+    <properties>
+      <maximumSize width="600" height="200"/>
+      <minimumSize width="600" height="200"/>
+      <preferredSize width="600" height="200"/>
+    </properties>
     <border type="empty">
       <size top="10" left="10" bottom="10" right="10"/>
     </border>
     <children>
       <scrollpane id="dc321">
-        <constraints>
-          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
-          <forms defaultalign-horz="false" defaultalign-vert="false"/>
-        </constraints>
+        <constraints border-constraint="Center"/>
         <properties/>
         <border type="none"/>
         <children>
@@ -28,10 +25,7 @@
         </children>
       </scrollpane>
       <component id="793ac" class="javax.swing.JProgressBar" binding="progressBar">
-        <constraints>
-          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-          <forms defaultalign-horz="false"/>
-        </constraints>
+        <constraints border-constraint="Last"/>
         <properties/>
       </component>
     </children>

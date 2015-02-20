@@ -20,7 +20,6 @@ package inspector.imondb.collector.view.overview;
  * #L%
  */
 
-import inspector.imondb.collector.controller.CollectorTask;
 import inspector.imondb.collector.controller.ExecutionController;
 import inspector.imondb.collector.view.CollectorFrame;
 
@@ -33,9 +32,6 @@ import java.util.Observer;
 
 public class ExecutionPanel implements Observer {
 
-    private CollectorFrame collectorFrame;
-    private ExecutionController executionController;
-
     private JPanel panel;
 
     private JPanel panelCardLayout;
@@ -44,18 +40,13 @@ public class ExecutionPanel implements Observer {
     private JButton buttonExecute;
 
     public ExecutionPanel(CollectorFrame collectorFrame, ExecutionController executionController) {
-        this.collectorFrame = collectorFrame;
-        this.executionController = executionController;
-
         panelOverview.add(collectorFrame.getOverviewPanel().getPanel());
         collectorFrame.getOverviewPanel().addObserver(this);
 
-        ProgressPanel progressPanel = new ProgressPanel();
-        panelProgress.add(progressPanel.getPanel());
+        ProgressPanel progressPanel = new ProgressPanel(this, collectorFrame, executionController);
+        panelProgress.add(progressPanel.getPanel(), BorderLayout.CENTER);
 
         buttonExecute.addActionListener(new ActionListener() {
-            private CollectorTask task;
-
             @Override
             public void actionPerformed(ActionEvent e) {
                 // change the card layout
@@ -63,12 +54,9 @@ public class ExecutionPanel implements Observer {
 
                 // execute the button functionality
                 if("Start collector".equals(e.getActionCommand())) {
-                    collectorFrame.setWaitCursor(true);
-                    task = executionController.getCollectorTask(progressPanel.getProgressBar());
-                    task.execute();
+                    progressPanel.start();
                 } else if("Stop collector".equals(e.getActionCommand())) {
-                    task.cancelExecution();
-                    collectorFrame.setWaitCursor(false);
+                    progressPanel.stop();
                 } else if("Schedule collector".equals(e.getActionCommand())) {
                     //TODO
                 }
@@ -93,6 +81,10 @@ public class ExecutionPanel implements Observer {
 
     public JPanel getPanel() {
         return panel;
+    }
+
+    public JButton getButton() {
+        return buttonExecute;
     }
 
     @Override

@@ -1,8 +1,7 @@
 package inspector.imondb.collector.controller;
 
 import inspector.imondb.collector.model.config.Configuration;
-
-import javax.swing.*;
+import inspector.imondb.collector.view.overview.ProgressPanel;
 
 public class ExecutionController {
 
@@ -14,7 +13,7 @@ public class ExecutionController {
         this.configuration = configuration;
     }
 
-    public CollectorTask getCollectorTask(JProgressBar progressBar) {
-        return new CollectorTask(progressBar, databaseController, configuration);
+    public CollectorTask getCollectorTask(ProgressPanel progressPanel) {
+        return new CollectorTask(progressPanel, databaseController, configuration);
     }
 }
