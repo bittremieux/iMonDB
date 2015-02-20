@@ -99,7 +99,7 @@
                 </properties>
               </component>
               <component id="deda3" class="javax.swing.JButton" binding="buttonDirectory">
-                <constraints border-constraint="After"/>
+                <constraints border-constraint="East"/>
                 <properties>
                   <horizontalTextPosition value="0"/>
                   <icon value="images/add.png"/>
@@ -126,7 +126,7 @@
                 </properties>
               </component>
               <component id="fc18" class="javax.swing.JButton" binding="buttonRegex">
-                <constraints border-constraint="After"/>
+                <constraints border-constraint="East"/>
                 <properties>
                   <horizontalTextPosition value="0"/>
                   <icon value="images/search.png"/>

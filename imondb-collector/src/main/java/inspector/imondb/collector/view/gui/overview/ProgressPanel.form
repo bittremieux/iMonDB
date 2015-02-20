@@ -32,7 +32,7 @@
         </children>
       </scrollpane>
       <component id="793ac" class="javax.swing.JProgressBar" binding="progressBar">
-        <constraints border-constraint="Last"/>
+        <constraints border-constraint="South"/>
         <properties/>
       </component>
     </children>
