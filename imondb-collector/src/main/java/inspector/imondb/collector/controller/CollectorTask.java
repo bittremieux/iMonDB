@@ -21,6 +21,7 @@ import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -30,23 +31,35 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
-public class CollectorTask implements Callable<Void> {
+public class CollectorTask extends SwingWorker<Void, Integer> {
 
     private static final Logger LOGGER = LogManager.getLogger(CollectorTask.class);
+
+    private JProgressBar progressBar;
 
     private DatabaseController databaseController;
     private Configuration configuration;
 
-    public CollectorTask(DatabaseController databaseController, Configuration configuration) {
+    private ExecutorService threadPool;
+
+    public CollectorTask(JProgressBar progressBar, DatabaseController databaseController, Configuration configuration) {
+        this.progressBar = progressBar;
         this.databaseController = databaseController;
         this.configuration = configuration;
     }
 
     @Override
-    public Void call() throws Exception {
+    protected Void doInBackground() throws Exception {
         LOGGER.info("Executing the collector");
 
         try {
+            // thread pool
+            GeneralConfiguration genConfig = configuration.getGeneralConfiguration();
+            int nrOfThreads = genConfig.getNumberOfThreads();
+            threadPool = Executors.newFixedThreadPool(nrOfThreads);
+            CompletionService<Timestamp> pool = new ExecutorCompletionService<>(threadPool);
+            int threadsSubmitted = 0;
+
             // create database connection
             DatabaseConfiguration dbConfig = configuration.getDatabaseConfiguration();
             databaseController.connectTo(dbConfig.getHost(), dbConfig.getPort(), dbConfig.getDatabase(),
@@ -58,16 +71,9 @@ public class CollectorTask implements Callable<Void> {
             ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
 
             // read the general information from the config file
-            GeneralConfiguration genConfig = configuration.getGeneralConfiguration();
             String fileNameRegex = genConfig.getFileNameRegex();
             Timestamp newestTimestamp = genConfig.getStartDate() != null ? genConfig.getStartDate() : new Timestamp(new Date(0).getTime());
             boolean forceUnique = genConfig.getUniqueFileNames();
-
-            // thread pool
-            int nrOfThreads = genConfig.getNumberOfThreads();
-            ExecutorService threadPool = Executors.newFixedThreadPool(nrOfThreads);
-            CompletionService<Timestamp> pool = new ExecutorCompletionService<>(threadPool);
-            int threadsSubmitted = 0;
 
             // instrument and metadata mappings
             RegexMapper<InstrumentMap> instrumentMapper = new RegexMapper<>(configuration.getInstrumentConfiguration().getInstruments());
@@ -113,8 +119,11 @@ public class CollectorTask implements Callable<Void> {
                     LOGGER.info("Processing file {} out of a total of {} queued files", (i + 1), threadsSubmitted);
                     Timestamp runTimestamp = pool.take().get();
                     newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
-                } catch(Exception e) {
-                    // catch all possible exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
+
+                    // update progress
+                    publish((i+1) * 100 / threadsSubmitted);
+                } catch(NullPointerException | IllegalArgumentException | IllegalStateException e) {
+                    // catch the exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
                     LOGGER.error("Error while executing a thread: {}", e.getMessage(), e);
                 }
             }
@@ -126,12 +135,12 @@ public class CollectorTask implements Callable<Void> {
 
             // save the date of the newest processed file to the config file
             genConfig.setStartDate(newestTimestamp);
-
-        } catch(InterruptedException e) {
-            LOGGER.error("Thread execution was interrupted: {}", e);
-        } finally {
             // save the (updated) config file to the user directory
             configuration.store();
+
+        } catch(InterruptedException e) {
+            LOGGER.error("Thread execution was interrupted: {}", e.getMessage(), e);
+        } finally {
             // close the database connection
             databaseController.disconnect();
         }
@@ -156,5 +165,15 @@ public class CollectorTask implements Callable<Void> {
                 LOGGER.trace("Instrument <{}> found in the database", instrumentMap.getKey());
             }
         }
+    }
+
+    @Override
+    protected void process(List<Integer> chunks) {
+        chunks.forEach(progressBar::setValue);
+    }
+
+    public void cancelExecution() {
+        cancel(true);
+        threadPool.shutdownNow();
     }
 }

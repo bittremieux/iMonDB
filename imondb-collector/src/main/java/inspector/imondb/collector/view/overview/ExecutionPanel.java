@@ -20,6 +20,7 @@ package inspector.imondb.collector.view.overview;
  * #L%
  */
 
+import inspector.imondb.collector.controller.CollectorTask;
 import inspector.imondb.collector.controller.ExecutionController;
 import inspector.imondb.collector.view.CollectorFrame;
 
@@ -32,26 +33,29 @@ import java.util.Observer;
 
 public class ExecutionPanel implements Observer {
 
+    private CollectorFrame collectorFrame;
+    private ExecutionController executionController;
+
     private JPanel panel;
 
     private JPanel panelCardLayout;
-
     private JPanel panelOverview;
-
-    private JPanel panelExecution;
-
-    private JTextArea textAreaLog;
-    private JProgressBar progressBar;
-
+    private JPanel panelProgress;
     private JButton buttonExecute;
 
     public ExecutionPanel(CollectorFrame collectorFrame, ExecutionController executionController) {
+        this.collectorFrame = collectorFrame;
+        this.executionController = executionController;
+
         panelOverview.add(collectorFrame.getOverviewPanel().getPanel());
         collectorFrame.getOverviewPanel().addObserver(this);
 
-        ExecutionController executionController1 = executionController;
+        ProgressPanel progressPanel = new ProgressPanel();
+        panelProgress.add(progressPanel.getPanel());
 
         buttonExecute.addActionListener(new ActionListener() {
+            private CollectorTask task;
+
             @Override
             public void actionPerformed(ActionEvent e) {
                 // change the card layout
@@ -60,23 +64,11 @@ public class ExecutionPanel implements Observer {
                 // execute the button functionality
                 if("Start collector".equals(e.getActionCommand())) {
                     collectorFrame.setWaitCursor(true);
-
-                    SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                        @Override
-                        protected Void doInBackground() throws Exception {
-                            executionController.startCollector();
-                            return null;
-                        }
-                        @Override
-                        protected void done() {
-                            collectorFrame.setWaitCursor(false);
-                            buttonExecute.setText("Start collector");
-                        }
-                    };
-
-                    worker.execute();
+                    task = executionController.getCollectorTask(progressPanel.getProgressBar());
+                    task.execute();
                 } else if("Stop collector".equals(e.getActionCommand())) {
-                    //TODO
+                    task.cancelExecution();
+                    collectorFrame.setWaitCursor(false);
                 } else if("Schedule collector".equals(e.getActionCommand())) {
                     //TODO
                 }
@@ -88,7 +80,7 @@ public class ExecutionPanel implements Observer {
         CardLayout cardLayout = (CardLayout) panelCardLayout.getLayout();
         String cardName = "CardOverview";
         if("Start collector".equals(e.getActionCommand())) {
-            cardName = "CardExecution";
+            cardName = "CardProgress";
             buttonExecute.setText("Stop collector");
         } else if("Stop collector".equals(e.getActionCommand())) {
             cardName = "CardOverview";
