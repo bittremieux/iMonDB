@@ -26,7 +26,6 @@ import inspector.imondb.collector.view.CollectorFrame;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -46,20 +45,15 @@ public class ExecutionPanel implements Observer {
         ProgressPanel progressPanel = new ProgressPanel(this, collectorFrame, executionController);
         panelProgress.add(progressPanel.getPanel(), BorderLayout.CENTER);
 
-        buttonExecute.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // change the card layout
-                updateLayout(e);
+        buttonExecute.addActionListener(e -> {
+            // change the card layout
+            updateLayout(e);
 
-                // execute the button functionality
-                if("Start collector".equals(e.getActionCommand())) {
-                    progressPanel.start();
-                } else if("Stop collector".equals(e.getActionCommand())) {
-                    progressPanel.stop();
-                } else if("Schedule collector".equals(e.getActionCommand())) {
-                    //TODO
-                }
+            // execute the button functionality
+            if("Start collector".equals(e.getActionCommand())) {
+                progressPanel.start();
+            } else if("Stop collector".equals(e.getActionCommand())) {
+                progressPanel.stop();
             }
         });
     }
@@ -73,8 +67,6 @@ public class ExecutionPanel implements Observer {
         } else if("Stop collector".equals(e.getActionCommand())) {
             cardName = "CardOverview";
             buttonExecute.setText("Start collector");
-        } else if("Schedule collector".equals(e.getActionCommand())) {
-            // no layout change
         }
         cardLayout.show(panelCardLayout, cardName);
     }
@@ -90,9 +82,5 @@ public class ExecutionPanel implements Observer {
     @Override
     public void update(Observable o, Object arg) {
         buttonExecute.setEnabled(!arg.equals(OverviewPanel.Status.ERROR));
-    }
-
-    public void setSchedule(boolean enabled) {
-        buttonExecute.setText(enabled ? "Schedule collector" : "Start collector");
     }
 }

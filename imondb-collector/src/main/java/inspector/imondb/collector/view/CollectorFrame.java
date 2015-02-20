@@ -90,8 +90,6 @@ public class CollectorFrame {
         metadataPanel = new MetadataPanel(configuration.getMetadataConfiguration().getMetadata());
         tabbedPane.addTab("Metadata", metadataPanel.getPanel());
 
-        tabbedPane.addTab("Schedule", null);
-
         overviewPanel = new OverviewPanel(this);
         ExecutionPanel executionPanel = new ExecutionPanel(this, executionController);
         tabbedPane.addTab("Execute", executionPanel.getPanel());
