@@ -207,7 +207,11 @@ public class ThermoRawFileExtractor {
             Timestamp date = metadata.getDate();
             InstrumentModel model = metadata.getModel();
 
-            if(model != instrument.getType()) {
+            // verify the instrument is valid
+            if(instrument == null) {
+                LOGGER.error("A valid instrument on which the raw file was generated should be provided");
+                throw new NullPointerException("A valid instrument on which the raw file was generated should be provided");
+            } else if(model != instrument.getType()) {
                 LOGGER.error("Invalid instrument <{}> with model {}, raw file instrument model = {}",
                         instrument.getName(), instrument.getType().toString(), model.toString());
                 throw new IllegalArgumentException("Invalid instrument " + instrument.getName() +
