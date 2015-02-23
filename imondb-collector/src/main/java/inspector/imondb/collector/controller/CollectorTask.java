@@ -82,7 +82,6 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
             int nrOfThreads = genConfig.getNumberOfThreads();
             threadPool = Executors.newFixedThreadPool(nrOfThreads);
             CompletionService<Timestamp> pool = new ExecutorCompletionService<>(threadPool);
-            int threadsSubmitted = 0;
 
             // create database connection
             DatabaseConfiguration dbConfig = configuration.getDatabaseConfiguration();
@@ -91,66 +90,23 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
             IMonDBReader dbReader = databaseController.getReader();
             IMonDBWriter dbWriter = databaseController.getWriter();
 
-            // raw file extractor
-            ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-
             // read the general information from the config file
-            String fileNameRegex = genConfig.getFileNameRegex();
             Timestamp newestTimestamp = genConfig.getStartDate() != null ? genConfig.getStartDate() : new Timestamp(new Date(0).getTime());
-            boolean forceUnique = genConfig.getUniqueFileNames();
-
-            // instrument and metadata mappings
-            RegexMapper<InstrumentMap> instrumentMapper = new RegexMapper<>(configuration.getInstrumentConfiguration().getInstruments());
-            RegexMapper<MetadataMap> metadataMapper = new RegexMapper<>(configuration.getMetadataConfiguration().getMetadata());
 
             // make sure all required instruments are present in the database
             createNewInstruments(dbReader, dbWriter, configuration.getInstrumentConfiguration().getInstruments());
 
             // browse the start directory and underlying directories to find new raw files
             File startDir = new File(genConfig.getDirectory());
-            try {
-                LOGGER.debug("Process directory <{}>", startDir.getCanonicalPath());
-
-                // retrieve all files that were created after the specified date, and matching the specified regex
-                Collection<File> files = FileUtils.listFiles(startDir, new AndFileFilter(
-                                new AgeFileFilter(new Date(newestTimestamp.getTime()), false),
-                                new RegexFileFilter(fileNameRegex, IOCase.INSENSITIVE)),
-                        DirectoryFileFilter.DIRECTORY);
-
-                // process all found files
-                for(File file : files) {
-                    // retrieve the instrument name from the file name and path based on the configuration
-                    List<InstrumentMap> applicableInstruments = instrumentMapper.getApplicableMaps(file);
-                    if(applicableInstruments.isEmpty()) {
-                        LOGGER.warn("No instrument applicable for file <{}>; skipping...", file.getCanonicalPath());
-                    } else if(applicableInstruments.size() > 1) {
-                        LOGGER.error("Multiple instruments applicable for file <{}>; skipping...", file.getCanonicalPath());
-                    } else {
-                        InstrumentMap instrumentMap = applicableInstruments.get(0);
-                        LOGGER.trace("Add file <{}> for instrument <{}> to the thread pool", file.getCanonicalPath(), instrumentMap.getKey());
-                        pool.submit(new FileProcessor(dbReader, dbWriter, extractor, file, instrumentMap, forceUnique, metadataMapper));
-                        threadsSubmitted++;
-                    }
-                }
-            } catch(IOException e) {
-                LOGGER.fatal("IO error: {}", e);
-                throw new IllegalArgumentException("IO error: " + e.getMessage());
-            }
+            int threadsSubmitted = submitTasks(startDir, pool, dbReader, dbWriter, newestTimestamp);
 
             // process all the submitted threads and retrieve the sample dates
             for(int i = 0; i < threadsSubmitted; i++) {
-                try {
-                    LOGGER.info("Processing file {} out of a total of {} queued files", (i + 1), threadsSubmitted);
-                    Timestamp runTimestamp = pool.take().get();
-                    newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
-
-                    // update progress
-                    publish((i+1) * 100 / threadsSubmitted);
-                } catch(ExecutionException e) {
-                    // all exceptions will be wrapped in an ExecutionException
-                    // catch the exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
-                    LOGGER.error("Error while executing a thread: {}", e.getMessage(), e);
-                }
+                LOGGER.info("Processing file {} out of a total of {} queued files", i + 1, threadsSubmitted);
+                Timestamp runTimestamp = retrieveTask(pool);
+                newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
+                // update progress
+                publish((i+1) * 100 / threadsSubmitted);
             }
 
             // shut down child threads
@@ -192,6 +148,61 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
                 LOGGER.trace("Instrument <{}> found in the database", instrumentMap.getKey());
             }
         }
+    }
+
+    private int submitTasks(File startDir, CompletionService<Timestamp> pool,
+                            IMonDBReader dbReader, IMonDBWriter dbWriter, Timestamp newestTimestamp) {
+        int threadsSubmitted = 0;
+        try {
+            LOGGER.debug("Process directory <{}>", startDir.getCanonicalPath());
+
+            String fileNameRegex = configuration.getGeneralConfiguration().getFileNameRegex();
+            boolean forceUnique = configuration.getGeneralConfiguration().getUniqueFileNames();
+
+            // retrieve all files that were created after the specified date, and matching the specified regex
+            Collection<File> files = FileUtils.listFiles(startDir, new AndFileFilter(
+                            new AgeFileFilter(new Date(newestTimestamp.getTime()), false),
+                            new RegexFileFilter(fileNameRegex, IOCase.INSENSITIVE)),
+                    DirectoryFileFilter.DIRECTORY);
+
+            // raw file extractor
+            ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
+
+            // instrument and metadata mappings
+            RegexMapper<InstrumentMap> instrumentMapper = new RegexMapper<>(configuration.getInstrumentConfiguration().getInstruments());
+            RegexMapper<MetadataMap> metadataMapper = new RegexMapper<>(configuration.getMetadataConfiguration().getMetadata());
+
+            // process all found files
+            for(File file : files) {
+                // retrieve the instrument name from the file name and path based on the configuration
+                List<InstrumentMap> applicableInstruments = instrumentMapper.getApplicableMaps(file);
+                if(applicableInstruments.isEmpty()) {
+                    LOGGER.warn("No instrument applicable for file <{}>; skipping...", file.getCanonicalPath());
+                } else if(applicableInstruments.size() > 1) {
+                    LOGGER.error("Multiple instruments applicable for file <{}>; skipping...", file.getCanonicalPath());
+                } else {
+                    InstrumentMap instrumentMap = applicableInstruments.get(0);
+                    LOGGER.trace("Add file <{}> for instrument <{}> to the thread pool", file.getCanonicalPath(), instrumentMap.getKey());
+                    pool.submit(new FileProcessor(dbReader, dbWriter, extractor, file, instrumentMap, forceUnique, metadataMapper));
+                    threadsSubmitted++;
+                }
+            }
+        } catch(IOException e) {
+            LOGGER.fatal("IO error: {}", e);
+            throw new IllegalArgumentException("IO error: " + e.getMessage());
+        }
+        return threadsSubmitted;
+    }
+
+    private Timestamp retrieveTask(CompletionService<Timestamp> pool) throws InterruptedException {
+        try {
+            return pool.take().get();
+        } catch(ExecutionException e) {
+            // all exceptions will be wrapped in an ExecutionException
+            // catch the exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
+            LOGGER.error("Error while executing a thread: {}", e.getMessage(), e);
+        }
+        return null;
     }
 
     @Override

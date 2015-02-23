@@ -49,82 +49,81 @@ import java.util.concurrent.Callable;
  */
 public class FileProcessor implements Callable<Timestamp> {
 
-	protected static final Logger LOGGER = LogManager.getLogger(FileProcessor.class);
+    private static final Logger LOGGER = LogManager.getLogger(FileProcessor.class);
 
-	private IMonDBReader dbReader;
-	private IMonDBWriter dbWriter;
-	private ThermoRawFileExtractor extractor;
-	private File file;
-	private InstrumentMap instrumentMap;
-	private boolean forceUnique;
+    private IMonDBReader dbReader;
+    private IMonDBWriter dbWriter;
+    private ThermoRawFileExtractor extractor;
+    private File file;
+    private InstrumentMap instrumentMap;
+    private boolean forceUnique;
     private RegexMapper<MetadataMap> metadataMapper;
 
-	/**
-	 * Processes a file by extracting the instrument data from it and storing the resulting run in the database.
-	 *
-	 * @param dbReader  the {@link IMonDBReader} used to verify the current file is not present in the database yet
-	 * @param dbWriter  the {@link IMonDBWriter} used to write the new {@link Run} to the database
-	 * @param extractor  the {@link ThermoRawFileExtractor} used to extract the instrument data from the raw file
-	 * @param file  the raw file that will be processed
-	 * @param instrumentMap  the information for the instrument on which the run was performed
-	 * @param forceUnique  flag which indicates whether run names have to be made unique explicitly
+    /**
+     * Processes a file by extracting the instrument data from it and storing the resulting run in the database.
+     *
+     * @param dbReader  the {@link IMonDBReader} used to verify the current file is not present in the database yet
+     * @param dbWriter  the {@link IMonDBWriter} used to write the new {@link Run} to the database
+     * @param extractor  the {@link ThermoRawFileExtractor} used to extract the instrument data from the raw file
+     * @param file  the raw file that will be processed
+     * @param instrumentMap  the information for the instrument on which the run was performed
+     * @param forceUnique  flag which indicates whether run names have to be made unique explicitly
      * @param metadataMapper  mapping to apply metadata based on the file information
-	 */
-	public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor,
+     */
+    public FileProcessor(IMonDBReader dbReader, IMonDBWriter dbWriter, ThermoRawFileExtractor extractor,
                          File file, InstrumentMap instrumentMap, boolean forceUnique, RegexMapper<MetadataMap> metadataMapper) {
-		this.dbReader = dbReader;
-		this.dbWriter = dbWriter;
-		this.extractor = extractor;
-		this.file = file;
-		this.instrumentMap = instrumentMap;
-		this.forceUnique = forceUnique;
+        this.dbReader = dbReader;
+        this.dbWriter = dbWriter;
+        this.extractor = extractor;
+        this.file = file;
+        this.instrumentMap = instrumentMap;
+        this.forceUnique = forceUnique;
         this.metadataMapper = metadataMapper;
-	}
+    }
 
-	@Override
-	public Timestamp call() {
-		LOGGER.info("Process file <{}>", file.getAbsolutePath());
+    @Override
+    public Timestamp call() {
+        LOGGER.info("Process file <{}>", file.getAbsolutePath());
 
-		String runName = FilenameUtils.getBaseName(file.getName());
-		if(forceUnique) {
-			// append the MD5 checksum to enforce unique file names
-			try {
-				FileInputStream fis = new FileInputStream(file);
+        String runName = FilenameUtils.getBaseName(file.getName());
+        if(forceUnique) {
+            // append the MD5 checksum to enforce unique file names
+            try {
+                FileInputStream fis = new FileInputStream(file);
 
-				String md5 = DigestUtils.md5Hex(fis);
-				runName += "_" + md5;
+                String md5 = DigestUtils.md5Hex(fis);
+                runName += "_" + md5;
 
-				fis.close();
-			} catch(IOException e) {
-				LOGGER.error("Unable to create a unique run name based on the MD5 checksum: {}", e.getMessage(), e);
-			}
-		}
+                fis.close();
+            } catch(IOException e) {
+                LOGGER.error("Unable to create a unique run name based on the MD5 checksum: {}", e.getMessage(), e);
+            }
+        }
 
-		// check if this run already exists in the database for the given instrument
-		Map<String, String> parameters = ImmutableMap.of("runName", runName, "instName", instrumentMap.getKey());
-		String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = :runName AND run.instrument.name = :instName";
-		boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class, parameters).get(0).equals(1L);
+        // check if this run already exists in the database for the given instrument
+        Map<String, String> parameters = ImmutableMap.of("runName", runName, "instName", instrumentMap.getKey());
+        String runExistQuery = "SELECT COUNT(run) FROM Run run WHERE run.name = :runName AND run.instrument.name = :instName";
+        boolean exists = dbReader.getFromCustomQuery(runExistQuery, Long.class, parameters).get(0).equals(1L);
 
-		if(!exists) {
+        if(!exists) {
             Instrument instrument = dbReader.getInstrument(instrumentMap.getKey());
-			Run run = extractor.extractInstrumentData(file.getAbsolutePath(), runName, instrument);
+            Run run = extractor.extractInstrumentData(file.getAbsolutePath(), runName, instrument);
 
-			// apply metadata
+            // apply metadata
             for(MetadataMap metadataMap : metadataMapper.getApplicableMaps(file)) {
                 new Metadata(metadataMap.getKey(), metadataMap.getValue(), run);
             }
 
-			// write the run to the database
+            // write the run to the database
             synchronized(FileProcessor.class) {
                 dbWriter.writeRun(run);
             }
 
-			// return the run's sample date
-			return run.getSampleDate();
-		}
-		else {
-			LOGGER.trace("Run <{}> already found in the database; skipping...", runName);
-			return null;
-		}
-	}
+            // return the run's sample date
+            return run.getSampleDate();
+        } else {
+            LOGGER.trace("Run <{}> already found in the database; skipping...", runName);
+            return null;
+        }
+    }
 }

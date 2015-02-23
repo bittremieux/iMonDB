@@ -50,21 +50,16 @@ public class MetadataPanel extends Observable {
             MetadataCreatePanel metadataCreatePanel = new MetadataCreatePanel();
             int result = JOptionPane.showConfirmDialog(Frame.getFrames()[0], metadataCreatePanel.getPanel(),
                     "Add metadata", JOptionPane.OK_CANCEL_OPTION);
-
             if(result == JOptionPane.OK_OPTION) {
                 MetadataMap metadataMap = metadataCreatePanel.getMetadataMap();
-
                 if(metadataMap.isValid() && !metadataMaps.containsKey(metadataMap)) {
                     addMetadata(metadataMap);
-
                     panelMetadata.revalidate();
                     panelMetadata.repaint();
                     scrollPaneMetadata.revalidate();
                 } else {
-                    JOptionPane.showMessageDialog(Frame.getFrames()[0],
-                            "<html>Invalid metadata configuration.<br><br>Please try to add the metadata again.<br>" +
-                                    "Make sure that all fields are correctly set,<br>" +
-                                    "and that no other metadata with the<br>same key-value combination already exists.</html>",
+                    JOptionPane.showMessageDialog(Frame.getFrames()[0], "<html>Invalid metadata configuration.<br><br>Please try to add the metadata again.<br>" +
+                                    "Make sure that all fields are correctly set,<br>and that no other metadata with the<br>same key-value combination already exists.</html>",
                             "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }

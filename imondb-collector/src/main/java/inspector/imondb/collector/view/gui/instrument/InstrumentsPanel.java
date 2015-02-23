@@ -49,21 +49,16 @@ public class InstrumentsPanel extends Observable {
             InstrumentCreatePanel instrumentCreatePanel = new InstrumentCreatePanel();
             int result = JOptionPane.showConfirmDialog(Frame.getFrames()[0], instrumentCreatePanel.getPanel(),
                     "Create instrument", JOptionPane.OK_CANCEL_OPTION);
-
             if(result == JOptionPane.OK_OPTION) {
                 InstrumentMap instrumentMap = instrumentCreatePanel.getInstrumentMap();
-
                 if(instrumentMap.isValid() && !instrumentMaps.containsKey(instrumentMap)) {
                     addInstrument(instrumentMap);
-
                     panelInstruments.revalidate();
                     panelInstruments.repaint();
                     scrollPaneInstruments.revalidate();
                 } else {
-                    JOptionPane.showMessageDialog(Frame.getFrames()[0],
-                            "<html>Invalid instrument configuration.<br><br>Please try to add the instrument again.<br>" +
-                                    "Make sure that all fields are correctly set,<br>" +
-                                    "and that no other instrument with the<br>same name already exists.</html>",
+                    JOptionPane.showMessageDialog(Frame.getFrames()[0], "<html>Invalid instrument configuration.<br><br>Please try to add the instrument again.<br>" +
+                                    "Make sure that all fields are correctly set,<br>and that no other instrument with the<br>same name already exists.</html>",
                             "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }

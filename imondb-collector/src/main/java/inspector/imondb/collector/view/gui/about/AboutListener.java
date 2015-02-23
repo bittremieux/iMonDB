@@ -27,7 +27,7 @@ import java.awt.event.ActionListener;
 
 public class AboutListener implements ActionListener {
 
-    private static final ImageIcon icon = new ImageIcon(AboutListener.class.getResource("/images/logo-64.png"));
+    private static final ImageIcon ICON = new ImageIcon(AboutListener.class.getResource("/images/logo-64.png"));
 
     private final String applicationName;
 
@@ -54,6 +54,6 @@ public class AboutListener implements ActionListener {
         linkPanel.add(new JLabel("."));
         messagePanel.add(linkPanel);
 
-        JOptionPane.showMessageDialog(Frame.getFrames()[0], messagePanel, title, JOptionPane.INFORMATION_MESSAGE, icon);
+        JOptionPane.showMessageDialog(Frame.getFrames()[0], messagePanel, title, JOptionPane.INFORMATION_MESSAGE, ICON);
     }
 }

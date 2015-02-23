@@ -37,7 +37,7 @@ import java.util.concurrent.ExecutionException;
 
 public class CollectorController {
 
-    protected static final Logger LOGGER = LogManager.getLogger(CollectorController.class);
+    private static final Logger LOGGER = LogManager.getLogger(CollectorController.class);
 
     private Configuration configuration;
 

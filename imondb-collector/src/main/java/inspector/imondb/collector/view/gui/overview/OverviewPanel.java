@@ -107,7 +107,9 @@ public class OverviewPanel extends Observable {
         return panel;
     }
 
-    public enum Status {VALID, WARNING, ERROR}
+    public enum Status {
+        VALID, WARNING, ERROR
+    }
 
     private JPanel panel;
 
@@ -145,6 +147,7 @@ public class OverviewPanel extends Observable {
                 break;
             case IN_PROGRESS:
                 setDatabaseStatus(Status.WARNING, "Unverified database configuration");
+                break;
             case UNKNOWN:
                 if(StringUtils.isEmpty(databasePanel.getHost()) || StringUtils.isEmpty(databasePanel.getPort()) ||
                         StringUtils.isEmpty(databasePanel.getDatabase()) || StringUtils.isEmpty(databasePanel.getUserName())) {
@@ -152,6 +155,7 @@ public class OverviewPanel extends Observable {
                 } else {
                     setDatabaseStatus(Status.WARNING, "Unverified database configuration");
                 }
+                break;
             default:
                 break;
         }
@@ -176,7 +180,7 @@ public class OverviewPanel extends Observable {
         // instrument configuration
         InstrumentsPanel instrumentsPanel = collector.getInstrumentsPanel();
         Collection<InstrumentMap> instrumentMaps = instrumentsPanel.getInstruments();
-        if(instrumentMaps.size() == 0) {
+        if(instrumentMaps.isEmpty()) {
             setInstrumentStatus(Status.ERROR, "No instruments configured");
         } else {
             InstrumentOverviewPanel.InstrumentStatus status = InstrumentOverviewPanel.InstrumentStatus.INVALID;
@@ -194,6 +198,7 @@ public class OverviewPanel extends Observable {
                 case UNKNOWN:
                 case NEW:
                     setInstrumentStatus(Status.WARNING, "One or more unverified/new instrument configurations");
+                    break;
                 default:
                     break;
             }
@@ -201,7 +206,7 @@ public class OverviewPanel extends Observable {
 
         // metadata configuration
         MetadataPanel metadataPanel = collector.getMetadataPanel();
-        if(metadataPanel.getMetadata().size() > 0) {
+        if(metadataPanel.getMetadata().isEmpty()) {
             setMetadataStatus(Status.VALID, "One or more valid metadata configurations");
         } else {
             setMetadataStatus(Status.WARNING, "No metadata configurations set");

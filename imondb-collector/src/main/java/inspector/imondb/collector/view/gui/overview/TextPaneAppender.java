@@ -59,7 +59,7 @@ public class TextPaneAppender extends AbstractAppender {
                             textPane.getStyle("err") : textPane.getStyle("out");
                     doc.insertString(doc.getLength(), new String(getLayout().toByteArray(event)), style);
                 } catch(BadLocationException e) {
-                    throw new RuntimeException(e);
+                    throw new IllegalStateException(e);
                 }
                 textPane.setCaretPosition(doc.getLength());
             });

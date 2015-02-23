@@ -167,7 +167,9 @@ public class InstrumentOverviewPanel {
         return panel;
     }
 
-    public enum InstrumentStatus {VALID, NEW, UNKNOWN, INVALID}
+    public enum InstrumentStatus {
+        VALID, NEW, UNKNOWN, INVALID
+    }
 
     private static ImageIcon iconInvalid = new ImageIcon(InstrumentOverviewPanel.class.getResource("/images/nok.png"));
     private static ImageIcon iconWarning = new ImageIcon(InstrumentOverviewPanel.class.getResource("/images/warning.png"));

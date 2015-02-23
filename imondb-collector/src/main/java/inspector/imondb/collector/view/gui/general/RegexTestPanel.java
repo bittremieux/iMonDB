@@ -30,8 +30,8 @@ import java.awt.*;
 
 public class RegexTestPanel {
 
-    private static final ImageIcon iconMatch = new ImageIcon(RegexTestPanel.class.getResource("/images/ok.png"));
-    private static final ImageIcon iconNoMatch = new ImageIcon(RegexTestPanel.class.getResource("/images/nok.png"));
+    private static final ImageIcon ICON_MATCH = new ImageIcon(RegexTestPanel.class.getResource("/images/ok.png"));
+    private static final ImageIcon ICON_NO_MATCH = new ImageIcon(RegexTestPanel.class.getResource("/images/nok.png"));
 
     private JPanel panel;
 
@@ -130,7 +130,7 @@ public class RegexTestPanel {
 
         private void update() {
             boolean matches = textFieldInput.getText().matches(textFieldRegex.getText());
-            labelResult.setIcon(matches ? iconMatch : iconNoMatch);
+            labelResult.setIcon(matches ? ICON_MATCH : ICON_NO_MATCH);
             labelResult.setText(matches ? "match" : "no match");
         }
     }

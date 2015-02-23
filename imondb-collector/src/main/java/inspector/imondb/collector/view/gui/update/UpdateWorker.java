@@ -37,7 +37,7 @@ public class UpdateWorker extends SwingWorker<String, Void> {
 
     private static final String VERSION_NR = UpdateWorker.class.getPackage().getImplementationVersion();
 
-    private static final ImageIcon icon = new ImageIcon(UpdateWorker.class.getResource("/images/logo-64.png"));
+    private static final ImageIcon ICON = new ImageIcon(UpdateWorker.class.getResource("/images/logo-64.png"));
 
     private final String id;
     private final String header;
@@ -83,12 +83,12 @@ public class UpdateWorker extends SwingWorker<String, Void> {
             if(version != null) {
                 LOGGER.info("New update found. Current version: " + VERSION_NR + "; update version: " + version);
                 JOptionPane.showMessageDialog(Frame.getFrames()[0], createUpdatePanel(version),
-                        title, JOptionPane.INFORMATION_MESSAGE, icon);
+                        title, JOptionPane.INFORMATION_MESSAGE, ICON);
             } else if(!isSilent) {
                 LOGGER.info("No updates found. Current version: " + VERSION_NR);
                 // only show a message if the update was explicitly requested
                 JOptionPane.showMessageDialog(Frame.getFrames()[0], createNoUpdatePanel(),
-                        title, JOptionPane.INFORMATION_MESSAGE, icon);
+                        title, JOptionPane.INFORMATION_MESSAGE, ICON);
             }
         } catch(InterruptedException | ExecutionException ex) {
             if(!isSilent) {

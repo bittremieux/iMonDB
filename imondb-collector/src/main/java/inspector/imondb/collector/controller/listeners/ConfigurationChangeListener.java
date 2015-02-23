@@ -114,13 +114,9 @@ public class ConfigurationChangeListener implements FocusListener, ActionListene
 
     @Override
     public void stateChanged(ChangeEvent e) {
-        switch(((Component) e.getSource()).getName()) {
+        if("gen_threads".equals(((Component) e.getSource()).getName())) {
             // general configuration
-            case "gen_threads":
-                configuration.getGeneralConfiguration().setNumberOfThreads(collectorFrame.getGeneralPanel().getNumberOfThreads());
-                break;
-            default:
-                break;
+            configuration.getGeneralConfiguration().setNumberOfThreads(collectorFrame.getGeneralPanel().getNumberOfThreads());
         }
 
         configuration.store();

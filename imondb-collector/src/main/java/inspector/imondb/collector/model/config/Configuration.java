@@ -31,7 +31,7 @@ import java.util.Map;
 
 public class Configuration {
 
-    protected static final Logger logger = LogManager.getLogger(Configuration.class);
+    private static final Logger LOGGER = LogManager.getLogger(Configuration.class);
 
     /** {@link Yaml} object to load and write YAML files */
     private Yaml yaml;
@@ -72,7 +72,7 @@ public class Configuration {
             metadataConfiguration = new MetadataConfiguration(rootMap);
 
         } catch(IOException e) {
-            logger.error("Error while loading the config file: {}", e);
+            LOGGER.error("Error while loading the config file: {}", e);
             throw new IllegalStateException("Error while loading the config file: " + e.getMessage());
         }
     }
@@ -90,7 +90,7 @@ public class Configuration {
         try {
             yaml.dump(rootMap, new FileWriter(file));
         } catch(IOException e) {
-            logger.error("Error while writing the configuration file: {}", e);
+            LOGGER.error("Error while writing the configuration file: {}", e);
         }
     }
 
