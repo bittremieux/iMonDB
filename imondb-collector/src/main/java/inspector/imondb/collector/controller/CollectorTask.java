@@ -146,7 +146,8 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
 
                     // update progress
                     publish((i+1) * 100 / threadsSubmitted);
-                } catch(NullPointerException | IllegalArgumentException | IllegalStateException e) {
+                } catch(ExecutionException e) {
+                    // all exceptions will be wrapped in an ExecutionException
                     // catch the exceptions that were thrown during the processing of this individual file to correctly continue processing the other files
                     LOGGER.error("Error while executing a thread: {}", e.getMessage(), e);
                 }
