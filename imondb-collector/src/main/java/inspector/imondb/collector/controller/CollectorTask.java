@@ -195,11 +195,8 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
 
     @Override
     protected void done() {
-        try {
-            if(progressReporter != null) {
-                progressReporter.done();
-            }
-        } catch(Exception ignore) {
+        if(progressReporter != null) {
+            progressReporter.done();
         }
     }
 

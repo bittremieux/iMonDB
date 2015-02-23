@@ -12,6 +12,6 @@ public class SystemOutProgressBar implements ProgressReporter {
 
     @Override
     public void done() {
-        // do nothing
+        System.out.println("Completed");
     }
 }

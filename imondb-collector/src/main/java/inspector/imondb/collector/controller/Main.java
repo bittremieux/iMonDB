@@ -26,7 +26,6 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 
 public class Main {
@@ -46,15 +45,30 @@ public class Main {
                 // show CLI help
                 new HelpFormatter().printHelp("iMonDB-collector", options, true);
             } else {
-                // logging verbosity
-                if(cmd.hasOption("v") || cmd.hasOption("vv")) {
+                // log level
+                if(cmd.hasOption("l")) {
                     LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-                    Configuration config = ctx.getConfiguration();
-                    LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-                    if(cmd.hasOption("v")) {
-                        loggerConfig.setLevel(Level.DEBUG);
-                    } else if(cmd.hasOption("vv")) {
-                        loggerConfig.setLevel(Level.TRACE);
+                    LoggerConfig loggerConfig = ctx.getConfiguration().getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+                    switch(cmd.getOptionValue("l")) {
+                        case "0":
+                            loggerConfig.setLevel(Level.OFF);
+                            break;
+                        case "1":
+                            loggerConfig.setLevel(Level.ERROR);
+                            break;
+                        case "2":
+                            loggerConfig.setLevel(Level.WARN);
+                            break;
+                        case "3":
+                        default:
+                            loggerConfig.setLevel(Level.INFO);
+                            break;
+                        case "4":
+                            loggerConfig.setLevel(Level.DEBUG);
+                            break;
+                        case "5":
+                            loggerConfig.setLevel(Level.TRACE);
+                            break;
                     }
                     ctx.updateLoggers();
                 }
@@ -85,10 +99,7 @@ public class Main {
         run.addOption(new Option("?", "help", false, "show help"));
         options.addOptionGroup(run);
 		// logging verbosity
-		OptionGroup logging = new OptionGroup();
-		logging.addOption(new Option("v", "verbose", false, "verbose logging"));
-		logging.addOption(new Option("vv", "very-verbose", false, "extremely verbose logging"));
-		options.addOptionGroup(logging);
+        options.addOption(new Option("l", "log-level", true, "the log granularity level (0-5). 0: no logging, 5: extremely detailed logging, default: 3"));
 
 		return options;
 	}
