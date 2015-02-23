@@ -15,6 +15,9 @@
         <SystemOutAppender name="sout">
             <PatternLayout pattern="%d{HH:mm:ss} - %-5level - %msg" />
         </SystemOutAppender>
+        <TextPaneAppender name="textPane">
+            <PatternLayout pattern="%d{HH:mm:ss} - %-5level- %msg%n" />
+        </TextPaneAppender>
 	</appenders>
 	
 	<loggers>

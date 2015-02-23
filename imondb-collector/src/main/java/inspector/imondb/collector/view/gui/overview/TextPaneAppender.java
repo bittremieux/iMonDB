@@ -30,28 +30,46 @@ import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 
+import javax.swing.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.Style;
 import java.io.Serializable;
 
-@Plugin(name="SystemOutAppender", category="Core", elementType="appender", printObject=true)
-public class SystemOutAppender extends AbstractAppender {
+@Plugin(name="TextPaneAppender", category="Core", elementType="appender", printObject=true)
+public class TextPaneAppender extends AbstractAppender {
 
-    private SystemOutAppender(Layout<? extends Serializable> layout, Filter filter, String name) {
+    private static JTextPane textPane;
+
+    private TextPaneAppender(Layout<? extends Serializable> layout, Filter filter, String name) {
         super(name, filter, layout, false);
+    }
+
+    public static void setTextPane(JTextPane textPane) {
+        TextPaneAppender.textPane = textPane;
     }
 
     @Override
     public void append(LogEvent event) {
-        if(event.getLevel() == Level.FATAL || event.getLevel() == Level.ERROR) {
-            System.err.println(new String(getLayout().toByteArray(event)));
-        } else {
-            System.out.println(new String(getLayout().toByteArray(event)));
+        if(textPane != null) {
+            SwingUtilities.invokeLater(() -> {
+                Document doc = textPane.getDocument();
+                try {
+                    Style style = event.getLevel() == Level.FATAL || event.getLevel() == Level.ERROR ?
+                            textPane.getStyle("err") : textPane.getStyle("out");
+                    doc.insertString(doc.getLength(), new String(getLayout().toByteArray(event)), style);
+                } catch(BadLocationException e) {
+                    throw new RuntimeException(e);
+                }
+                textPane.setCaretPosition(doc.getLength());
+            });
         }
     }
 
     @PluginFactory
-    public static SystemOutAppender createAppender(@PluginElement("Layout") Layout<? extends Serializable> layout,
+    public static TextPaneAppender createAppender(@PluginElement("Layout") Layout<? extends Serializable> layout,
                                                    @PluginElement("Filter") final Filter filter,
                                                    @PluginAttribute("name") final String name) {
-        return new SystemOutAppender(layout, filter, name);
+        return new TextPaneAppender(layout, filter, name);
     }
 }
