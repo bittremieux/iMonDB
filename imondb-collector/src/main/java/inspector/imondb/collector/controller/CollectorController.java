@@ -27,11 +27,16 @@ import inspector.imondb.collector.view.gui.CollectorFrame;
 import inspector.imondb.collector.view.gui.about.AboutListener;
 import inspector.imondb.collector.view.gui.exit.ExitAction;
 import inspector.imondb.collector.view.gui.update.UpdateListener;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import java.io.File;
+import java.util.concurrent.ExecutionException;
 
 public class CollectorController {
+
+    protected static final Logger LOGGER = LogManager.getLogger(CollectorController.class);
 
     private Configuration configuration;
 
@@ -71,5 +76,17 @@ public class CollectorController {
             collector.display();
             collector.initialize();
         });
+    }
+
+    public void startCliView() {
+        try {
+            CollectorTask task = executionController.getCollectorTask(null);
+            task.execute();
+            task.get();
+        } catch(InterruptedException | ExecutionException e) {
+            LOGGER.error("Error while executing the collector: {}", e.getMessage(), e);
+        }
+
+        cleanUp();
     }
 }

@@ -49,7 +49,7 @@ import java.util.concurrent.Callable;
  */
 public class FileProcessor implements Callable<Timestamp> {
 
-	protected static final Logger logger = LogManager.getLogger(FileProcessor.class);
+	protected static final Logger LOGGER = LogManager.getLogger(FileProcessor.class);
 
 	private IMonDBReader dbReader;
 	private IMonDBWriter dbWriter;
@@ -83,7 +83,7 @@ public class FileProcessor implements Callable<Timestamp> {
 
 	@Override
 	public Timestamp call() {
-		logger.info("Process file <{}>", file.getAbsolutePath());
+		LOGGER.info("Process file <{}>", file.getAbsolutePath());
 
 		String runName = FilenameUtils.getBaseName(file.getName());
 		if(forceUnique) {
@@ -96,7 +96,7 @@ public class FileProcessor implements Callable<Timestamp> {
 
 				fis.close();
 			} catch(IOException e) {
-				logger.error("Unable to create a unique run name based on the MD5 checksum: {}", e.getMessage(), e);
+				LOGGER.error("Unable to create a unique run name based on the MD5 checksum: {}", e.getMessage(), e);
 			}
 		}
 
@@ -123,7 +123,7 @@ public class FileProcessor implements Callable<Timestamp> {
 			return run.getSampleDate();
 		}
 		else {
-			logger.trace("Run <{}> already found in the database; skipping...", runName);
+			LOGGER.trace("Run <{}> already found in the database; skipping...", runName);
 			return null;
 		}
 	}
