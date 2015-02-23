@@ -40,6 +40,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.util.Arrays;
 
 public class CollectorFrame {
 
@@ -67,7 +68,8 @@ public class CollectorFrame {
         this.configuration = configuration;
 
         frame = new JFrame("iMonDB Collector");
-        frame.setIconImage(new ImageIcon(getClass().getResource("/images/logo-small.png")).getImage());
+        frame.setIconImages(Arrays.asList(new ImageIcon(getClass().getResource("/images/logo-small.png")).getImage(),
+                new ImageIcon(getClass().getResource("/images/logo-64.png")).getImage()));
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         JPanel panelParent = new JPanel(new BorderLayout());
