@@ -74,6 +74,10 @@ public class CollectorFrame {
         // create and arrange panels
         tabbedPane = new JTabbedPane();
 
+        overviewPanel = new OverviewPanel(this);
+        ExecutionPanel executionPanel = new ExecutionPanel(this, executionController);
+        tabbedPane.addTab("Execute", executionPanel.getPanel());
+
         DatabaseConfiguration databaseConfiguration = configuration.getDatabaseConfiguration();
         databasePanel = new DatabasePanel(databaseConfiguration.getHost(), databaseConfiguration.getPort(),
                 databaseConfiguration.getUserName(), databaseConfiguration.getPassword(), databaseConfiguration.getDatabase());
@@ -89,10 +93,6 @@ public class CollectorFrame {
 
         metadataPanel = new MetadataPanel(configuration.getMetadataConfiguration().getMetadata());
         tabbedPane.addTab("Metadata", metadataPanel.getPanel());
-
-        overviewPanel = new OverviewPanel(this);
-        ExecutionPanel executionPanel = new ExecutionPanel(this, executionController);
-        tabbedPane.addTab("Execute", executionPanel.getPanel());
 
         tabbedPane.addChangeListener(e -> {
             if("Execute".equals(tabbedPane.getTitleAt(tabbedPane.getSelectedIndex()))) {
