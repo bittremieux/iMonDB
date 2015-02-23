@@ -60,6 +60,10 @@ public class CollectorController {
     }
 
     public void startGuiView() {
+        // enable the text pane appender
+        org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
+        rootLogger.addAppender(rootLogger.getContext().getConfiguration().getAppender("textPane"));
+
         // view
         collector = new CollectorFrame(this, executionController, configuration);
 
@@ -79,6 +83,11 @@ public class CollectorController {
     }
 
     public void startCliView() {
+        // enable the console appender
+        org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
+        rootLogger.addAppender(rootLogger.getContext().getConfiguration().getAppender("console"));
+
+        // start processing
         try {
             CollectorTask task = executionController.getCollectorTask(null);
             task.execute();
