@@ -22,6 +22,7 @@ package inspector.imondb.collector.view.gui.overview;
 
 import inspector.imondb.collector.controller.CollectorTask;
 import inspector.imondb.collector.controller.ExecutionController;
+import inspector.imondb.collector.view.ProgressReporter;
 import inspector.imondb.collector.view.gui.CollectorFrame;
 
 import javax.swing.*;
@@ -29,7 +30,7 @@ import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import java.awt.*;
 
-public class ProgressPanel {
+public class ProgressPanel implements ProgressReporter {
 
     private JPanel panel;
 

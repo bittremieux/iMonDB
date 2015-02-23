@@ -21,7 +21,7 @@ package inspector.imondb.collector.controller;
  */
 
 import inspector.imondb.collector.model.config.Configuration;
-import inspector.imondb.collector.view.gui.overview.ProgressPanel;
+import inspector.imondb.collector.view.ProgressReporter;
 
 public class ExecutionController {
 
@@ -33,7 +33,10 @@ public class ExecutionController {
         this.configuration = configuration;
     }
 
-    public CollectorTask getCollectorTask(ProgressPanel progressPanel) {
-        return new CollectorTask(progressPanel, databaseController, configuration);
+    public CollectorTask getCollectorTask(ProgressReporter progressReporter) {
+        CollectorTask task = new CollectorTask(databaseController, configuration);
+        task.setProgressReporter(progressReporter);
+
+        return task;
     }
 }

@@ -23,6 +23,7 @@ package inspector.imondb.collector.controller;
 import inspector.imondb.collector.controller.listeners.ConfigurationChangeListener;
 import inspector.imondb.collector.controller.listeners.DatabaseConnectionListener;
 import inspector.imondb.collector.model.config.Configuration;
+import inspector.imondb.collector.view.cli.SystemOutProgressBar;
 import inspector.imondb.collector.view.gui.CollectorFrame;
 import inspector.imondb.collector.view.gui.about.AboutListener;
 import inspector.imondb.collector.view.gui.exit.ExitAction;
@@ -89,7 +90,7 @@ public class CollectorController {
 
         // start processing
         try {
-            CollectorTask task = executionController.getCollectorTask(null);
+            CollectorTask task = executionController.getCollectorTask(new SystemOutProgressBar());
             task.execute();
             task.get();
         } catch(InterruptedException | ExecutionException e) {

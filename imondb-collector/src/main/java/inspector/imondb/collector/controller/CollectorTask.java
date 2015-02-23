@@ -1,5 +1,25 @@
 package inspector.imondb.collector.controller;
 
+/*
+ * #%L
+ * iMonDB Collector
+ * %%
+ * Copyright (C) 2014 - 2015 InSPECtor
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import com.google.common.collect.ImmutableMap;
 import inspector.imondb.collector.model.InstrumentMap;
 import inspector.imondb.collector.model.MetadataMap;
@@ -7,7 +27,7 @@ import inspector.imondb.collector.model.RegexMapper;
 import inspector.imondb.collector.model.config.Configuration;
 import inspector.imondb.collector.model.config.DatabaseConfiguration;
 import inspector.imondb.collector.model.config.GeneralConfiguration;
-import inspector.imondb.collector.view.gui.overview.ProgressPanel;
+import inspector.imondb.collector.view.ProgressReporter;
 import inspector.imondb.convert.thermo.ThermoRawFileExtractor;
 import inspector.imondb.io.IMonDBReader;
 import inspector.imondb.io.IMonDBWriter;
@@ -36,17 +56,20 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
 
     private static final Logger LOGGER = LogManager.getLogger(CollectorTask.class);
 
-    private ProgressPanel progressPanel;
+    private ProgressReporter progressReporter;
 
     private DatabaseController databaseController;
     private Configuration configuration;
 
     private ExecutorService threadPool;
 
-    public CollectorTask(ProgressPanel progressPanel, DatabaseController databaseController, Configuration configuration) {
-        this.progressPanel = progressPanel;
+    public CollectorTask(DatabaseController databaseController, Configuration configuration) {
         this.databaseController = databaseController;
         this.configuration = configuration;
+    }
+
+    public void setProgressReporter(ProgressReporter progressReporter) {
+        this.progressReporter = progressReporter;
     }
 
     @Override
@@ -173,14 +196,18 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
     @Override
     protected void done() {
         try {
-            progressPanel.done();
+            if(progressReporter != null) {
+                progressReporter.done();
+            }
         } catch(Exception ignore) {
         }
     }
 
     @Override
     protected void process(List<Integer> chunks) {
-        chunks.forEach(progressPanel::setProgress);
+        if(progressReporter != null) {
+            chunks.forEach(progressReporter::setProgress);
+        }
     }
 
     public void cancelExecution() {
