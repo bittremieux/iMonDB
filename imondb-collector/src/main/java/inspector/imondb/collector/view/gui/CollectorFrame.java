@@ -33,14 +33,18 @@ import inspector.imondb.collector.view.gui.instrument.InstrumentsPanel;
 import inspector.imondb.collector.view.gui.metadata.MetadataPanel;
 import inspector.imondb.collector.view.gui.overview.ExecutionPanel;
 import inspector.imondb.collector.view.gui.overview.OverviewPanel;
+import org.apache.commons.io.FilenameUtils;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 
 public class CollectorFrame {
 
     private CollectorController collectorController;
+    private Configuration configuration;
 
     private JFrame frame;
 
@@ -60,6 +64,7 @@ public class CollectorFrame {
 
     public CollectorFrame(CollectorController collectorController, ExecutionController executionController, Configuration configuration) {
         this.collectorController = collectorController;
+        this.configuration = configuration;
 
         frame = new JFrame("iMonDB Collector");
         frame.setIconImage(new ImageIcon(getClass().getResource("/images/logo-small.png")).getImage());
@@ -109,6 +114,25 @@ public class CollectorFrame {
         // file menu
         JMenu menuFile = new JMenu("File");
         menuFile.setMnemonic(KeyEvent.VK_F);
+
+        JMenuItem menuItemExport = new JMenuItem("Export config");
+        menuItemExport.setMnemonic(KeyEvent.VK_E);
+        menuItemExport.addActionListener(e -> {
+            // show save dialog
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setSelectedFile(new File("config.yaml"));
+            fileChooser.setFileFilter(new FileNameExtensionFilter("Config file", "yaml"));
+
+            int returnVal = fileChooser.showSaveDialog(frame);
+            if(returnVal == JFileChooser.APPROVE_OPTION) {
+                // save the config file
+                final File file = FilenameUtils.getExtension(fileChooser.getSelectedFile().getName()).isEmpty() ?
+                        new File(fileChooser.getSelectedFile().getAbsolutePath() + ".yaml") :
+                        fileChooser.getSelectedFile();
+                configuration.store(file);
+            }
+        });
+        menuFile.add(menuItemExport);
 
         menuItemExit = new JMenuItem("Exit");
         menuItemExit.setMnemonic(KeyEvent.VK_X);

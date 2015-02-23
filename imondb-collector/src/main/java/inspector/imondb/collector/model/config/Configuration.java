@@ -83,8 +83,12 @@ public class Configuration {
      * <em>Attention:</em> All comments will be lost.
      */
     public void store() {
+        store(new File("config.yaml"));
+    }
+
+    public void store(File file) {
         try {
-            yaml.dump(rootMap, new FileWriter(new File("config.yaml")));
+            yaml.dump(rootMap, new FileWriter(file));
         } catch(IOException e) {
             logger.error("Error while writing the configuration file: {}", e);
         }
