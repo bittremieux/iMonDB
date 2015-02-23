@@ -21,6 +21,7 @@ package inspector.imondb.viewer.model;
  */
 
 import com.google.common.collect.ImmutableMap;
+import org.jasypt.util.text.BasicTextEncryptor;
 
 import java.util.Map;
 
@@ -36,8 +37,13 @@ public class DatabaseConfiguration extends Configuration {
             "db_database", "iMonDB"
     );
 
+    private BasicTextEncryptor textEncryptor;
+
     public DatabaseConfiguration() {
         super();
+
+        textEncryptor = new BasicTextEncryptor();
+        textEncryptor.setPassword("iMonDB not so secret encryption password");
     }
 
     public boolean getAutoConnect() {
@@ -81,13 +87,14 @@ public class DatabaseConfiguration extends Configuration {
     public String getPassword() {
         String key = "db_password";
         // not so pretty because of not-null constraint of the map
-        return preferences.get(key, null);
+        String password = preferences.get(key, null);
+        return password != null ? textEncryptor.decrypt(password) : null;
     }
 
     public void setPassword(String password) {
         String key = "db_password";
         if(password != null) {
-            preferences.put(key, password);
+            preferences.put(key, textEncryptor.encrypt(password));
         } else {
             preferences.remove(key);
         }

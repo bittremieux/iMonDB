@@ -66,7 +66,7 @@ public class IMonDBReader {
         try {
             return emf.createEntityManager();
         } catch(Exception e) {
-            LOGGER.warn("Error while creating the EntityManager to connect to the database: {}", e);
+            LOGGER.warn("Error while creating the EntityManager to connect to the database: {}", e.getMessage(), e);
             throw new IllegalStateException("Couldn't connect to the database: " + e);
         }
     }

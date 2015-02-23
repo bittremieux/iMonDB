@@ -120,6 +120,7 @@ public class ViewerFrame {
         frame.setPreferredSize(new Dimension(1280, 800));
         frame.pack();
         frame.setVisible(true);
+        frame.setLocationRelativeTo(null);
     }
 
     public void setWaitCursor(boolean wait) {

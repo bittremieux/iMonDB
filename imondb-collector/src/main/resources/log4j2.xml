@@ -10,14 +10,18 @@
             </Policies>
         </RollingFile>
 		<Console name="console" target="SYSTEM_OUT">
-			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+            <PatternLayout pattern="%d{HH:mm:ss} - %-5level - %msg%n" />
 		</Console>
+        <TextPaneAppender name="textPane">
+            <PatternLayout pattern="%d{HH:mm:ss} - %-5level - %msg%n" />
+        </TextPaneAppender>
 	</appenders>
 	
 	<loggers>
-		<root level="WARN">
-			<appender-ref ref="logFile" />
-			<appender-ref ref="console" />
+		<root level="INFO">
+            <appender-ref ref="logFile" />
+            <!--<appender-ref ref="textPane" />-->
+			<!--<appender-ref ref="console" />-->
 		</root>
 	</loggers>
 	

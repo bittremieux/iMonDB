@@ -48,8 +48,6 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Locale;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -63,9 +61,6 @@ public class ThermoRawFileExtractor {
 
     private static final Logger LOGGER = LogManager.getLogger(ThermoRawFileExtractor.class);
 
-    /** static lock to make sure that the Thermo external resources are only accessed by a single instance */
-    private static final Lock FILE_COPY_LOCK = new ReentrantLock();
-
     /** properties containing a list of value names that have to be excluded */
     private PropertiesConfiguration exclusionProperties;
 
@@ -74,7 +69,6 @@ public class ThermoRawFileExtractor {
     //TODO: correctly specify the used cv
     //TODO: maybe we can even re-use some terms from the PSI-MS cv?
     private static CV cvIMon = new CV("iMonDB", "Dummy controlled vocabulary containing iMonDB terms", "https://bitbucket.org/proteinspector/imondb/", "0.0.1");
-    private static CV cvMS = new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
 
     /**
      * Creates an extractor to retrieve instrument data from Thermo raw files.
@@ -84,8 +78,7 @@ public class ThermoRawFileExtractor {
         exclusionProperties = initializeExclusionProperties();
 
         // make sure the extractor exe's are available outside the jar
-        try {
-            FILE_COPY_LOCK.lock();
+        synchronized(ThermoRawFileExtractor.class) {
             if(!new File("./Thermo/ThermoMetaData.exe").exists()
                     || !new File("./Thermo/ThermoStatusLog.exe").exists()
                     || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
@@ -93,8 +86,6 @@ public class ThermoRawFileExtractor {
                 LOGGER.debug("Copying the Thermo extractor CLI's to a new folder in the base directory");
                 copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
             }
-        } finally {
-            FILE_COPY_LOCK.unlock();
         }
     }
 
@@ -203,10 +194,10 @@ public class ThermoRawFileExtractor {
      *
      * @param fileName  the name of the raw file from which the instrument data will be extracted, not {@code null}
      * @param runName  the name of the created {@code Run}, if {@code null} the base file name is used
-     * @param instrumentName  the name of the {@link Instrument} on which the {@code Run} was performed, not {@code null}
+     * @param instrument  the {@link Instrument} on which the {@code Run} was performed, not {@code null}
      * @return a {@code Run} containing the instrument data as {@code Value}s
      */
-    public Run extractInstrumentData(String fileName, String runName, String instrumentName) {
+    public Run extractInstrumentData(String fileName, String runName, Instrument instrument) {
         try {
             // test if the file name is valid
             File rawFile = getFile(fileName);
@@ -216,8 +207,17 @@ public class ThermoRawFileExtractor {
             Timestamp date = metadata.getDate();
             InstrumentModel model = metadata.getModel();
 
-            // create the instrument on which the run was performed
-            Instrument instrument = new Instrument(instrumentName, model, cvMS);
+            // verify the instrument is valid
+            if(instrument == null) {
+                LOGGER.error("A valid instrument on which the raw file was generated should be provided");
+                throw new NullPointerException("A valid instrument on which the raw file was generated should be provided");
+            } else if(model != instrument.getType()) {
+                LOGGER.error("Invalid instrument <{}> with model {}, raw file instrument model = {}",
+                        instrument.getName(), instrument.getType().toString(), model.toString());
+                throw new IllegalArgumentException("Invalid instrument " + instrument.getName() +
+                        " with model " + instrument.getType().toString() + ", raw file instrument model = " + model.toString());
+            }
+
             // create a run to store all the instrument data values
             Run run = new Run(runName == null ? FilenameUtils.getBaseName(rawFile.getName()) : runName,
                     rawFile.getCanonicalPath(), date, instrument);
