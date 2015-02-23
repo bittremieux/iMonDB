@@ -144,8 +144,14 @@ public class OverviewPanel extends Observable {
                 setDatabaseStatus(Status.ERROR, "Invalid database configuration");
                 break;
             case IN_PROGRESS:
-            case UNKNOWN:
                 setDatabaseStatus(Status.WARNING, "Unverified database configuration");
+            case UNKNOWN:
+                if(StringUtils.isEmpty(databasePanel.getHost()) || StringUtils.isEmpty(databasePanel.getPort()) ||
+                        StringUtils.isEmpty(databasePanel.getDatabase()) || StringUtils.isEmpty(databasePanel.getUserName())) {
+                    setDatabaseStatus(Status.ERROR, "Invalid database configuration");
+                } else {
+                    setDatabaseStatus(Status.WARNING, "Unverified database configuration");
+                }
             default:
                 break;
         }
