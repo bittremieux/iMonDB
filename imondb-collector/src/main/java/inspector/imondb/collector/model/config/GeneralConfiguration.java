@@ -25,6 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 import java.util.Map;
 
 public class GeneralConfiguration {
@@ -40,6 +41,10 @@ public class GeneralConfiguration {
 
     public GeneralConfiguration(Map<String, Object> map) {
         rootMap = map;
+
+        if(rootMap.get("general") == null) {
+            rootMap.put("general", new HashMap<String, String>());
+        }
     }
 
     public String getDirectory() {

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang.StringUtils;
 import org.jasypt.util.text.BasicTextEncryptor;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class DatabaseConfiguration {
@@ -45,6 +46,10 @@ public class DatabaseConfiguration {
 
         textEncryptor = new BasicTextEncryptor();
         textEncryptor.setPassword("iMonDB Collector not so secret encryption password");
+
+        if(rootMap.get("sql") == null) {
+            rootMap.put("sql", new HashMap<String, String>());
+        }
     }
 
     public String getHost() {
