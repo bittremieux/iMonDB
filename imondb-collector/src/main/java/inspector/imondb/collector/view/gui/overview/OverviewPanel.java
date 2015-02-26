@@ -207,9 +207,9 @@ public class OverviewPanel extends Observable {
         // metadata configuration
         MetadataPanel metadataPanel = collector.getMetadataPanel();
         if(metadataPanel.getMetadata().isEmpty()) {
-            setMetadataStatus(Status.VALID, "One or more valid metadata configurations");
-        } else {
             setMetadataStatus(Status.WARNING, "No metadata configurations set");
+        } else {
+            setMetadataStatus(Status.VALID, "One or more valid metadata configurations");
         }
 
         setChanged();

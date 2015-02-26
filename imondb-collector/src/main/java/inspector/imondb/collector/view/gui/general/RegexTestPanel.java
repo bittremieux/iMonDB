@@ -27,6 +27,7 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.util.regex.Pattern;
 
 public class RegexTestPanel {
 
@@ -129,7 +130,8 @@ public class RegexTestPanel {
         }
 
         private void update() {
-            boolean matches = textFieldInput.getText().matches(textFieldRegex.getText());
+            Pattern pattern = Pattern.compile(textFieldRegex.getText(), Pattern.CASE_INSENSITIVE);
+            boolean matches = pattern.matcher(textFieldInput.getText()).matches();
             labelResult.setIcon(matches ? ICON_MATCH : ICON_NO_MATCH);
             labelResult.setText(matches ? "match" : "no match");
         }
