@@ -22,6 +22,7 @@ package inspector.imondb.collector.model.config;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang.StringUtils;
+import org.jasypt.exceptions.EncryptionOperationNotPossibleException;
 import org.jasypt.util.text.BasicTextEncryptor;
 
 import java.util.HashMap;
@@ -66,7 +67,13 @@ public class DatabaseConfiguration {
 
     public String getPort() {
         @SuppressWarnings("unchecked")
-        String result = ((Map<String, String>) rootMap.get("sql")).get("port");
+        Object o = ((Map<String, Object>) rootMap.get("sql")).get("port");
+        String result = null;
+        if(o != null && o.getClass() == Integer.class) {
+            result = Integer.toString((Integer) o);
+        } else if(o != null && o.getClass() == String.class) {
+            result = (String) o;
+        }
         return !StringUtils.isEmpty(result) ? result : DATABASE_DEFAULTS.get("db_port");
     }
 
@@ -103,7 +110,11 @@ public class DatabaseConfiguration {
     public String getPassword() {
         @SuppressWarnings("unchecked")
         String result = ((Map<String, String>) rootMap.get("sql")).get("password");
-        return textEncryptor.decrypt(result);
+        try {
+            return textEncryptor.decrypt(result);
+        } catch(EncryptionOperationNotPossibleException e) {
+            return result;
+        }
     }
 
     public void setPassword(String password) {
