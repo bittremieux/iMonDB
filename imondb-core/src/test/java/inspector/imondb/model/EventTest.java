@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.util.Date;
 
@@ -52,7 +53,7 @@ public class EventTest {
     @Test
     public void setAttachment() {
         Event event = new Event(instrument, new Timestamp(new Date().getTime()), EventType.UNDEFINED);
-        File attachment = new File(getClass().getResource("/attachment.jpg").getFile());
+        File attachment = loadResource("/attachment.jpg");
         event.setAttachment(attachment);
 
         assertTrue(event.getAttachmentName().equals(attachment.getName()));
@@ -77,7 +78,7 @@ public class EventTest {
     @Test
     public void setAttachment_null() {
         Event event = new Event(instrument, new Timestamp(new Date().getTime()), EventType.UNDEFINED);
-        File attachment = new File(getClass().getResource("/attachment.jpg").getFile());
+        File attachment = loadResource("/attachment.jpg");
 
         // set null file attachment
         event.setAttachment(attachment);
@@ -107,7 +108,7 @@ public class EventTest {
         Event eventSolution = new Event(instrument, date, EventType.UNDEFINED, null, "solution", null);
         Event eventExtra = new Event(instrument, date, EventType.UNDEFINED, null, null, "extra");
         Event eventAttachment = new Event(instrument, date, EventType.UNDEFINED);
-        eventAttachment.setAttachment(new File(getClass().getResource("/attachment.jpg").getFile()));
+        eventAttachment.setAttachment(loadResource("/attachment.jpg"));
         Event eventIdentical = new Event(instrument, date, EventType.UNDEFINED);
 
         assertEquals(event, event);
@@ -121,5 +122,14 @@ public class EventTest {
         assertEquals(event, eventExtra);
         assertEquals(event, eventAttachment);
         assertEquals(event, eventIdentical);
+    }
+
+    private File loadResource(String fileName) {
+        try {
+            return new File(getClass().getResource(fileName).toURI());
+        } catch(URISyntaxException e) {
+            fail(e.getMessage());
+        }
+        return null;
     }
 }

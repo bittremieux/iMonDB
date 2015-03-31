@@ -32,8 +32,10 @@ import org.junit.Test;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import java.io.File;
+import java.net.URISyntaxException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class ThermoRawFileExtractorIT {
 
@@ -77,7 +79,7 @@ public class ThermoRawFileExtractorIT {
 
 	@Test
 	public void init_existingExclusionProperties() {
-		System.setProperty("exclusion.properties", getClass().getResource("/exclusion.properties").getFile());
+		System.setProperty("exclusion.properties", loadResource("/exclusion.properties").getAbsolutePath());
 		new ThermoRawFileExtractor();
 	}
 
@@ -90,7 +92,7 @@ public class ThermoRawFileExtractorIT {
 	@Test(expected = IllegalArgumentException.class)
 	public void extract_nonRawFile() {
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		extractor.extractInstrumentData(new File(getClass().getResource("/attachment.jpg").getFile()).getAbsolutePath(), "run",
+		extractor.extractInstrumentData(loadResource("/attachment.jpg").getAbsolutePath(), "run",
                 new Instrument("instrument", InstrumentModel.UNKNOWN_MODEL, new CV("cv", "name", "uri", "1")));
 	}
 
@@ -103,13 +105,13 @@ public class ThermoRawFileExtractorIT {
 	@Test(expected = NullPointerException.class)
 	public void extract_illegalRawFile() {
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		extractor.extractInstrumentData(new File(getClass().getResource("/IllegalFile.raw").getFile()).getAbsolutePath(), null, null);
+		extractor.extractInstrumentData(loadResource("/IllegalFile.raw").getAbsolutePath(), null, null);
 	}
 
 	@Test(expected = NullPointerException.class)
 	public void extract_nullInstrument() {
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		extractor.extractInstrumentData(new File(getClass().getResource("/LtqOrbitrap.raw").getFile()).getAbsolutePath(), null, null);
+		extractor.extractInstrumentData(loadResource("/LtqOrbitrap.raw").getAbsolutePath(), null, null);
 	}
 
 	@Test
@@ -119,7 +121,7 @@ public class ThermoRawFileExtractorIT {
 		writer.writeInstrument(instrument);
 
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/LtqOrbitrap.raw").getFile()).getAbsolutePath(), null, instrument);
+		Run run = extractor.extractInstrumentData(loadResource("/LtqOrbitrap.raw").getAbsolutePath(), null, instrument);
 
 		writer.writeRun(run);
 
@@ -137,7 +139,7 @@ public class ThermoRawFileExtractorIT {
 		writer.writeInstrument(instrument);
 
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapXL.raw").getFile()).getAbsolutePath(), null, instrument);
+		Run run = extractor.extractInstrumentData(loadResource("/OrbitrapXL.raw").getAbsolutePath(), null, instrument);
 
 		writer.writeRun(run);
 
@@ -155,7 +157,7 @@ public class ThermoRawFileExtractorIT {
 		writer.writeInstrument(instrument);
 
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/LtqVelos.raw").getFile()).getAbsolutePath(), null, instrument);
+		Run run = extractor.extractInstrumentData(loadResource("/LtqVelos.raw").getAbsolutePath(), null, instrument);
 
 		writer.writeRun(run);
 
@@ -173,7 +175,7 @@ public class ThermoRawFileExtractorIT {
 		writer.writeInstrument(instrument);
 
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/TsqVantage.raw").getFile()).getAbsolutePath(), null, instrument);
+		Run run = extractor.extractInstrumentData(loadResource("/TsqVantage.raw").getAbsolutePath(), null, instrument);
 
 		writer.writeRun(run);
 
@@ -191,7 +193,7 @@ public class ThermoRawFileExtractorIT {
 		writer.writeInstrument(instrument);
 
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapVelos.raw").getFile()).getAbsolutePath(), null, instrument);
+		Run run = extractor.extractInstrumentData(loadResource("/OrbitrapVelos.raw").getAbsolutePath(), null, instrument);
 
 		writer.writeRun(run);
 
@@ -209,7 +211,7 @@ public class ThermoRawFileExtractorIT {
 		writer.writeInstrument(instrument);
 
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/QExactive.raw").getFile()).getAbsolutePath(), null, instrument);
+		Run run = extractor.extractInstrumentData(loadResource("/QExactive.raw").getAbsolutePath(), null, instrument);
 
 		writer.writeRun(run);
 
@@ -227,7 +229,7 @@ public class ThermoRawFileExtractorIT {
 		writer.writeInstrument(instrument);
 
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapFusion.raw").getFile()).getAbsolutePath(), null, instrument);
+		Run run = extractor.extractInstrumentData(loadResource("/OrbitrapFusion.raw").getAbsolutePath(), null, instrument);
 
 		writer.writeRun(run);
 
@@ -236,5 +238,14 @@ public class ThermoRawFileExtractorIT {
 
 		// compare all elements
 		assertEquals(run, runDb);
+	}
+
+	private File loadResource(String fileName) {
+		try {
+			return new File(getClass().getResource(fileName).toURI());
+		} catch(URISyntaxException e) {
+			fail(e.getMessage());
+		}
+		return null;
 	}
 }

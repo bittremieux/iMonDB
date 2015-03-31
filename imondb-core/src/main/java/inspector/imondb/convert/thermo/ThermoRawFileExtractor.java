@@ -37,9 +37,7 @@ import org.apache.logging.log4j.Logger;
 import sun.net.www.protocol.file.FileURLConnection;
 
 import java.io.*;
-import java.net.JarURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.*;
 import java.nio.charset.Charset;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -84,7 +82,7 @@ public class ThermoRawFileExtractor {
                     || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
                 // copy the resources outside the jar
                 LOGGER.debug("Copying the Thermo extractor CLI's to a new folder in the base directory");
-                copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
+                copyResources(getClass().getResource("/Thermo"), new File("./Thermo"));
             }
         }
     }
@@ -133,12 +131,12 @@ public class ThermoRawFileExtractor {
                 copyJarResources((JarURLConnection) urlConnection, destinationDir);
             } else if(urlConnection instanceof FileURLConnection) {
                 // resources in a folder
-                FileUtils.copyDirectory(new File(originUrl.getFile()), destinationDir);
+                FileUtils.copyDirectory(new File(originUrl.toURI()), destinationDir);
             } else {
                 LOGGER.error("Could not copy resources, unknown URLConnection: {}", urlConnection.getClass().getSimpleName());
                 throw new IllegalStateException("Unknown URLConnection: " + urlConnection.getClass().getSimpleName());
             }
-        } catch(IOException e) {
+        } catch(IOException | URISyntaxException e) {
             LOGGER.error("Could not copy resources: {}", e.getMessage());
             throw new IllegalStateException("Could not copy resources: " + e.getMessage(), e);
         }
