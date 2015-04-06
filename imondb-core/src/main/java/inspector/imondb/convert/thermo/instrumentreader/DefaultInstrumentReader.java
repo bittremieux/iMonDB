@@ -21,6 +21,7 @@ package inspector.imondb.convert.thermo.instrumentreader;
  */
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 
 public class DefaultInstrumentReader implements InstrumentReader {
 
@@ -39,6 +40,11 @@ public class DefaultInstrumentReader implements InstrumentReader {
     }
 
     public String[] getNameAndValue(String line) throws UnsupportedEncodingException {
-        return line.split("\t");
+        String[] values = line.split("\t");
+
+        String name = values[0].trim();
+        String value = values.length > 1 ? values[1].trim() : "";
+
+        return new String[] { new String(name.getBytes(textEncoding), Charset.forName(textEncoding)), value };
     }
 }
