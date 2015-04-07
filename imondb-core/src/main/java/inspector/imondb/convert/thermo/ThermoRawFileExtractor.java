@@ -352,11 +352,16 @@ public class ThermoRawFileExtractor {
      */
     private InstrumentReader getInstrumentReader(InstrumentModel model) {
         switch(model) {
+            case THERMO_LCQ_DECA_XP_PLUS:
             case THERMO_LTQ:
+            case THERMO_LTQ_FT:
             case THERMO_LTQ_ORBITRAP:
+            case THERMO_LTQ_ORBITRAP_DISCOVERY:
             case THERMO_ORBITRAP_XL:
+            case THERMO_LTQ_FT_ULTRA:
             case THERMO_LTQ_VELOS:
             case THERMO_ORBITRAP_VELOS:
+            case THERMO_LTQ_ORBITRAP_ELITE:
                 return new OrbitrapReader(EXE_TEXT_ENCODING);
             case THERMO_TSQ_VANTAGE:
                 return new TsqVantageReader(EXE_TEXT_ENCODING);
