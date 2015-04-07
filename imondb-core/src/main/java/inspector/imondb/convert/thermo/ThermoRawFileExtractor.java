@@ -371,6 +371,7 @@ public class ThermoRawFileExtractor {
                 return new FusionReader(EXE_TEXT_ENCODING);
             case UNKNOWN_MODEL:
             default:
+                LOGGER.warn("Unknown instrument model, default instrument reader used");
                 return new DefaultInstrumentReader(EXE_TEXT_ENCODING);
         }
 
