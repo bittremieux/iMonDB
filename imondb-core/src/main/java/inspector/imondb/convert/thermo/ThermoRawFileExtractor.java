@@ -37,9 +37,7 @@ import org.apache.logging.log4j.Logger;
 import sun.net.www.protocol.file.FileURLConnection;
 
 import java.io.*;
-import java.net.JarURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.*;
 import java.nio.charset.Charset;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -84,7 +82,7 @@ public class ThermoRawFileExtractor {
                     || !new File("./Thermo/ThermoTuneMethod.exe").exists()) {
                 // copy the resources outside the jar
                 LOGGER.debug("Copying the Thermo extractor CLI's to a new folder in the base directory");
-                copyResources(ThermoRawFileExtractor.class.getResource("/Thermo"), new File("./Thermo"));
+                copyResources(getClass().getResource("/Thermo"), new File("./Thermo"));
             }
         }
     }
@@ -133,12 +131,12 @@ public class ThermoRawFileExtractor {
                 copyJarResources((JarURLConnection) urlConnection, destinationDir);
             } else if(urlConnection instanceof FileURLConnection) {
                 // resources in a folder
-                FileUtils.copyDirectory(new File(originUrl.getFile()), destinationDir);
+                FileUtils.copyDirectory(new File(originUrl.toURI()), destinationDir);
             } else {
                 LOGGER.error("Could not copy resources, unknown URLConnection: {}", urlConnection.getClass().getSimpleName());
                 throw new IllegalStateException("Unknown URLConnection: " + urlConnection.getClass().getSimpleName());
             }
-        } catch(IOException e) {
+        } catch(IOException | URISyntaxException e) {
             LOGGER.error("Could not copy resources: {}", e.getMessage());
             throw new IllegalStateException("Could not copy resources: " + e.getMessage(), e);
         }
@@ -354,11 +352,16 @@ public class ThermoRawFileExtractor {
      */
     private InstrumentReader getInstrumentReader(InstrumentModel model) {
         switch(model) {
+            case THERMO_LCQ_DECA_XP_PLUS:
             case THERMO_LTQ:
+            case THERMO_LTQ_FT:
             case THERMO_LTQ_ORBITRAP:
+            case THERMO_LTQ_ORBITRAP_DISCOVERY:
             case THERMO_ORBITRAP_XL:
+            case THERMO_LTQ_FT_ULTRA:
             case THERMO_LTQ_VELOS:
             case THERMO_ORBITRAP_VELOS:
+            case THERMO_LTQ_ORBITRAP_ELITE:
                 return new OrbitrapReader(EXE_TEXT_ENCODING);
             case THERMO_TSQ_VANTAGE:
                 return new TsqVantageReader(EXE_TEXT_ENCODING);
@@ -368,6 +371,7 @@ public class ThermoRawFileExtractor {
                 return new FusionReader(EXE_TEXT_ENCODING);
             case UNKNOWN_MODEL:
             default:
+                LOGGER.warn("Unknown instrument model, default instrument reader used");
                 return new DefaultInstrumentReader(EXE_TEXT_ENCODING);
         }
 

@@ -12,7 +12,7 @@
     <groupId>inspector.imondb.imondb-collector</groupId>
     <artifactId>imondb-collector</artifactId>
     <packaging>jar</packaging>
-    <version>1.1.1</version>
+    <version>1.1.2</version>
 
     <name>iMonDB Collector</name>
     <url>https://bitbucket.org/proteinspector/imondb</url>
@@ -43,7 +43,7 @@
         <dependency>
             <groupId>inspector.imondb.imondb-core</groupId>
             <artifactId>imondb-core</artifactId>
-            <version>1.0.4</version>
+            <version>1.0.5</version>
         </dependency>
 
         <!-- logging -->

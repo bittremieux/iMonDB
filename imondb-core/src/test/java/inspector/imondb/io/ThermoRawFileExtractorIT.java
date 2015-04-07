@@ -32,8 +32,10 @@ import org.junit.Test;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import java.io.File;
+import java.net.URISyntaxException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class ThermoRawFileExtractorIT {
 
@@ -77,7 +79,7 @@ public class ThermoRawFileExtractorIT {
 
 	@Test
 	public void init_existingExclusionProperties() {
-		System.setProperty("exclusion.properties", getClass().getResource("/exclusion.properties").getFile());
+		System.setProperty("exclusion.properties", loadResource("/exclusion.properties").getAbsolutePath());
 		new ThermoRawFileExtractor();
 	}
 
@@ -90,7 +92,7 @@ public class ThermoRawFileExtractorIT {
 	@Test(expected = IllegalArgumentException.class)
 	public void extract_nonRawFile() {
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		extractor.extractInstrumentData(new File(getClass().getResource("/attachment.jpg").getFile()).getAbsolutePath(), "run",
+		extractor.extractInstrumentData(loadResource("/attachment.jpg").getAbsolutePath(), "run",
                 new Instrument("instrument", InstrumentModel.UNKNOWN_MODEL, new CV("cv", "name", "uri", "1")));
 	}
 
@@ -103,136 +105,97 @@ public class ThermoRawFileExtractorIT {
 	@Test(expected = NullPointerException.class)
 	public void extract_illegalRawFile() {
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		extractor.extractInstrumentData(new File(getClass().getResource("/IllegalFile.raw").getFile()).getAbsolutePath(), null, null);
+		extractor.extractInstrumentData(loadResource("/IllegalFile.raw").getAbsolutePath(), null, null);
 	}
 
 	@Test(expected = NullPointerException.class)
 	public void extract_nullInstrument() {
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		extractor.extractInstrumentData(new File(getClass().getResource("/LtqOrbitrap.raw").getFile()).getAbsolutePath(), null, null);
+		extractor.extractInstrumentData(loadResource("/LtqOrbitrap.raw").getAbsolutePath(), null, null);
+	}
+
+	@Test
+	public void extractLcqDecaXpPlus() {
+		testExtractor(InstrumentModel.THERMO_LCQ_DECA_XP_PLUS, "/LcqDecaXpPlus.raw");
+	}
+
+	@Test
+	public void extractLtqFt() {
+		testExtractor(InstrumentModel.THERMO_LTQ_FT, "/LtqFt.raw");
 	}
 
 	@Test
 	public void extractLtqOrbitrap() {
-		IMonDBWriter writer = new IMonDBWriter(emf);
-		Instrument instrument = new Instrument("test instrument", InstrumentModel.THERMO_LTQ_ORBITRAP, new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0"));
-		writer.writeInstrument(instrument);
+		testExtractor(InstrumentModel.THERMO_LTQ_ORBITRAP, "/LtqOrbitrap.raw");
+	}
 
-		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/LtqOrbitrap.raw").getFile()).getAbsolutePath(), null, instrument);
-
-		writer.writeRun(run);
-
-		IMonDBReader reader = new IMonDBReader(emf);
-		Run runDb = reader.getRun("LtqOrbitrap", instrument.getName());
-
-		// compare all elements
-		assertEquals(run, runDb);
+	@Test
+	public void extractLtqOrbitrapDiscovery() {
+		testExtractor(InstrumentModel.THERMO_LTQ_ORBITRAP_DISCOVERY, "/LtqOrbitrapDiscovery.raw");
 	}
 
 	@Test
 	public void extractOrbitrapXL() {
-		IMonDBWriter writer = new IMonDBWriter(emf);
-		Instrument instrument = new Instrument("test instrument", InstrumentModel.THERMO_ORBITRAP_XL, new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0"));
-		writer.writeInstrument(instrument);
+		testExtractor(InstrumentModel.THERMO_ORBITRAP_XL, "/OrbitrapXL.raw");
+	}
 
-		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapXL.raw").getFile()).getAbsolutePath(), null, instrument);
-
-		writer.writeRun(run);
-
-		IMonDBReader reader = new IMonDBReader(emf);
-		Run runDb = reader.getRun("OrbitrapXL", instrument.getName());
-
-		// compare all elements
-		assertEquals(run, runDb);
+	@Test
+	public void extractLtqFtUltra() {
+		testExtractor(InstrumentModel.THERMO_LTQ_FT_ULTRA, "/LtqFtUltra.raw");
 	}
 
 	@Test
 	public void extractLtqVelos() {
-		IMonDBWriter writer = new IMonDBWriter(emf);
-		Instrument instrument = new Instrument("test instrument", InstrumentModel.THERMO_LTQ_VELOS, new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0"));
-		writer.writeInstrument(instrument);
-
-		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/LtqVelos.raw").getFile()).getAbsolutePath(), null, instrument);
-
-		writer.writeRun(run);
-
-		IMonDBReader reader = new IMonDBReader(emf);
-		Run runDb = reader.getRun("LtqVelos", instrument.getName());
-
-		// compare all elements
-		assertEquals(run, runDb);
+		testExtractor(InstrumentModel.THERMO_LTQ_VELOS, "/LtqVelos.raw");
 	}
 
 	@Test
 	public void extractTsqVantage() {
-		IMonDBWriter writer = new IMonDBWriter(emf);
-		Instrument instrument = new Instrument("test instrument", InstrumentModel.THERMO_TSQ_VANTAGE, new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0"));
-		writer.writeInstrument(instrument);
-
-		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/TsqVantage.raw").getFile()).getAbsolutePath(), null, instrument);
-
-		writer.writeRun(run);
-
-		IMonDBReader reader = new IMonDBReader(emf);
-		Run runDb = reader.getRun("TsqVantage", instrument.getName());
-
-		// compare all elements
-		assertEquals(run, runDb);
+		testExtractor(InstrumentModel.THERMO_TSQ_VANTAGE, "/TsqVantage.raw");
 	}
 
 	@Test
 	public void extractOrbitrapVelos() {
-		IMonDBWriter writer = new IMonDBWriter(emf);
-		Instrument instrument = new Instrument("test instrument", InstrumentModel.THERMO_ORBITRAP_VELOS, new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0"));
-		writer.writeInstrument(instrument);
+		testExtractor(InstrumentModel.THERMO_ORBITRAP_VELOS, "/OrbitrapVelos.raw");
+	}
 
-		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapVelos.raw").getFile()).getAbsolutePath(), null, instrument);
-
-		writer.writeRun(run);
-
-		IMonDBReader reader = new IMonDBReader(emf);
-		Run runDb = reader.getRun("OrbitrapVelos", instrument.getName());
-
-		// compare all elements
-		assertEquals(run, runDb);
+	@Test
+	public void extractLtqOrbitrapElite() {
+		testExtractor(InstrumentModel.THERMO_LTQ_ORBITRAP_ELITE, "/LtqOrbitrapElite.raw");
 	}
 
 	@Test
 	public void extractQExactive() {
-		IMonDBWriter writer = new IMonDBWriter(emf);
-		Instrument instrument = new Instrument("test instrument", InstrumentModel.THERMO_Q_EXACTIVE, new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0"));
-		writer.writeInstrument(instrument);
-
-		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/QExactive.raw").getFile()).getAbsolutePath(), null, instrument);
-
-		writer.writeRun(run);
-
-		IMonDBReader reader = new IMonDBReader(emf);
-		Run runDb = reader.getRun("QExactive", instrument.getName());
-
-		// compare all elements
-		assertEquals(run, runDb);
+		testExtractor(InstrumentModel.THERMO_Q_EXACTIVE, "/QExactive.raw");
 	}
 
 	@Test
 	public void extractOrbitrapFusion() {
+		testExtractor(InstrumentModel.THERMO_ORBITRAP_FUSION, "/OrbitrapFusion.raw");
+	}
+
+	private File loadResource(String fileName) {
+		try {
+			return new File(getClass().getResource(fileName).toURI());
+		} catch(URISyntaxException e) {
+			fail(e.getMessage());
+		}
+		return null;
+	}
+
+	private void testExtractor(InstrumentModel model, String fileName) {
 		IMonDBWriter writer = new IMonDBWriter(emf);
-		Instrument instrument = new Instrument("test instrument", InstrumentModel.THERMO_ORBITRAP_FUSION, new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0"));
+		Instrument instrument = new Instrument("test instrument", model, new CV("MS", "PSI-MS CV", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0"));
 		writer.writeInstrument(instrument);
 
 		ThermoRawFileExtractor extractor = new ThermoRawFileExtractor();
-		Run run = extractor.extractInstrumentData(new File(getClass().getResource("/OrbitrapFusion.raw").getFile()).getAbsolutePath(), null, instrument);
+		Run run = extractor.extractInstrumentData(loadResource(fileName).getAbsolutePath(), null, instrument);
 
 		writer.writeRun(run);
 
 		IMonDBReader reader = new IMonDBReader(emf);
-		Run runDb = reader.getRun("OrbitrapFusion", instrument.getName());
+		String runName = fileName.substring(fileName.indexOf('/') + 1, fileName.indexOf(".raw"));
+		Run runDb = reader.getRun(runName, instrument.getName());
 
 		// compare all elements
 		assertEquals(run, runDb);
