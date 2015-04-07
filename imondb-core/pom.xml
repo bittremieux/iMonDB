@@ -12,7 +12,7 @@
 	<groupId>inspector.imondb.imondb-core</groupId>
 	<artifactId>imondb-core</artifactId>
 	<packaging>jar</packaging>
-    <version>1.0.4</version>
+    <version>1.0.5</version>
 
     <name>iMonDB Core</name>
     <description>The iMonDB core API</description>
