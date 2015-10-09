@@ -152,8 +152,13 @@ public class EventController {
             List<Event> events = null;
             try {
                 events = new EventsCsvImporter(file, instrument).read();
-                // add each event
-                events.forEach(eventsViewModel::add);
+                for(Event event : events) {
+                    // write the event to the database
+                    DatabaseConnection.getConnection().getWriter().writeOrUpdateEvent(event);
+
+                    // add the event to the application
+                    eventsViewModel.add(event);
+                }
             } catch(IOException e) {
                 throw new IllegalStateException(e);
             }
