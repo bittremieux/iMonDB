@@ -116,7 +116,7 @@ public class ViewerFrame {
 
     public void display() {
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.setMinimumSize(new Dimension(1280, 800));
+        frame.setMinimumSize(new Dimension(900, 700));
         frame.setPreferredSize(new Dimension(1280, 800));
         frame.pack();
         frame.setVisible(true);
@@ -266,7 +266,7 @@ public class ViewerFrame {
     }
 
     private JPanel createTopPanel() {
-        JPanel panelTop = new JPanel();
+        JPanel panelTop = new JPanel(new WrapLayout());
 
         buttonConnectToDatabase = new JButton("Connect to database");
         panelTop.add(buttonConnectToDatabase);
