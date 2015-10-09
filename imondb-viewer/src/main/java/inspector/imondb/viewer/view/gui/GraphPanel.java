@@ -28,6 +28,7 @@ import org.jfree.chart.plot.XYPlot;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class GraphPanel {
@@ -62,9 +63,23 @@ public class GraphPanel {
         panel.add(buttonsPanel, BorderLayout.PAGE_END);
         previous = new JButton(new ImageIcon(getClass().getResource("/images/previous.png")));
         previous.setActionCommand("Previous");
+        previous.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("LEFT"), "Previous");
+        previous.getActionMap().put("Previous", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                previous.doClick();
+            }
+        });
         previous.setEnabled(false);
         next = new JButton(new ImageIcon(getClass().getResource("/images/next.png")));
         next.setActionCommand("Next");
+        next.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("RIGHT"), "Next");
+        next.getActionMap().put("Next", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                next.doClick();
+            }
+        });
         next.setEnabled(false);
 
         // property label
