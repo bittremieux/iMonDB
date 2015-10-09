@@ -50,17 +50,26 @@ public class EventExportListener implements ActionListener {
         } else {
             try {
                 JFileChooser fileChooser = new JFileChooser();
-                fileChooser.setFileFilter(new FileNameExtensionFilter("PDF documents", "pdf"));
+                // export only to csv or pdf files
+                FileNameExtensionFilter csvFilter = new FileNameExtensionFilter("CSV-files", "csv");
+                fileChooser.addChoosableFileFilter(csvFilter);
+                FileNameExtensionFilter pdfFilter = new FileNameExtensionFilter("PDF documents", "pdf");
+                fileChooser.addChoosableFileFilter(pdfFilter);
+                fileChooser.removeChoosableFileFilter(fileChooser.getAcceptAllFileFilter());
 
                 int returnVal = fileChooser.showSaveDialog(viewerFrame.getFrame());
                 if(returnVal == JFileChooser.APPROVE_OPTION) {
-                    final File file = FilenameUtils.getExtension(fileChooser.getSelectedFile().getName()).isEmpty() ?
-                            new File(fileChooser.getSelectedFile().getAbsolutePath() + ".pdf") :
-                            fileChooser.getSelectedFile();
-
                     Thread eventExporter = new Thread() {
                         public void run() {
-                            eventController.exportEvents(file);
+                            EventController.ExportType exportType = fileChooser.getFileFilter().equals(csvFilter) ?
+                                    EventController.ExportType.CSV : EventController.ExportType.PDF;
+                            // check if a correct extension was provided
+                            final File file = FilenameUtils.getExtension(fileChooser.getSelectedFile().getName()).isEmpty() ?
+                                    new File(fileChooser.getSelectedFile().getAbsolutePath() +
+                                            (exportType == EventController.ExportType.CSV ? ".csv": ".pdf")) :
+                                    fileChooser.getSelectedFile();
+                            // export to file
+                            eventController.exportEvents(file, exportType);
                         }
                     };
                     eventExporter.start();

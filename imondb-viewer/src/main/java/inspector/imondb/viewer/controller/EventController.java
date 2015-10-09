@@ -24,10 +24,11 @@ import inspector.imondb.model.Event;
 import inspector.imondb.model.EventType;
 import inspector.imondb.model.Instrument;
 import inspector.imondb.viewer.model.DatabaseConnection;
-import inspector.imondb.viewer.view.EventsReportWriter;
+import inspector.imondb.viewer.view.io.EventsCsvExporter;
+import inspector.imondb.viewer.view.io.EventsExporter;
+import inspector.imondb.viewer.view.io.EventsPdfExporter;
 import inspector.imondb.viewer.viewmodel.EventsViewModel;
 import inspector.imondb.viewer.viewmodel.InstrumentsViewModel;
-import net.sf.dynamicreports.report.exception.DRException;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +39,8 @@ public class EventController {
 
     private InstrumentsViewModel instrumentsViewModel;
     private EventsViewModel eventsViewModel;
+
+    public enum ExportType { CSV, PDF };
 
     public EventController(InstrumentsViewModel instrumentsViewModel, EventsViewModel view) {
         this.instrumentsViewModel = instrumentsViewModel;
@@ -139,7 +142,7 @@ public class EventController {
         }
     }
 
-    public void exportEvents(File file) {
+    public void exportEvents(File file, ExportType exportType) {
         if(DatabaseConnection.getConnection().isActive()) {
             // get all events in chronological order
             Instrument instrument = DatabaseConnection.getConnection().getReader().getInstrument(
@@ -148,22 +151,23 @@ public class EventController {
             for(Iterator<Event> it = instrument.getEventIterator(); it.hasNext(); ) {
                 events.add(it.next());
             }
-            Collections.sort(events, new Comparator<Event>() {
-                @Override
-                public int compare(Event o1, Event o2) {
-                    int compareDate = o1.getDate().compareTo(o2.getDate());
-                    return compareDate == 0 ? o1.getType().compareTo(o2.getType()) : compareDate;
-                }
+            Collections.sort(events, (o1, o2) -> {
+                int compareDate = o1.getDate().compareTo(o2.getDate());
+                return compareDate == 0 ? o1.getType().compareTo(o2.getType()) : compareDate;
             });
 
             if(events.isEmpty()) {
                 throw new IllegalArgumentException("No events found for instrument <" +
                         instrumentsViewModel.getActiveInstrument() + ">");
             } else {
+                // export the events to the selected file type
+                EventsExporter exporter = exportType == ExportType.CSV ?
+                        new EventsCsvExporter(file, events) :
+                        new EventsPdfExporter(file, instrumentsViewModel.getActiveInstrument(), events);
                 try {
-                    EventsReportWriter.writeReport(instrumentsViewModel.getActiveInstrument(), events, file);
-                } catch(DRException | IOException ex) {
-                    throw new IllegalStateException(ex);
+                    exporter.export();
+                } catch(IOException e) {
+                    throw new IllegalStateException(e);
                 }
             }
         }

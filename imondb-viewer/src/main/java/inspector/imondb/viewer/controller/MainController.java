@@ -82,6 +82,7 @@ public class MainController {
         viewer.addEventRemover(new EventRemoveListener(viewer, eventController));
         viewer.addEventEditor(new EventEditListener(viewer, instrumentsViewModel, eventController));
         viewer.addEventClearer(new EventClearListener(viewer, eventController));
+        viewer.addEventImporter(new EventImportListener(viewer, eventController));
         viewer.addEventExporter(new EventExportListener(viewer, eventController));
 
         viewer.addAdvancedSearchDisplayer(new AdvancedSearchListener(viewer,
