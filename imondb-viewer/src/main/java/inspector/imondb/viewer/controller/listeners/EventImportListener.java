@@ -23,21 +23,19 @@ package inspector.imondb.viewer.controller.listeners;
 import inspector.imondb.viewer.controller.EventController;
 import inspector.imondb.viewer.model.DatabaseConnection;
 import inspector.imondb.viewer.view.gui.ViewerFrame;
-import org.apache.commons.io.FilenameUtils;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
 
-public class EventExportListener implements ActionListener {
+public class EventImportListener implements ActionListener {
 
     private ViewerFrame viewerFrame;
 
     private EventController eventController;
 
-    public EventExportListener(ViewerFrame frame, EventController eventController) {
+    public EventImportListener(ViewerFrame frame, EventController eventController) {
         this.viewerFrame = frame;
         this.eventController = eventController;
     }
@@ -46,33 +44,23 @@ public class EventExportListener implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         if(!DatabaseConnection.getConnection().isActive()) {
             JOptionPane.showMessageDialog(viewerFrame.getFrame(),
-                    "Please connect to a database to export an event log.", "Warning", JOptionPane.WARNING_MESSAGE);
+                    "Please connect to a database to import events.", "Warning", JOptionPane.WARNING_MESSAGE);
         } else {
             try {
                 JFileChooser fileChooser = new JFileChooser();
-                // export only to csv or pdf files
+                // import only from csv files
                 FileNameExtensionFilter csvFilter = new FileNameExtensionFilter("CSV-files", "csv");
                 fileChooser.addChoosableFileFilter(csvFilter);
-                FileNameExtensionFilter pdfFilter = new FileNameExtensionFilter("PDF documents", "pdf");
-                fileChooser.addChoosableFileFilter(pdfFilter);
                 fileChooser.removeChoosableFileFilter(fileChooser.getAcceptAllFileFilter());
 
                 int returnVal = fileChooser.showSaveDialog(viewerFrame.getFrame());
                 if(returnVal == JFileChooser.APPROVE_OPTION) {
-                    Thread eventExporter = new Thread() {
+                    Thread eventImporter = new Thread() {
                         public void run() {
-                            EventController.ExportType exportType = fileChooser.getFileFilter().equals(csvFilter) ?
-                                    EventController.ExportType.CSV : EventController.ExportType.PDF;
-                            // check if a correct extension was provided
-                            final File file = FilenameUtils.getExtension(fileChooser.getSelectedFile().getName()).isEmpty() ?
-                                    new File(fileChooser.getSelectedFile().getAbsolutePath() +
-                                            (exportType == EventController.ExportType.CSV ? ".csv": ".pdf")) :
-                                    fileChooser.getSelectedFile();
-                            // export to file
-                            eventController.exportEvents(file, exportType);
+                            eventController.importEvents(fileChooser.getSelectedFile());
                         }
                     };
-                    eventExporter.start();
+                    eventImporter.start();
                 }
             } catch(IllegalArgumentException ex) {
                 JOptionPane.showMessageDialog(viewerFrame.getFrame(), ex.getMessage(), "Warning", JOptionPane.WARNING_MESSAGE);

@@ -33,8 +33,8 @@ public class EventPanel {
     private EventTree eventTree;
 
     private JButton buttonAdd;
+    private JButton buttonImport;
     private JButton buttonExport;
-    private JButton buttonRemove;
     private JButton buttonClear;
 
     public EventPanel(VisualizationConfiguration configuration) {
@@ -56,12 +56,12 @@ public class EventPanel {
         buttonsPanel.setPreferredSize(new Dimension(250, 50));
         buttonAdd = new JButton("Add");
         buttonsPanel.add(buttonAdd);
-        buttonExport = new JButton("Export");
-        buttonsPanel.add(buttonExport);
-        buttonRemove = new JButton("Remove");
-        buttonsPanel.add(buttonRemove);
         buttonClear = new JButton("Clear");
         buttonsPanel.add(buttonClear);
+        buttonImport = new JButton("Import");
+        buttonsPanel.add(buttonImport);
+        buttonExport = new JButton("Export");
+        buttonsPanel.add(buttonExport);
 
         panel.add(buttonsPanel, BorderLayout.PAGE_END);
     }
@@ -82,12 +82,12 @@ public class EventPanel {
         return buttonAdd;
     }
 
-    public JButton getButtonRemove() {
-        return buttonRemove;
-    }
-
     public JButton getButtonClear() {
         return buttonClear;
+    }
+
+    public JButton getButtonImport() {
+        return buttonImport;
     }
 
     public JButton getButtonExport() {

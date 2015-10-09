@@ -1,4 +1,4 @@
-package inspector.imondb.viewer.view;
+package inspector.imondb.viewer.view.io;
 
 /*
  * #%L
@@ -46,7 +46,7 @@ import java.util.List;
 
 import static net.sf.dynamicreports.report.builder.DynamicReports.*;
 
-public class EventsReportWriter {
+public class EventsPdfExporter implements EventsExporter {
 
     // text styles
     private static StyleBuilder titleBigStyle = stl.style().bold().setFontSize(30)
@@ -61,17 +61,23 @@ public class EventsReportWriter {
             .setHorizontalAlignment(HorizontalAlignment.LEFT).setVerticalAlignment(VerticalAlignment.TOP);
     private static StyleBuilder dateStyle = valueStyle.setPattern("dd/MM/yyyy");
 
-    private EventsReportWriter() {
+    private File file;
+    private String instrumentName;
+    private List<Event> events;
 
+    public EventsPdfExporter(File file, String instrumentName, List<Event> events) {
+        this.file = file;
+        this.instrumentName = instrumentName;
+        this.events = events;
     }
 
-    public static void writeReport(String instrumentName, List<Event> events, File file) throws DRException, IOException {
-
+    @Override
+    public void export() throws IOException {
         JasperReportBuilder report = report();
 
         // create report
         // logo
-        BufferedImage logo = ImageIO.read(EventsReportWriter.class.getResource("/images/logo.png"));
+        BufferedImage logo = ImageIO.read(EventsPdfExporter.class.getResource("/images/logo.png"));
 
         // header text fields
         int keyWidth = 35;
@@ -128,6 +134,8 @@ public class EventsReportWriter {
         try {
             fos = new FileOutputStream(file);
             report.toPdf(fos);
+        } catch(DRException e) {
+            throw new IOException(e);
         } finally {
             IOUtils.closeQuietly(fos);
         }

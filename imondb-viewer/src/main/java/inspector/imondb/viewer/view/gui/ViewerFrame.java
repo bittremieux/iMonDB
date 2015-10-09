@@ -38,6 +38,7 @@ public class ViewerFrame {
     private JMenuItem menuItemConnectToDb;
     private JMenuItem menuItemDisconnectFromDb;
     private JMenuItem menuItemSaveGraph;
+    private JMenuItem menuItemImportEvents;
     private JMenuItem menuItemExportEvents;
     private JMenuItem menuItemPreferences;
     private JMenuItem menuItemExit;
@@ -116,7 +117,7 @@ public class ViewerFrame {
 
     public void display() {
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.setMinimumSize(new Dimension(1280, 800));
+        frame.setMinimumSize(new Dimension(900, 700));
         frame.setPreferredSize(new Dimension(1280, 800));
         frame.pack();
         frame.setVisible(true);
@@ -180,7 +181,6 @@ public class ViewerFrame {
     }
 
     public void addEventRemover(ActionListener listener) {
-        panelEvent.getButtonRemove().addActionListener(listener);
         panelEvent.getEventTree().setEventRemoveListener(listener);
     }
 
@@ -190,6 +190,11 @@ public class ViewerFrame {
 
     public void addEventClearer(ActionListener listener) {
         panelEvent.getButtonClear().addActionListener(listener);
+    }
+
+    public void addEventImporter(ActionListener listener) {
+        panelEvent.getButtonImport().addActionListener(listener);
+        menuItemImportEvents.addActionListener(listener);
     }
 
     public void addEventExporter(ActionListener listener) {
@@ -228,9 +233,9 @@ public class ViewerFrame {
         menuItemSaveGraph.setMnemonic(KeyEvent.VK_S);
         menuItemSaveGraph.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
         menuFile.add(menuItemSaveGraph);
+        menuItemImportEvents = new JMenuItem("Import event log");
+        menuFile.add(menuItemImportEvents);
         menuItemExportEvents = new JMenuItem("Export event log as...");
-        menuItemExportEvents.setMnemonic(KeyEvent.VK_E);
-        menuItemExportEvents.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_E, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
         menuFile.add(menuItemExportEvents);
 
         menuFile.addSeparator();
@@ -266,7 +271,7 @@ public class ViewerFrame {
     }
 
     private JPanel createTopPanel() {
-        JPanel panelTop = new JPanel();
+        JPanel panelTop = new JPanel(new WrapLayout());
 
         buttonConnectToDatabase = new JButton("Connect to database");
         panelTop.add(buttonConnectToDatabase);
