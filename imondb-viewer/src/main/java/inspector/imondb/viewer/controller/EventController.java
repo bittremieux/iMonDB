@@ -25,6 +25,7 @@ import inspector.imondb.model.EventType;
 import inspector.imondb.model.Instrument;
 import inspector.imondb.viewer.model.DatabaseConnection;
 import inspector.imondb.viewer.view.io.EventsCsvExporter;
+import inspector.imondb.viewer.view.io.EventsCsvImporter;
 import inspector.imondb.viewer.view.io.EventsExporter;
 import inspector.imondb.viewer.view.io.EventsPdfExporter;
 import inspector.imondb.viewer.viewmodel.EventsViewModel;
@@ -139,6 +140,23 @@ public class EventController {
             }
 
             clearEvents();
+        }
+    }
+
+    public void importEvents(File file) {
+        if(DatabaseConnection.getConnection().isActive()) {
+            Instrument instrument = DatabaseConnection.getConnection().getReader().getInstrument(
+                    instrumentsViewModel.getActiveInstrument(), true, false);
+
+            // read the events from the file
+            List<Event> events = null;
+            try {
+                events = new EventsCsvImporter(file, instrument).read();
+                // add each event
+                events.forEach(eventsViewModel::add);
+            } catch(IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
     }
 
