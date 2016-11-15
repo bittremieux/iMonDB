@@ -22,6 +22,7 @@ package inspector.imondb.collector.controller.listeners;
 
 import inspector.imondb.collector.model.config.Configuration;
 import inspector.imondb.collector.view.gui.CollectorFrame;
+import inspector.imondb.collector.view.gui.external.ExternalPanel;
 import inspector.imondb.collector.view.gui.instrument.InstrumentsPanel;
 import inspector.imondb.collector.view.gui.metadata.MetadataPanel;
 
@@ -75,6 +76,13 @@ public class ConfigurationChangeListener implements FocusListener, ActionListene
             // general configuration
             case "gen_regex":
                 configuration.getGeneralConfiguration().setFileNameRegex(collectorFrame.getGeneralPanel().getFileNameRegex());
+                break;
+            // external configuration
+            case "sense_username":
+                configuration.getExternalConfiguration().setUserName(collectorFrame.getExternalPanel().getUserName());
+                break;
+            case "sense_password":
+                configuration.getExternalConfiguration().setPassword(collectorFrame.getExternalPanel().getPassword());
                 break;
             default:
                 break;
@@ -130,6 +138,9 @@ public class ConfigurationChangeListener implements FocusListener, ActionListene
         } else if(o instanceof MetadataPanel) {
             // metadata configuration
             configuration.getMetadataConfiguration().setMetadata(collectorFrame.getMetadataPanel().getMetadata());
+        } else if(o instanceof ExternalPanel) {
+            // external configuration
+            configuration.getExternalConfiguration().setDevices(collectorFrame.getExternalPanel().getDevices());
         }
 
         configuration.store();

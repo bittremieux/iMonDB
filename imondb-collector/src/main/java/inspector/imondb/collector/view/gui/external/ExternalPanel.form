@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="inspector.imondb.collector.view.gui.external.ExternalPanel">
+  <grid id="27dc6" binding="panel" layout-manager="GridBagLayout">
+    <constraints>
+      <xy x="20" y="20" width="549" height="400"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <grid id="c0ba5" layout-manager="FormLayout">
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:3dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:3dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:3dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:d:grow"/>
+        <constraints>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="1" fill="0" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.0" weighty="0.0"/>
+        </constraints>
+        <properties/>
+        <border type="empty">
+          <size top="10" left="10" bottom="10" right="10"/>
+        </border>
+        <children>
+          <component id="3927b" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="11"/>
+              <labelFor value="f8d2"/>
+              <text value="&amp;Username"/>
+              <toolTipText value="The Sen.se username"/>
+            </properties>
+          </component>
+          <component id="f8d2" class="javax.swing.JTextField" binding="textFieldUsername">
+            <constraints>
+              <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+              <forms defaultalign-horz="false" defaultalign-vert="false"/>
+            </constraints>
+            <properties>
+              <maximumSize width="420" height="24"/>
+              <minimumSize width="420" height="24"/>
+              <preferredSize width="420" height="24"/>
+              <text value=""/>
+            </properties>
+          </component>
+          <component id="27f0d" class="javax.swing.JPasswordField" binding="passwordField">
+            <constraints>
+              <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+              <forms defaultalign-horz="false" defaultalign-vert="false"/>
+            </constraints>
+            <properties>
+              <maximumSize width="420" height="24"/>
+              <minimumSize width="420" height="24"/>
+              <preferredSize width="420" height="24"/>
+            </properties>
+          </component>
+          <component id="85724" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="11"/>
+              <labelFor value="27f0d"/>
+              <text value="&amp;Password"/>
+              <toolTipText value="The Sen.se password"/>
+            </properties>
+          </component>
+          <grid id="3da79" layout-manager="FormLayout">
+            <rowspec value="center:d:grow"/>
+            <colspec value="fill:max(d;4px):noGrow"/>
+            <colspec value="left:4dlu:noGrow"/>
+            <colspec value="fill:d:grow"/>
+            <constraints>
+              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="8" fill="2" indent="0" use-parent-layout="false"/>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties/>
+            <border type="empty">
+              <size top="0" left="0" bottom="0" right="0"/>
+            </border>
+            <children>
+              <component id="80d03" class="javax.swing.JLabel">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                  <forms/>
+                </constraints>
+                <properties>
+                  <text value="Import external data from Sen.se smart sensors."/>
+                </properties>
+              </component>
+              <component id="480b5" class="javax.swing.JButton" binding="buttonSynchronize">
+                <constraints>
+                  <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                  <forms/>
+                </constraints>
+                <properties>
+                  <text value="&amp;Synchronize"/>
+                </properties>
+              </component>
+            </children>
+          </grid>
+          <grid id="b9d21" layout-manager="BorderLayout" hgap="0" vgap="0">
+            <constraints>
+              <grid row="6" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <minimumSize width="405" height="160"/>
+              <preferredSize width="405" height="160"/>
+            </properties>
+            <border type="none"/>
+            <children>
+              <scrollpane id="a7203" binding="scrollPaneDevices">
+                <constraints border-constraint="Center"/>
+                <properties>
+                  <horizontalScrollBarPolicy value="31"/>
+                  <verticalScrollBarPolicy value="20"/>
+                </properties>
+                <border type="none"/>
+                <children>
+                  <grid id="ec4c9" binding="panelDevices" custom-create="true" layout-manager="GridBagLayout">
+                    <constraints/>
+                    <properties/>
+                    <border type="none"/>
+                    <children/>
+                  </grid>
+                </children>
+              </scrollpane>
+            </children>
+          </grid>
+        </children>
+      </grid>
+    </children>
+  </grid>
+</form>

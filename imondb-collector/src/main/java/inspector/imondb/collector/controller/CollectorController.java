@@ -22,6 +22,7 @@ package inspector.imondb.collector.controller;
 
 import inspector.imondb.collector.controller.listeners.ConfigurationChangeListener;
 import inspector.imondb.collector.controller.listeners.DatabaseConnectionListener;
+import inspector.imondb.collector.controller.listeners.SenseSynchronizeListener;
 import inspector.imondb.collector.model.config.Configuration;
 import inspector.imondb.collector.view.cli.SystemOutProgressBar;
 import inspector.imondb.collector.view.gui.CollectorFrame;
@@ -75,6 +76,7 @@ public class CollectorController {
 
         collector.addConfigurationChangeListener(new ConfigurationChangeListener(collector, configuration));
         collector.addDatabaseConnectionListener(new DatabaseConnectionListener(collector, databaseController));
+        collector.addSenseSynchronizeListener(new SenseSynchronizeListener(collector));
 
         // start viewer
         SwingUtilities.invokeLater(() -> {

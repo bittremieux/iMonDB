@@ -43,6 +43,7 @@ public class Configuration {
     private GeneralConfiguration generalConfiguration;
     private InstrumentConfiguration instrumentConfiguration;
     private MetadataConfiguration metadataConfiguration;
+    private ExternalConfiguration externalConfiguration;
 
     public Configuration(File file) {
         try {
@@ -70,6 +71,7 @@ public class Configuration {
             generalConfiguration = new GeneralConfiguration(rootMap);
             instrumentConfiguration = new InstrumentConfiguration(rootMap);
             metadataConfiguration = new MetadataConfiguration(rootMap);
+            externalConfiguration = new ExternalConfiguration(rootMap);
 
         } catch(IOException e) {
             LOGGER.error("Error while loading the config file: {}", e);
@@ -108,5 +110,9 @@ public class Configuration {
 
     public MetadataConfiguration getMetadataConfiguration() {
         return metadataConfiguration;
+    }
+
+    public ExternalConfiguration getExternalConfiguration() {
+        return externalConfiguration;
     }
 }

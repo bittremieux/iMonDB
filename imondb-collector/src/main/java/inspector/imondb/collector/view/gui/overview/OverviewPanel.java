@@ -25,6 +25,7 @@ import com.jgoodies.forms.layout.FormLayout;
 import inspector.imondb.collector.model.InstrumentMap;
 import inspector.imondb.collector.view.gui.CollectorFrame;
 import inspector.imondb.collector.view.gui.database.DatabasePanel;
+import inspector.imondb.collector.view.gui.external.ExternalPanel;
 import inspector.imondb.collector.view.gui.general.GeneralPanel;
 import inspector.imondb.collector.view.gui.instrument.InstrumentOverviewPanel;
 import inspector.imondb.collector.view.gui.instrument.InstrumentsPanel;
@@ -62,7 +63,7 @@ public class OverviewPanel extends Observable {
         panel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
         panel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10), null));
         final JPanel panel1 = new JPanel();
-        panel1.setLayout(new FormLayout("fill:d:noGrow,left:4dlu:noGrow,fill:max(d;4px):noGrow", "center:d:noGrow,top:3dlu:noGrow,center:max(d;4px):noGrow,top:3dlu:noGrow,center:max(d;4px):noGrow,top:3dlu:noGrow,center:max(d;4px):noGrow"));
+        panel1.setLayout(new FormLayout("fill:d:noGrow,left:4dlu:noGrow,fill:max(d;4px):noGrow", "center:d:noGrow,top:3dlu:noGrow,center:max(d;4px):noGrow,top:3dlu:noGrow,center:max(d;4px):noGrow,top:3dlu:noGrow,center:max(d;4px):noGrow,top:3dlu:noGrow,center:max(d;4px):noGrow"));
         panel.add(panel1);
         panel1.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10), null));
         final JLabel label1 = new JLabel();
@@ -98,6 +99,14 @@ public class OverviewPanel extends Observable {
         labelMetadata.setIcon(new ImageIcon(getClass().getResource("/images/warning.png")));
         labelMetadata.setText("");
         panel1.add(labelMetadata, cc.xy(3, 7));
+        final JLabel label5 = new JLabel();
+        label5.setHorizontalAlignment(11);
+        label5.setText("External configuration:");
+        panel1.add(label5, cc.xy(1, 9));
+        labelExternal = new JLabel();
+        labelExternal.setIcon(new ImageIcon(getClass().getResource("/images/warning.png")));
+        labelExternal.setText("");
+        panel1.add(labelExternal, cc.xy(3, 9));
     }
 
     /**
@@ -117,6 +126,7 @@ public class OverviewPanel extends Observable {
     private JLabel labelInstrument;
     private JLabel labelGeneral;
     private JLabel labelMetadata;
+    private JLabel labelExternal;
 
     private CollectorFrame collector;
 
@@ -212,6 +222,14 @@ public class OverviewPanel extends Observable {
             setMetadataStatus(Status.VALID, "One or more valid metadata configurations");
         }
 
+        // external configuration
+        ExternalPanel externalPanel = collector.getExternalPanel();
+        if(!externalPanel.isSynchronized()) {
+            setExternalStatus(Status.WARNING, "Not synchronized with Sen.se");
+        } else {
+            setExternalStatus(Status.VALID, "All devices are synchronized with Sen.se");
+        }
+
         setChanged();
         notifyObservers(globalStatus);
     }
@@ -240,6 +258,13 @@ public class OverviewPanel extends Observable {
     private void setMetadataStatus(Status status, String message) {
         setIcon(labelMetadata, status);
         labelMetadata.setToolTipText(message);
+
+        globalStatus = globalStatus.compareTo(status) < 0 ? status : globalStatus;
+    }
+
+    private void setExternalStatus(Status status, String message) {
+        setIcon(labelExternal, status);
+        labelExternal.setToolTipText(message);
 
         globalStatus = globalStatus.compareTo(status) < 0 ? status : globalStatus;
     }

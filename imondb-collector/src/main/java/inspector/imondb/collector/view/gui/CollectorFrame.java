@@ -24,10 +24,13 @@ import inspector.imondb.collector.controller.CollectorController;
 import inspector.imondb.collector.controller.ExecutionController;
 import inspector.imondb.collector.controller.listeners.ConfigurationChangeListener;
 import inspector.imondb.collector.controller.listeners.DatabaseConnectionListener;
+import inspector.imondb.collector.controller.listeners.SenseSynchronizeListener;
 import inspector.imondb.collector.model.config.Configuration;
 import inspector.imondb.collector.model.config.DatabaseConfiguration;
+import inspector.imondb.collector.model.config.ExternalConfiguration;
 import inspector.imondb.collector.model.config.GeneralConfiguration;
 import inspector.imondb.collector.view.gui.database.DatabasePanel;
+import inspector.imondb.collector.view.gui.external.ExternalPanel;
 import inspector.imondb.collector.view.gui.general.GeneralPanel;
 import inspector.imondb.collector.view.gui.instrument.InstrumentsPanel;
 import inspector.imondb.collector.view.gui.metadata.MetadataPanel;
@@ -57,11 +60,12 @@ public class CollectorFrame {
     // panel containers
     private JTabbedPane tabbedPane;
 
+    private OverviewPanel overviewPanel;
     private DatabasePanel databasePanel;
     private GeneralPanel generalPanel;
     private InstrumentsPanel instrumentsPanel;
     private MetadataPanel metadataPanel;
-    private OverviewPanel overviewPanel;
+    private ExternalPanel externalPanel;
 
     public CollectorFrame(CollectorController collectorController, ExecutionController executionController, Configuration configuration) {
         this.collectorController = collectorController;
@@ -100,6 +104,11 @@ public class CollectorFrame {
 
         metadataPanel = new MetadataPanel(configuration.getMetadataConfiguration().getMetadata());
         tabbedPane.addTab("Metadata", metadataPanel.getPanel());
+
+        ExternalConfiguration externalConfiguration = configuration.getExternalConfiguration();
+        externalPanel = new ExternalPanel(externalConfiguration.getUserName(), externalConfiguration.getPassword(),
+                externalConfiguration.getDevices());
+        tabbedPane.addTab("External", externalPanel.getPanel());
 
         tabbedPane.addChangeListener(e -> {
             if("Execute".equals(tabbedPane.getTitleAt(tabbedPane.getSelectedIndex()))) {
@@ -197,6 +206,10 @@ public class CollectorFrame {
         return metadataPanel;
     }
 
+    public ExternalPanel getExternalPanel() {
+        return externalPanel;
+    }
+
     public OverviewPanel getOverviewPanel() {
         return overviewPanel;
     }
@@ -224,10 +237,15 @@ public class CollectorFrame {
         generalPanel.addConfigurationChangeListener(listener);
         instrumentsPanel.addConfigurationChangeListener(listener);
         metadataPanel.addConfigurationChangeListener(listener);
+        externalPanel.addConfigurationChangeListener(listener);
     }
 
     public void addDatabaseConnectionListener(DatabaseConnectionListener databaseConnectionListener) {
         databasePanel.addDatabaseConnectionListener(databaseConnectionListener);
         instrumentsPanel.addObserver(databaseConnectionListener);
+    }
+
+    public void addSenseSynchronizeListener(SenseSynchronizeListener senseSynchronizeListener) {
+        externalPanel.addSenseSynchronizeListener(senseSynchronizeListener);
     }
 }

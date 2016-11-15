@@ -17,6 +17,8 @@
         <rowspec value="center:max(d;4px):noGrow"/>
         <rowspec value="top:3dlu:noGrow"/>
         <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:3dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
         <colspec value="fill:d:noGrow"/>
         <colspec value="left:4dlu:noGrow"/>
         <colspec value="fill:max(d;4px):noGrow"/>
@@ -99,6 +101,26 @@
           <component id="b55bb" class="javax.swing.JLabel" binding="labelMetadata">
             <constraints>
               <grid row="6" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <icon value="images/warning.png"/>
+              <text value=""/>
+            </properties>
+          </component>
+          <component id="cd7d1" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <horizontalAlignment value="11"/>
+              <text value="External configuration:"/>
+            </properties>
+          </component>
+          <component id="17db7" class="javax.swing.JLabel" binding="labelExternal">
+            <constraints>
+              <grid row="8" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
               <forms/>
             </constraints>
             <properties>
