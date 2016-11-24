@@ -27,7 +27,7 @@ import inspector.imondb.collector.controller.listeners.DatabaseConnectionListene
 import inspector.imondb.collector.controller.listeners.SenseSynchronizeListener;
 import inspector.imondb.collector.model.config.Configuration;
 import inspector.imondb.collector.model.config.DatabaseConfiguration;
-import inspector.imondb.collector.model.config.ExternalConfiguration;
+import inspector.imondb.collector.model.config.SenseConfiguration;
 import inspector.imondb.collector.model.config.GeneralConfiguration;
 import inspector.imondb.collector.view.gui.database.DatabasePanel;
 import inspector.imondb.collector.view.gui.external.ExternalPanel;
@@ -105,9 +105,9 @@ public class CollectorFrame {
         metadataPanel = new MetadataPanel(configuration.getMetadataConfiguration().getMetadata());
         tabbedPane.addTab("Metadata", metadataPanel.getPanel());
 
-        ExternalConfiguration externalConfiguration = configuration.getExternalConfiguration();
-        externalPanel = new ExternalPanel(externalConfiguration.getUserName(), externalConfiguration.getPassword(),
-                externalConfiguration.getDevices());
+        SenseConfiguration senseConfiguration = configuration.getSenseConfiguration();
+        externalPanel = new ExternalPanel(senseConfiguration.getUserName(), senseConfiguration.getPassword(),
+                senseConfiguration.getDevices());
         tabbedPane.addTab("External", externalPanel.getPanel());
 
         tabbedPane.addChangeListener(e -> {

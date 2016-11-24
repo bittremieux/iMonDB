@@ -79,10 +79,10 @@ public class ConfigurationChangeListener implements FocusListener, ActionListene
                 break;
             // external configuration
             case "sense_username":
-                configuration.getExternalConfiguration().setUserName(collectorFrame.getExternalPanel().getUserName());
+                configuration.getSenseConfiguration().setUserName(collectorFrame.getExternalPanel().getUserName());
                 break;
             case "sense_password":
-                configuration.getExternalConfiguration().setPassword(collectorFrame.getExternalPanel().getPassword());
+                configuration.getSenseConfiguration().setPassword(collectorFrame.getExternalPanel().getPassword());
                 break;
             default:
                 break;
@@ -140,7 +140,7 @@ public class ConfigurationChangeListener implements FocusListener, ActionListene
             configuration.getMetadataConfiguration().setMetadata(collectorFrame.getMetadataPanel().getMetadata());
         } else if(o instanceof ExternalPanel) {
             // external configuration
-            configuration.getExternalConfiguration().setDevices(collectorFrame.getExternalPanel().getDevices());
+            configuration.getSenseConfiguration().setDevices(collectorFrame.getExternalPanel().getDevices());
         }
 
         configuration.store();

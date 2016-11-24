@@ -25,7 +25,9 @@ public enum EventType {
     UNDEFINED("undefined"),
     CALIBRATION("calibration"),
     MAINTENANCE("maintenance"),
-    INCIDENT("incident");
+    INCIDENT("incident"),
+    TEMPERATURE("temperature"),
+    MOTION("motion");
 
     private final String type;
 

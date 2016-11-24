@@ -26,6 +26,7 @@ import inspector.imondb.collector.model.MetadataMap;
 import inspector.imondb.collector.model.RegexMapper;
 import inspector.imondb.collector.model.config.Configuration;
 import inspector.imondb.collector.model.config.DatabaseConfiguration;
+import inspector.imondb.collector.model.config.DeviceInfo;
 import inspector.imondb.collector.model.config.GeneralConfiguration;
 import inspector.imondb.collector.view.ProgressReporter;
 import inspector.imondb.convert.thermo.ThermoRawFileExtractor;
@@ -33,6 +34,7 @@ import inspector.imondb.io.IMonDBReader;
 import inspector.imondb.io.IMonDBWriter;
 import inspector.imondb.model.CV;
 import inspector.imondb.model.Instrument;
+import inspector.imondb.model.InstrumentModel;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.filefilter.AgeFileFilter;
@@ -94,15 +96,25 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
             Timestamp newestTimestamp = genConfig.getStartDate() != null ? genConfig.getStartDate() : new Timestamp(new Date(0).getTime());
 
             // make sure all required instruments are present in the database
-            createNewInstruments(dbReader, dbWriter, configuration.getInstrumentConfiguration().getInstruments());
+            List<DeviceInfo> devices = configuration.getSenseConfiguration().getDevices();
+            createNewInstruments(dbReader, dbWriter, configuration.getInstrumentConfiguration().getInstruments(), devices);
 
             // browse the start directory and underlying directories to find new raw files
             File startDir = new File(genConfig.getDirectory());
             int threadsSubmitted = submitTasks(startDir, pool, dbReader, dbWriter, newestTimestamp);
+            // retrieve external measurements from Sen.se
+            String senseUsername = configuration.getSenseConfiguration().getUserName();
+            String sensePassword = configuration.getSenseConfiguration().getPassword();
+            int timeOutMilliseconds = 60000 * configuration.getGeneralConfiguration().getNumberOfThreads() / 100;
+            for(DeviceInfo deviceInfo : devices) {
+                pool.submit(new SenseProcessor(dbReader, dbWriter, senseUsername, sensePassword, deviceInfo,
+                        newestTimestamp, timeOutMilliseconds), null);
+                threadsSubmitted++;
+            }
 
             // process all the submitted threads and retrieve the sample dates
             for(int i = 0; i < threadsSubmitted; i++) {
-                LOGGER.info("Processing file {} out of a total of {} queued files", i + 1, threadsSubmitted);
+                LOGGER.info("Processing task {} out of a total of {} queued tasks", i + 1, threadsSubmitted);
                 Timestamp runTimestamp = retrieveTask(pool);
                 newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
                 // update progress
@@ -131,7 +143,8 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
         return null;
     }
 
-    private void createNewInstruments(IMonDBReader reader, IMonDBWriter writer, Collection<InstrumentMap> instrumentMaps) {
+    private void createNewInstruments(IMonDBReader reader, IMonDBWriter writer,
+                                      Collection<InstrumentMap> instrumentMaps, List<DeviceInfo> externalDevices) {
         CV cv = new CV("MS", "PSI MS controlled vocabulary", "http://psidev.cvs.sourceforge.net/viewvc/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo", "3.68.0");
 
         for(InstrumentMap instrumentMap : instrumentMaps) {
@@ -146,6 +159,21 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
                 writer.writeInstrument(new Instrument(instrumentMap.getKey(), instrumentMap.getValue(), cv));
             } else {
                 LOGGER.trace("Instrument <{}> found in the database", instrumentMap.getKey());
+            }
+        }
+
+        for(DeviceInfo deviceInfo : externalDevices) {
+            // check if the instrument already exists in the database
+            Map<String, String> parameters = ImmutableMap.of("name", deviceInfo.getName());
+            String query = "SELECT COUNT(inst) FROM Instrument inst WHERE inst.name = :name";
+            boolean exists = reader.getFromCustomQuery(query, Long.class, parameters).get(0).equals(1L);
+
+            // else, add it to the database
+            if(!exists) {
+                LOGGER.trace("Add external device <{}> to the database", deviceInfo.getName());
+                writer.writeInstrument(new Instrument(deviceInfo.getName(), InstrumentModel.EXTERNAL, cv));
+            } else {
+                LOGGER.trace("External device <{}> found in the database", deviceInfo.getName());
             }
         }
     }

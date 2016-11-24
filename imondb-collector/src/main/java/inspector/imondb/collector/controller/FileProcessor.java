@@ -51,8 +51,8 @@ public class FileProcessor implements Callable<Timestamp> {
 
     private static final Logger LOGGER = LogManager.getLogger(FileProcessor.class);
 
-    private IMonDBReader dbReader;
-    private IMonDBWriter dbWriter;
+    private final IMonDBReader dbReader;
+    private final IMonDBWriter dbWriter;
     private ThermoRawFileExtractor extractor;
     private File file;
     private InstrumentMap instrumentMap;
@@ -115,7 +115,7 @@ public class FileProcessor implements Callable<Timestamp> {
             }
 
             // write the run to the database
-            synchronized(FileProcessor.class) {
+            synchronized(dbWriter) {
                 dbWriter.writeRun(run);
             }
 

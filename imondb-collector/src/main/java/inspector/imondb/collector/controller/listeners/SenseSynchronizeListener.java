@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import inspector.imondb.collector.model.config.DeviceInfo;
 import inspector.imondb.collector.view.gui.CollectorFrame;
 import inspector.imondb.collector.view.gui.external.ExternalPanel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.ws.rs.client.Client;
@@ -23,6 +25,8 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 
 public class SenseSynchronizeListener implements ActionListener {
+
+    private static final Logger LOGGER = LogManager.getLogger(SenseSynchronizeListener.class);
 
     private final String BASE_URL = "https://apis.sen.se/v2/";
 
@@ -101,6 +105,7 @@ public class SenseSynchronizeListener implements ActionListener {
                     get();
                 } catch(InterruptedException | ExecutionException ex) {
                     // synchronization failed
+                    LOGGER.error("Error while synchronizing the Sen.se devices: {}", ex.getMessage(), ex);
                     JOptionPane.showMessageDialog(Frame.getFrames()[0],
                             "<html><b>Could not synchronize the Sen.se smart monitors</b></html>\n"
                                     + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);

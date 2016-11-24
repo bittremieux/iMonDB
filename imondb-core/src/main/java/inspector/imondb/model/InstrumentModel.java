@@ -38,7 +38,10 @@ public enum InstrumentModel {
     THERMO_ORBITRAP_FUSION("MS:1002416"),
 
     /* general instruments */
-    UNKNOWN_MODEL("MS:1000031");
+    UNKNOWN_MODEL("MS:1000031"),
+
+    /* external measurements */
+    EXTERNAL("external");
 
     private final String cvAccession;
 

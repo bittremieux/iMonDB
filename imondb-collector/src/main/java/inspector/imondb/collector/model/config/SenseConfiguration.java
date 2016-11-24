@@ -7,13 +7,13 @@ import org.jasypt.util.text.BasicTextEncryptor;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ExternalConfiguration {
+public class SenseConfiguration {
 
     private Map<String, Object> rootMap;
 
     private BasicTextEncryptor textEncryptor;
 
-    public ExternalConfiguration(Map<String, Object> map) {
+    public SenseConfiguration(Map<String, Object> map) {
         rootMap = map;
 
         textEncryptor = new BasicTextEncryptor();
