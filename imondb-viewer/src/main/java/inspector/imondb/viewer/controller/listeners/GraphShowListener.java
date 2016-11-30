@@ -56,7 +56,7 @@ public class GraphShowListener implements ActionListener, Observer {
                 searchSettingsController.advanceProperty(true);
             } else if("Previous".equals(e.getActionCommand()) && searchSettingsController.hasPreviousProperty()) {
                 searchSettingsController.advanceProperty(false);
-            } else if("propertyChanged".equals(e.getActionCommand())) {
+            } else if("propertyChanged".equals(e.getActionCommand()) || "comboBoxChanged".equals(e.getActionCommand())) {
                 showGraph();
             }
         }
@@ -70,7 +70,10 @@ public class GraphShowListener implements ActionListener, Observer {
     private void showGraph() {
         Thread graphThread = new Thread() {
             public void run() {
+                // primary values
                 List<Object[]> values = graphController.queryValues();
+                // secondary (external) values
+                List<Object[]> externalValues = graphController.queryExternalValues();
 
                 if(values != null) {
                     if(values.isEmpty()) {
@@ -78,6 +81,10 @@ public class GraphShowListener implements ActionListener, Observer {
                                 "Warning", JOptionPane.WARNING_MESSAGE);
                     } else {
                         ValuePlot plot = new ValuePlot(values);
+                        if(externalValues != null) {
+                            plot.addSeries(externalValues);
+                        }
+
                         JFreeChart chart = new JFreeChart(plot.getPlot());
                         chart.removeLegend();
 

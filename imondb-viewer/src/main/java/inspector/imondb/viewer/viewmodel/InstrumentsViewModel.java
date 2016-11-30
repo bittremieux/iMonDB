@@ -38,7 +38,15 @@ public class InstrumentsViewModel {
         propertySelectionPanel.addInstrument(instrument);
     }
 
+    public void addExternal(String instrument) {
+        propertySelectionPanel.addExternalInstrument(instrument);
+    }
+
     public String getActiveInstrument() {
         return propertySelectionPanel.getSelectedInstrument();
+    }
+
+    public String getActiveExternal() {
+        return propertySelectionPanel.getSelectedExternalInstrument();
     }
 }

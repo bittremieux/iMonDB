@@ -29,32 +29,48 @@ public class PropertySelectionPanel {
     private JPanel panel;
 
     private JComboBox<String> comboBoxInstrument;
+    private JComboBox<String> comboBoxExternal;
     private JComboBox<PropertyComboBoxItem> comboBoxProperty;
 
     private JButton buttonSearchSettings;
 
     public PropertySelectionPanel() {
         panel = new JPanel();
+        panel.setLayout(new GridLayout(2, 1));
+
+        JPanel panelTop = new JPanel(new FlowLayout(FlowLayout.LEADING));
+        panel.add(panelTop);
+        JPanel panelBottom = new JPanel(new FlowLayout(FlowLayout.LEADING));
+        panel.add(panelBottom);
 
         JLabel labelInstrument = new JLabel("Instrument");
-        panel.add(labelInstrument);
+        labelInstrument.setPreferredSize(new Dimension(80, 25));
+        panelTop.add(labelInstrument);
         comboBoxInstrument = new JComboBox<>();
         comboBoxInstrument.setPreferredSize(new Dimension(250, 25));
         comboBoxInstrument.setMaximumSize(new Dimension(250, 25));
-        panel.add(comboBoxInstrument);
+        panelTop.add(comboBoxInstrument);
 
         JLabel labelProperty = new JLabel("Property");
-        panel.add(labelProperty);
+        panelTop.add(labelProperty);
         ComboBoxModel<PropertyComboBoxItem> sortedComboBoxModel = new SortedComboBoxModel<>();
         comboBoxProperty = new JComboBox<>(sortedComboBoxModel);
         comboBoxProperty.setActionCommand("propertyChanged");
         comboBoxProperty.setPreferredSize(new Dimension(450, 25));
         comboBoxProperty.setMaximumSize(new Dimension(450, 25));
-        panel.add(comboBoxProperty);
+        panelTop.add(comboBoxProperty);
 
         buttonSearchSettings = new JButton(new ImageIcon(getClass().getResource("/images/search.png")));
         buttonSearchSettings.setToolTipText("advanced search settings");
-        panel.add(buttonSearchSettings);
+        panelTop.add(buttonSearchSettings);
+
+        JLabel labelExternal = new JLabel("Temperature");
+        labelExternal.setPreferredSize(new Dimension(80, 25));
+        panelBottom.add(labelExternal);
+        comboBoxExternal = new JComboBox<>();
+        comboBoxExternal.setPreferredSize(new Dimension(250, 25));
+        comboBoxExternal.setMaximumSize(new Dimension(250, 25));
+        panelBottom.add(comboBoxExternal);
     }
 
     public JPanel getPanel() {
@@ -65,6 +81,10 @@ public class PropertySelectionPanel {
         comboBoxInstrument.addItem(instrument);
     }
 
+    public void addExternalInstrument(String instrument) {
+        comboBoxExternal.addItem(instrument);
+    }
+
     public void addProperty(String propertyName, String propertyAccession) {
         comboBoxProperty.setActionCommand("ignore");
         comboBoxProperty.addItem(new PropertyComboBoxItem(propertyName, propertyAccession));
@@ -73,6 +93,10 @@ public class PropertySelectionPanel {
 
     public String getSelectedInstrument() {
         return (String) comboBoxInstrument.getSelectedItem();
+    }
+
+    public String getSelectedExternalInstrument() {
+        return (String) comboBoxExternal.getSelectedItem();
     }
 
     public String getSelectedPropertyName() {
@@ -110,6 +134,7 @@ public class PropertySelectionPanel {
 
     public void clearInstruments() {
         comboBoxInstrument.removeAllItems();
+        comboBoxExternal.removeAllItems();
     }
 
     public void clearProperties() {
@@ -118,6 +143,10 @@ public class PropertySelectionPanel {
 
     public void addInstrumentChangeListener(ActionListener listener) {
         comboBoxInstrument.addActionListener(listener);
+    }
+
+    public void addExternalInstrumentChangeListener(ActionListener listener) {
+        comboBoxExternal.addActionListener(listener);
     }
 
     public void addPropertyChangeListener(ActionListener listener) {

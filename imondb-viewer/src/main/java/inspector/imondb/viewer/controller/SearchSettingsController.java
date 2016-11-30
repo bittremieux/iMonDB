@@ -75,10 +75,15 @@ public class SearchSettingsController {
         clearInstruments();
 
         if(DatabaseConnection.getConnection().isActive()) {
-            // retrieve all instrument names from the database
+            // MS instruments
             List<String> instruments = DatabaseConnection.getConnection().getReader().getFromCustomQuery(
                     "SELECT inst.name FROM Instrument inst WHERE inst.type != 'external' ORDER BY inst.name", String.class);
             instruments.forEach(instrumentsViewModel::add);
+            // external instruments
+            instrumentsViewModel.addExternal("(none)");
+            List<String> externalInstruments = DatabaseConnection.getConnection().getReader().getFromCustomQuery(
+                    "SELECT inst.name FROM Instrument inst WHERE inst.type = 'external' ORDER BY inst.name", String.class);
+            externalInstruments.forEach(instrumentsViewModel::addExternal);
         }
     }
 

@@ -158,6 +158,7 @@ public class ViewerFrame {
     public void addGraphDisplayer(ActionListener listener) {
         propertySelectionPanel.addPropertyChangeListener(listener);
         panelGraph.addGraphAdvancer(listener);
+        propertySelectionPanel.addExternalInstrumentChangeListener(listener);
     }
 
     public void addGraphSaver(ActionListener listener) {
@@ -273,7 +274,8 @@ public class ViewerFrame {
     private JPanel createTopPanel() {
         JPanel panelTop = new JPanel(new WrapLayout());
 
-        buttonConnectToDatabase = new JButton("Connect to database");
+        buttonConnectToDatabase = new JButton("<html><center>Connect to<br>database</center></html>");
+        buttonConnectToDatabase.setPreferredSize(new Dimension(100, 50));
         panelTop.add(buttonConnectToDatabase);
 
         propertySelectionPanel = new PropertySelectionPanel();

@@ -99,6 +99,25 @@ public class ValuePlot {
         plot.setRenderer(2, minMaxRenderer);
     }
 
+    public void addSeries(java.util.List<Object[]> values) {
+        XYSeries externalSeries = new XYSeries("External");
+        for(Object[] objects : values) {
+            externalSeries.add(((Timestamp) objects[1]).getTime(), (Double) objects[0]);
+        }
+
+        XYSeriesCollection externalCollection = new XYSeriesCollection(externalSeries);
+        XYItemRenderer externalRenderer = new XYLineAndShapeRenderer();
+        externalRenderer.setSeriesPaint(0, Color.MAGENTA);
+        ((XYLineAndShapeRenderer) externalRenderer).setBaseShapesVisible(false);
+
+        NumberAxis temperatureAxis = new NumberAxis("Temperature (°C)");
+        temperatureAxis.setAutoRangeIncludesZero(false);
+        plot.setRangeAxis(1, temperatureAxis);
+        plot.setDataset(3, externalCollection);
+        plot.setRenderer(3, externalRenderer);
+        plot.mapDatasetToRangeAxis(3, 1);
+    }
+
     public XYPlot getPlot() {
         return plot;
     }

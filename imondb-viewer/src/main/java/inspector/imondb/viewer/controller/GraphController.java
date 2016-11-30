@@ -20,7 +20,9 @@ package inspector.imondb.viewer.controller;
  * #L%
  */
 
+import inspector.imondb.model.Event;
 import inspector.imondb.model.EventType;
+import inspector.imondb.model.Instrument;
 import inspector.imondb.viewer.model.DatabaseConnection;
 import inspector.imondb.viewer.view.gui.GraphPanel;
 import inspector.imondb.viewer.view.gui.ViewerFrame;
@@ -33,10 +35,7 @@ import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.ui.Layer;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class GraphController {
 
@@ -78,6 +77,33 @@ public class GraphController {
                     " ORDER BY val.originatingRun.sampleDate";
 
             return DatabaseConnection.getConnection().getReader().getFromCustomQuery(query, Object[].class, parameters);
+        } else {
+            return null;
+        }
+    }
+
+    public List<Object[]> queryExternalValues() {
+        if(DatabaseConnection.getConnection().isActive() &&
+                instrumentsViewModel.getActiveExternal() != null && !"(none)".equals(instrumentsViewModel.getActiveExternal())) {
+            Instrument external = DatabaseConnection.getConnection().getReader().getInstrument(
+                    instrumentsViewModel.getActiveExternal(), true, false);
+            List<Event> events = new ArrayList<>();
+            for(Iterator<Event> it = external.getEventIterator(); it.hasNext(); ) {
+                Event event = it.next();
+                if(event.getType() == EventType.TEMPERATURE) {
+                    events.add(event);
+                }
+            }
+            Collections.sort(events, (o1, o2) -> {
+                int compareDate = o1.getDate().compareTo(o2.getDate());
+                return compareDate == 0 ? o1.getType().compareTo(o2.getType()) : compareDate;
+            });
+            List<Object[]> result = new ArrayList<>(events.size());
+            for(Event event : events) {
+                result.add(new Object[] { Double.parseDouble(event.getExtra()), event.getDate() });
+            }
+
+            return result;
         } else {
             return null;
         }
