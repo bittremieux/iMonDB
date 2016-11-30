@@ -77,7 +77,7 @@ public class SearchSettingsController {
         if(DatabaseConnection.getConnection().isActive()) {
             // retrieve all instrument names from the database
             List<String> instruments = DatabaseConnection.getConnection().getReader().getFromCustomQuery(
-                    "SELECT inst.name FROM Instrument inst ORDER BY inst.name", String.class);
+                    "SELECT inst.name FROM Instrument inst WHERE inst.type != 'external' ORDER BY inst.name", String.class);
             instruments.forEach(instrumentsViewModel::add);
         }
     }
