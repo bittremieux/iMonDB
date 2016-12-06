@@ -102,15 +102,6 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
             // browse the start directory and underlying directories to find new raw files
             File startDir = new File(genConfig.getDirectory());
             int threadsSubmitted = submitTasks(startDir, pool, dbReader, dbWriter, newestTimestamp);
-            // retrieve external measurements from Sen.se
-            String senseUsername = configuration.getSenseConfiguration().getUserName();
-            String sensePassword = configuration.getSenseConfiguration().getPassword();
-            int timeOutMilliseconds = 60000 * configuration.getGeneralConfiguration().getNumberOfThreads() / 100;
-            for(DeviceInfo deviceInfo : devices) {
-                pool.submit(new SenseProcessor(dbReader, dbWriter, senseUsername, sensePassword, deviceInfo,
-                        newestTimestamp, timeOutMilliseconds), null);
-                threadsSubmitted++;
-            }
 
             // process all the submitted threads and retrieve the sample dates
             for(int i = 0; i < threadsSubmitted; i++) {
@@ -118,7 +109,20 @@ public class CollectorTask extends SwingWorker<Void, Integer> {
                 Timestamp runTimestamp = retrieveTask(pool);
                 newestTimestamp = runTimestamp != null && newestTimestamp.before(runTimestamp) ? runTimestamp : newestTimestamp;
                 // update progress
-                publish((i+1) * 100 / threadsSubmitted);
+                publish((i+1) * 100 / (threadsSubmitted + devices.size()));
+            }
+
+            // retrieve external measurements from Sen.se
+            String senseUsername = configuration.getSenseConfiguration().getUserName();
+            String sensePassword = configuration.getSenseConfiguration().getPassword();
+            int timeOutMilliseconds = 600;  // max. 100 requests per minute
+            for(int i = 0; i < devices.size(); i++) {
+                DeviceInfo deviceInfo = devices.get(i);
+                SenseProcessor processor = new SenseProcessor(dbReader, dbWriter, senseUsername, sensePassword,
+                        deviceInfo, newestTimestamp, timeOutMilliseconds);
+                processor.run();
+                // update progress
+                publish((threadsSubmitted + i + 1) * 100 / (threadsSubmitted + devices.size()));
             }
 
             // shut down child threads
