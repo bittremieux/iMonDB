@@ -91,12 +91,12 @@ public class ValuePlot {
         plot = new XYPlot();
         plot.setDomainAxis(dateAxis);
         plot.setRangeAxis(valueAxis);
-        plot.setDataset(0, medianCollection);
-        plot.setDataset(1, q1q3Collection);
-        plot.setDataset(2, minMaxCollection);
-        plot.setRenderer(0, medianRenderer);
-        plot.setRenderer(1, q1q3Renderer);
-        plot.setRenderer(2, minMaxRenderer);
+        plot.setDataset(1, medianCollection);
+        plot.setDataset(2, q1q3Collection);
+        plot.setDataset(3, minMaxCollection);
+        plot.setRenderer(1, medianRenderer);
+        plot.setRenderer(2, q1q3Renderer);
+        plot.setRenderer(3, minMaxRenderer);
     }
 
     public void addSeries(java.util.List<Object[]> values) {
@@ -113,9 +113,9 @@ public class ValuePlot {
         NumberAxis temperatureAxis = new NumberAxis("Temperature (°C)");
         temperatureAxis.setAutoRangeIncludesZero(false);
         plot.setRangeAxis(1, temperatureAxis);
-        plot.setDataset(3, externalCollection);
-        plot.setRenderer(3, externalRenderer);
-        plot.mapDatasetToRangeAxis(3, 1);
+        plot.setDataset(0, externalCollection);
+        plot.setRenderer(0, externalRenderer);
+        plot.mapDatasetToRangeAxis(0, 1);
     }
 
     public XYPlot getPlot() {
